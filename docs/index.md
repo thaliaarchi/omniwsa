@@ -3,6 +3,7 @@
 - [Parsing any dialect](parsing.md)
 - [Mnemonics](mnemonics.md)
 - Dialects
-  - [Whitelips IDE (javascript/vii5ard-whitelips-ide)](dialects/whitelips.md)
-  - [Lime Whitespace (c/manarice)](dialects/limews.md)
+  - [Whitelips IDE](dialects/whitelips.md) (javascript/vii5ard-whitelips-ide)
+  - [Lime Whitespace](dialects/limews.md) (c/manarice)
+  - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
   - [Other](dialects/other_dialects.md)
