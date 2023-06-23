@@ -7,6 +7,7 @@
   - [Burghard](dialects/burghard.md) (haskell/burghard-wsa)
   - [Respace](dialects/respace.md) (cpp/thaliaarchi-respace)
   - [rdebath](dialects/rdebath.md) (c/rdebath)
+  - [Palaiologos](dialects/palaiologos.md) (c/kspalaiologos-asm2ws)
   - [Lime Whitespace](dialects/limews.md) (c/manarice)
   - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
   - [Other](dialects/other_dialects.md)
