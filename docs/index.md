@@ -5,6 +5,7 @@
 - Dialects
   - [Whitelips IDE](dialects/whitelips.md) (javascript/vii5ard-whitelips-ide)
   - [Burghard](dialects/burghard.md) (haskell/burghard-wsa)
+  - [Respace](dialects/respace.md) (cpp/thaliaarchi-respace)
   - [rdebath](dialects/rdebath.md) (c/rdebath)
   - [Lime Whitespace](dialects/limews.md) (c/manarice)
   - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
