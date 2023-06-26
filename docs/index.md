@@ -1,6 +1,7 @@
 # Whitespace assembly
 
 - [Parsing any dialect](parsing.md)
+- [Macros](macros.md)
 - [Mnemonics](mnemonics.md)
 - Dialects
   - [Whitelips](dialects/whitelips.md) (javascript/vii5ard-whitelips)
