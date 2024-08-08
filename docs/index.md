@@ -11,4 +11,5 @@
   - [Palaiologos](dialects/palaiologos.md) (c/kspalaiologos-asm2ws)
   - [Lime Whitespace](dialects/limews.md) (c/manarice)
   - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
+  - [voliva](dialects/voliva.md) (typescript/voliva-wsa)
   - [Other](dialects/other_dialects.md)
