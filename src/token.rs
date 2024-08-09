@@ -5,8 +5,8 @@ use std::borrow::Cow;
 use rug::Integer;
 
 // TODO:
-// - Whitelips and Lime macro definitions.
-// - Respace `@ifdef`.
+// - Whitelips, Lime, and Respace macro definitions.
+// - Respace `@define`.
 // - How to represent escapes in strings and chars?
 // - How to represent equivalent integers?
 
@@ -21,7 +21,7 @@ pub struct Token<'s> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TokenKind<'s> {
     /// Instruction or predefined macro mnemonic.
-    Mnemonic { mnemonic: Mnemonic },
+    Mnemonic(Mnemonic),
     /// Integer.
     Integer {
         value: Integer,
@@ -66,6 +66,8 @@ pub enum TokenKind<'s> {
     Space,
     /// Line terminator.
     LineTerm,
+    /// End of file.
+    Eof,
     /// Line comment (e.g., `//`).
     LineComment { start: &'s [u8], text: &'s [u8] },
     /// Block comment (e.g., `/* */`).
@@ -123,10 +125,32 @@ pub enum Mnemonic {
     /// Burghard `pushs`.
     PushString0,
 
+    /// Burghard `option`.
+    DefineOption,
+    /// Burghard `ifoption` and Respace `@ifdef`.
+    IfOption,
+    /// Burghard `elseifoption`.
+    ElseIfOption,
+    /// Burghard `elseoption` and Respace `@else`.
+    ElseOption,
+    /// Burghard `endoption` and Respace `@endif`.
+    EndOption,
+
+    /// Burghard `include`.
+    BurghardInclude,
+    /// Respace `@include`.
+    RespaceInclude,
+
+    /// Burghard `valueinteger`.
+    BurghardValueInteger,
+    /// Burghard `valuestring`.
+    BurghardValueString,
+
     /// Burghard `debug_printstack`.
-    BurghardDebugStack,
+    BurghardPrintStack,
     /// Burghard `debug_printheap`.
-    BurghardDebugHeap,
+    BurghardPrintHeap,
+
     /// Burghard `jumpp`.
     BurghardJmpP,
     /// Burghard `jumpnp` or `jumppn`.
@@ -137,22 +161,6 @@ pub enum Mnemonic {
     BurghardJmpPZ,
     /// Burghard `test`.
     BurghardTest,
-    /// Burghard `valueinteger`.
-    BurghardValueInteger,
-    /// Burghard `valuestring`.
-    BurghardValueString,
-    /// Burghard `include`.
-    BurghardInclude,
-    /// Burghard `option`.
-    BurghardOption,
-    /// Burghard `ifoption`.
-    BurghardIfOption,
-    /// Burghard `elseifoption`.
-    BurghardElseIfOption,
-    /// Burghard `elseoption`.
-    BurghardElseOption,
-    /// Burghard `endoption`.
-    BurghardEndOption,
 }
 
 /// The sign of an integer literal.
