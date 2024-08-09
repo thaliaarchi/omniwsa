@@ -7,7 +7,8 @@
 
 ## Parsing
 
-The file must be valid UTF-8.
+The file must be valid UTF-8. It is decoded strictly (in effect), because
+everything is demanded before it starts writing to a file.
 
 The file is first preprocessed by removing comments, that are outside of
 strings. Comments are of the form:

@@ -10,7 +10,8 @@ use rug::Integer;
 // - How to represent escapes in strings and chars?
 // - How to represent equivalent integers?
 
-/// A lexical token in interoperable Whitespace assembly.
+/// A lexical token, a unit of scanned text, in interoperable Whitespace
+/// assembly.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Token<'s> {
     pub text: &'s [u8],
