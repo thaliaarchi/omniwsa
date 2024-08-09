@@ -4,7 +4,6 @@ use crate::token::Token;
 
 // TODO:
 // - Macro definitions and invocations.
-// - Include comments.
 
 /// A node in a concrete syntax tree for interoperable Whitespace assembly.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -30,24 +29,42 @@ pub enum Cst<'s> {
 /// Instruction.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inst<'s> {
-    pub space_before: Option<Token<'s>>,
+    pub space_before: Space<'s>,
     pub mnemonic: Token<'s>,
-    pub args: Vec<(Sep<'s>, Token<'s>)>,
-    pub space_after: Option<Token<'s>>,
-    pub inst_sep: Token<'s>,
+    pub args: Vec<(ArgSep<'s>, Token<'s>)>,
+    pub inst_sep: InstSep<'s>,
+}
+
+/// A sequence of whitespace and block comments.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Space<'s> {
+    pub tokens: Vec<Token<'s>>,
+}
+
+/// A token surrounded by optional whitespace.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Spaced<'s, T> {
+    pub space_before: Space<'s>,
+    pub inner: T,
+    pub space_after: Space<'s>,
 }
 
 /// Argument separator.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Sep<'s> {
-    Space {
-        space: Token<'s>,
+pub enum ArgSep<'s> {
+    Space(Space<'s>),
+    Sep(Spaced<'s, Token<'s>>),
+}
+
+/// Instruction separator.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum InstSep<'s> {
+    LineTerm {
+        space_before: Space<'s>,
+        line_comment: Option<Token<'s>>,
+        line_term: Token<'s>,
     },
-    Sep {
-        space_before: Option<Token<'s>>,
-        sep: Token<'s>,
-        space_after: Option<Token<'s>>,
-    },
+    Sep(Spaced<'s, Token<'s>>),
 }
 
 /// A Whitespace assembly dialect.
@@ -61,4 +78,34 @@ pub enum Dialect {
     Respace,
     Voliva,
     Whitelips,
+}
+
+impl Dialect {
+    /// The name of this dialect.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Dialect::Burghard => "Burghard",
+            Dialect::Lime => "Lime",
+            Dialect::LittleBugHunter => "littleBugHunter",
+            Dialect::Palaiologos => "Palaiologos",
+            Dialect::Rdebath => "rdebath",
+            Dialect::Respace => "Respace",
+            Dialect::Voliva => "voliva",
+            Dialect::Whitelips => "Whitelips",
+        }
+    }
+
+    /// A shortened name for this dialect, for use in filenames.
+    pub fn short_name(&self) -> &'static str {
+        match self {
+            Dialect::Burghard => "burg",
+            Dialect::Lime => "lime",
+            Dialect::LittleBugHunter => "lbug",
+            Dialect::Palaiologos => "palo",
+            Dialect::Rdebath => "rdb",
+            Dialect::Respace => "resp",
+            Dialect::Voliva => "voli",
+            Dialect::Whitelips => "wlip",
+        }
+    }
 }

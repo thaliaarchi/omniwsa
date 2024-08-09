@@ -71,6 +71,8 @@ pub enum TokenKind<'s> {
     /// Line comment (e.g., `//`).
     LineComment { start: &'s [u8], text: &'s [u8] },
     /// Block comment (e.g., `/* */`).
+    /// Sequences ignored due to a bug in the reference parser also count as
+    /// block comments (e.g., voliva ignored arguments).
     BlockComment {
         start: &'s [u8],
         text: &'s [u8],
@@ -88,10 +90,8 @@ pub enum TokenKind<'s> {
         inner: Box<Token<'s>>,
         close: &'s [u8],
     },
-    /// A sequence ignored due to a bug in the reference parser.
-    Ignore,
     /// An erroneous sequence.
-    Error,
+    Error(TokenError),
 }
 
 /// Instruction or predefined macro mnemonic.
@@ -194,6 +194,13 @@ pub enum StringKind {
     Quoted,
     /// A string not enclosed in quotes (Burghard).
     Unquoted,
+}
+
+/// A lexical error.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TokenError {
+    /// Invalid UTF-8 sequence (Burghard).
+    InvalidUtf8,
 }
 
 impl<'s> Token<'s> {
