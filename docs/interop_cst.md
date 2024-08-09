@@ -18,11 +18,15 @@ Token kinds:
 - Character
 - String
 - Identifier
+- Label colon
+- Label definition
+- Label reference
 - Instruction separator
 - Argument separator
 - Whitespace
 - Line terminator
-- Comment
+- Line comment
+- Block comment
 - Spliced token (a token interspersed with block comments; Burghard)
 - Ignored text (a sequence ignored due to a bug; e.g., voliva ignored arguments)
 - Error

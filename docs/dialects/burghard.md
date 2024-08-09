@@ -83,9 +83,9 @@ inst ::=
     | "jumpz" label
     | "jumpn" label
     | "jumpp" label
+    | ("jumpnp" | "jumppn") label
     | "jumpnz" label
     | "jumppz" label
-    | ("jumpnp" | "jumppn") label
     | "ret"
     | "exit"
     | "outc"

@@ -1,0 +1,12 @@
+[package]
+name = "omniwsa"
+version = "0.1.0"
+authors = ["Thalia Archibald <thalia@archibald.dev>"]
+edition = "2021"
+description = "An assembler for all dialects of Whitespace assembly"
+license = "MPL-2.0"
+keywords = ["whitespace", "assembler"]
+categories = ["compilers"]
+
+[dependencies]
+rug = { version = "1.25.0", features = ["integer", "std"], default-features = false }
