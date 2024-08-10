@@ -1,5 +1,7 @@
 //! Generic token scanning.
 
+use crate::token::{Token, TokenError, TokenKind};
+
 /// A scanner for generically reading tokens from UTF-8 text.
 #[derive(Clone, Debug)]
 pub struct Utf8Scanner<'s> {
@@ -51,12 +53,6 @@ impl<'s> Utf8Scanner<'s> {
         self.src[self.end.offset..].chars().next().unwrap()
     }
 
-    /// Returns the next byte without consuming it.
-    #[inline]
-    pub fn peek_byte(&mut self) -> u8 {
-        self.src.as_bytes()[self.end.offset]
-    }
-
     /// Consumes and returns the next char.
     #[inline]
     pub fn next_char(&mut self) -> char {
@@ -70,39 +66,98 @@ impl<'s> Utf8Scanner<'s> {
         ch
     }
 
-    /// Consumes and returns the next byte.
+    /// Consumes the next char if it matches the predicate.
     #[inline]
-    pub fn next_byte(&mut self) -> u8 {
-        let ch = self.peek_byte();
-        self.end.offset += 1;
-        self.end.col += 1;
-        if ch == b'\n' {
-            self.end.line += 1;
-            self.end.col = 1;
+    pub fn bump_if<F: Fn(char) -> bool>(&mut self, predicate: F) -> bool {
+        if !self.eof() && predicate(self.peek_char()) {
+            self.next_char();
+            true
+        } else {
+            false
         }
-        ch
     }
 
     /// Consumes chars while they match the predicate.
     #[inline]
-    pub fn bump_chars_while<F: Fn(char) -> bool>(&mut self, predicate: F) {
+    pub fn bump_while<F: Fn(char) -> bool>(&mut self, predicate: F) {
         while !self.eof() && predicate(self.peek_char()) {
             self.next_char();
         }
     }
 
-    /// Consumes bytes while they match the predicate.
-    #[inline]
-    pub fn bump_bytes_while<F: Fn(u8) -> bool>(&mut self, predicate: F) {
-        while !self.eof() && predicate(self.peek_byte()) {
-            self.next_byte();
+    /// Consumes until the end of the line and returns a line comment token. The
+    /// cursor must start after the comment prefix.
+    pub fn line_comment(&mut self) -> Token<'s> {
+        let text_start = self.end.offset;
+        self.bump_while(|c| c != '\n');
+        let src = self.src.as_bytes();
+        self.wrap(TokenKind::LineComment {
+            prefix: &src[self.start.offset..text_start],
+            text: &src[text_start..self.end.offset],
+        })
+    }
+
+    /// Consumes a non-nested block comment. The cursor must start after the
+    /// opening sequence.
+    pub fn block_comment(&mut self, close: [u8; 2]) -> Token<'s> {
+        let text_start = self.end.offset;
+        let terminated = loop {
+            let Some(&chunk) = self.rest().as_bytes().first_chunk::<2>() else {
+                self.end.offset = self.src.len();
+                break false;
+            };
+            if chunk == close {
+                break true;
+            }
+            self.next_char();
+        };
+        let text_end = self.end.offset;
+        let src = self.src.as_bytes();
+        let mut token = TokenKind::BlockComment {
+            open: &src[self.start.offset..text_start],
+            text: &src[text_start..text_end],
+            close: &src[text_end..self.end.offset],
+            nested: false,
+        };
+        if !terminated {
+            token = TokenKind::Error(TokenError::UnterminatedBlockComment {
+                comment: Box::new(self.wrap(token)),
+            });
         }
+        self.wrap(token)
+    }
+
+    /// Wraps a `TokenKind` with the text of the current token.
+    #[inline]
+    pub fn wrap(&self, kind: TokenKind<'s>) -> Token<'s> {
+        Token {
+            text: self.text().as_bytes(),
+            kind,
+        }
+    }
+
+    /// Starts a new token.
+    #[inline]
+    pub fn reset(&mut self) {
+        self.start = self.end;
+    }
+
+    /// Returns the full source text.
+    #[inline]
+    pub fn src(&self) -> &'s str {
+        self.src
     }
 
     /// Returns the text for the previous token.
     #[inline]
     pub fn text(&self) -> &'s str {
         &self.src[self.start.offset..self.end.offset]
+    }
+
+    /// Returns the remaining text.
+    #[inline]
+    pub fn rest(&self) -> &'s str {
+        &self.src[self.end.offset..]
     }
 
     /// Returns the start position of the previous token.

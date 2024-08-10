@@ -2,7 +2,10 @@
 
 use std::str;
 
-use crate::scan::Utf8Scanner;
+use crate::{
+    scan::Utf8Scanner,
+    token::{Token, TokenError, TokenKind},
+};
 
 /// A lexer for tokens in the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -30,6 +33,43 @@ impl<'s> Lexer<'s> {
             scan: Utf8Scanner::new(valid),
             invalid,
             rest,
+        }
+    }
+
+    /// Scans the next token from the source.
+    pub fn next_token(&mut self) -> Token<'s> {
+        self.scan.reset();
+
+        if self.scan.eof() {
+            if !self.invalid.is_empty() {
+                let text = self.invalid;
+                self.invalid = b"";
+                return Token::new(text, TokenKind::Error(TokenError::InvalidUtf8));
+            } else if !self.rest.is_empty() {
+                let text = self.rest;
+                self.rest = b"";
+                return Token::new(
+                    text,
+                    TokenKind::BlockComment {
+                        open: b"",
+                        text,
+                        close: b"",
+                        nested: false,
+                    },
+                );
+            } else {
+                return Token::new(b"", TokenKind::Eof);
+            }
+        }
+
+        match self.scan.next_char() {
+            ';' => self.scan.line_comment(),
+            '-' if self.scan.bump_if(|c| c == '-') => self.scan.line_comment(),
+            // TODO: Make nested.
+            '{' if self.scan.bump_if(|c| c == '-') => self.scan.block_comment(*b"-}"),
+            _ => {
+                todo!()
+            }
         }
     }
 }

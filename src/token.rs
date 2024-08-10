@@ -70,14 +70,14 @@ pub enum TokenKind<'s> {
     /// End of file.
     Eof,
     /// Line comment (e.g., `//`).
-    LineComment { start: &'s [u8], text: &'s [u8] },
+    LineComment { prefix: &'s [u8], text: &'s [u8] },
     /// Block comment (e.g., `/* */`).
     /// Sequences ignored due to a bug in the reference parser also count as
     /// block comments (e.g., voliva ignored arguments).
     BlockComment {
-        start: &'s [u8],
+        open: &'s [u8],
         text: &'s [u8],
-        end: &'s [u8],
+        close: &'s [u8],
         nested: bool,
     },
     /// Tokens spliced by block comments (Burghard).
@@ -92,7 +92,7 @@ pub enum TokenKind<'s> {
         close: &'s [u8],
     },
     /// An erroneous sequence.
-    Error(TokenError),
+    Error(TokenError<'s>),
 }
 
 /// Instruction or predefined macro mnemonic.
@@ -198,13 +198,19 @@ pub enum StringKind {
 }
 
 /// A lexical error.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TokenError {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TokenError<'s> {
+    /// Unterminated block comment.
+    UnterminatedBlockComment { comment: Box<Token<'s>> },
     /// Invalid UTF-8 sequence (Burghard).
     InvalidUtf8,
 }
 
 impl<'s> Token<'s> {
+    pub fn new(text: &'s [u8], kind: TokenKind<'s>) -> Self {
+        Token { text, kind }
+    }
+
     /// The text of this token with splices and non-semantic quotes processed.
     pub fn text(&self) -> &[u8] {
         match &self.kind {
