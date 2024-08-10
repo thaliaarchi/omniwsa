@@ -35,7 +35,7 @@ line ::=
     | word? (space | string) line
     | lf
 token ::= word | string
-word ::= [^ "]+
+word ::= [^ \t"]+
 string ::= "\"" [^"]* "\""
 space ::= [ \t]+
 lf ::= "\n" | EOF

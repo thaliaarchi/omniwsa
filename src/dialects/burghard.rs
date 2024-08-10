@@ -4,7 +4,7 @@ use std::str;
 
 use crate::{
     scan::Utf8Scanner,
-    token::{Token, TokenError, TokenKind},
+    token::{StringKind, Token, TokenError, TokenKind},
 };
 
 /// A lexer for tokens in the Burghard Whitespace assembly dialect.
@@ -37,9 +37,10 @@ impl<'s> Lexer<'s> {
 
     /// Scans the next token from the source.
     pub fn next_token(&mut self) -> Token<'s> {
-        self.scan.reset();
+        let scan = &mut self.scan;
+        scan.reset();
 
-        if self.scan.eof() {
+        if scan.eof() {
             if let Some((rest, error_len)) = self.invalid_utf8.take() {
                 return Token::new(
                     rest,
@@ -49,13 +50,31 @@ impl<'s> Lexer<'s> {
             return Token::new(b"", TokenKind::Eof);
         }
 
-        match self.scan.next_char() {
-            ';' => self.scan.line_comment(),
-            '-' if self.scan.bump_if(|c| c == '-') => self.scan.line_comment(),
-            // TODO: Make nested.
-            '{' if self.scan.bump_if(|c| c == '-') => self.scan.block_comment(*b"-}"),
+        match scan.next_char() {
+            ';' => scan.line_comment(),
+            '-' if scan.bump_if(|c| c == '-') => scan.line_comment(),
+            '{' if scan.bump_if(|c| c == '-') => scan.nested_block_comment(*b"{-", *b"-}"),
+            '"' => scan.string_no_escape(),
+            ' ' | '\t' => {
+                scan.bump_while(|c| c == ' ' || c == '\t');
+                scan.wrap(TokenKind::Space)
+            }
+            '\n' => scan.wrap(TokenKind::LineTerm),
             _ => {
-                todo!()
+                while !scan.eof() {
+                    let rest = scan.rest().as_bytes();
+                    match rest[0] {
+                        b';' | b' ' | b'\t' | b'\n' => break,
+                        b'-' | b'{' if rest.get(1) == Some(&b'-') => break,
+                        _ => {}
+                    }
+                    scan.next_char();
+                }
+                scan.wrap(TokenKind::String {
+                    unquoted: scan.text().as_bytes().into(),
+                    kind: StringKind::Unquoted,
+                    terminated: true,
+                })
             }
         }
     }

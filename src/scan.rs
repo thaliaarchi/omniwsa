@@ -1,6 +1,6 @@
 //! Generic token scanning.
 
-use crate::token::{Token, TokenKind};
+use crate::token::{StringKind, Token, TokenKind};
 
 /// A scanner for generically reading tokens from UTF-8 text.
 #[derive(Clone, Debug)]
@@ -85,8 +85,21 @@ impl<'s> Utf8Scanner<'s> {
         }
     }
 
-    /// Consumes until the end of the line and returns a line comment token. The
-    /// cursor must start after the comment prefix.
+    /// Consumes a string without escapes. The cursor must start after the open
+    /// `"`.
+    pub fn string_no_escape(&mut self) -> Token<'s> {
+        let text_start = self.end.offset;
+        self.bump_while(|c| c != '"');
+        let text_end = self.end.offset;
+        let terminated = self.bump_if(|c| c == '"');
+        self.wrap(TokenKind::String {
+            unquoted: self.src.as_bytes()[text_start..text_end].into(),
+            kind: StringKind::Quoted,
+            terminated,
+        })
+    }
+
+    /// Consumes a line comment. The cursor must start after the comment prefix.
     pub fn line_comment(&mut self) -> Token<'s> {
         let text_start = self.end.offset;
         self.bump_while(|c| c != '\n');
@@ -101,23 +114,56 @@ impl<'s> Utf8Scanner<'s> {
     /// opening sequence.
     pub fn block_comment(&mut self, close: [u8; 2]) -> Token<'s> {
         let text_start = self.end.offset;
-        let terminated = loop {
-            let Some(&chunk) = self.rest().as_bytes().first_chunk::<2>() else {
+        let (text_end, terminated) = loop {
+            let rest = self.rest().as_bytes();
+            if rest.len() < 2 {
                 self.end.offset = self.src.len();
-                break false;
-            };
-            if chunk == close {
-                break true;
+                break (self.end.offset, false);
+            } else if rest[..2] == close {
+                self.end.offset += 2;
+                break (self.end.offset - 2, true);
             }
             self.next_char();
         };
-        let text_end = self.end.offset;
         let src = self.src.as_bytes();
         self.wrap(TokenKind::BlockComment {
             open: &src[self.start.offset..text_start],
             text: &src[text_start..text_end],
             close: &src[text_end..self.end.offset],
             nested: false,
+            terminated,
+        })
+    }
+
+    /// Consumes a nested block comment. The cursor must start after the opening
+    /// sequence.
+    pub fn nested_block_comment(&mut self, open: [u8; 2], close: [u8; 2]) -> Token<'s> {
+        let mut level = 1;
+        let text_start = self.end.offset;
+        let (text_end, terminated) = loop {
+            let rest = self.rest().as_bytes();
+            if rest.len() < 2 {
+                self.end.offset = self.src.len();
+                break (self.end.offset, false);
+            } else if rest[..2] == close {
+                self.end.offset += 2;
+                level -= 1;
+                if level == 0 {
+                    break (self.end.offset - 2, true);
+                }
+            } else if rest[..2] == open {
+                self.end.offset += 2;
+                level += 1;
+            } else {
+                self.next_char();
+            }
+        };
+        let src = self.src.as_bytes();
+        self.wrap(TokenKind::BlockComment {
+            open: &src[self.start.offset..text_start],
+            text: &src[text_start..text_end],
+            close: &src[text_end..self.end.offset],
+            nested: true,
             terminated,
         })
     }
@@ -153,6 +199,12 @@ impl<'s> Utf8Scanner<'s> {
     #[inline]
     pub fn rest(&self) -> &'s str {
         &self.src[self.end.offset..]
+    }
+
+    /// Returns the current offset into the source.
+    #[inline]
+    pub fn offset(&self) -> usize {
+        self.end.offset
     }
 
     /// Returns the start position of the previous token.
