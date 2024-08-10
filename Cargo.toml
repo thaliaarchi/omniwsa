@@ -9,4 +9,5 @@ keywords = ["whitespace", "assembler"]
 categories = ["compilers"]
 
 [dependencies]
+bstr = "1.10.0"
 rug = { version = "1.25.0", features = ["integer", "std"], default-features = false }

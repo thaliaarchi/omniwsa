@@ -1,5 +1,7 @@
 //! Concrete syntax tree for interoperable Whitespace assembly.
 
+use std::fmt::{self, Debug, Formatter};
+
 use crate::token::{Token, TokenKind};
 
 // TODO:
@@ -38,7 +40,7 @@ pub struct Inst<'s> {
 }
 
 /// A sequence of whitespace and block comments.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Space<'s> {
     pub tokens: Vec<Token<'s>>,
 }
@@ -145,5 +147,12 @@ impl Dialect {
             Dialect::Voliva => "voli",
             Dialect::Whitelips => "wlip",
         }
+    }
+}
+
+impl Debug for Space<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Space ")?;
+        f.debug_list().entries(&self.tokens).finish()
     }
 }

@@ -1,7 +1,11 @@
 //! Lexical tokens for interoperable Whitespace assembly.
 
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    fmt::{self, Debug, Formatter},
+};
 
+use bstr::ByteSlice;
 use rug::Integer;
 
 // TODO:
@@ -12,14 +16,14 @@ use rug::Integer;
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Token<'s> {
     pub text: Cow<'s, [u8]>,
     pub kind: TokenKind<'s>,
 }
 
 /// A kind of token.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum TokenKind<'s> {
     /// Instruction or predefined macro mnemonic.
     Mnemonic(Mnemonic),
@@ -254,6 +258,102 @@ impl<'s> Token<'s> {
             } => !terminated || inner.is_error(),
             TokenKind::Error(_) => true,
             _ => false,
+        }
+    }
+}
+
+impl Debug for Token<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Token")
+            .field(&self.text.as_bstr())
+            .field(&self.kind)
+            .finish()
+    }
+}
+
+impl Debug for TokenKind<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            TokenKind::Mnemonic(mnemonic) => f.debug_tuple("Mnemonic").field(mnemonic).finish(),
+            TokenKind::Integer { value, sign, base } => f
+                .debug_struct("Integer")
+                .field("value", value)
+                .field("sign", sign)
+                .field("base", base)
+                .finish(),
+            TokenKind::Char { value, terminated } => f
+                .debug_struct("Char")
+                .field("value", value)
+                .field("terminated", terminated)
+                .finish(),
+            TokenKind::String {
+                unquoted,
+                kind,
+                terminated,
+            } => f
+                .debug_struct("String")
+                .field("unquoted", &unquoted.as_bstr())
+                .field("kind", kind)
+                .field("terminated", terminated)
+                .finish(),
+            TokenKind::Ident { sigil, ident } => f
+                .debug_struct("Ident")
+                .field("sigil", &sigil.as_bstr())
+                .field("ident", &ident.as_bstr())
+                .finish(),
+            TokenKind::LabelColon => write!(f, "LabelColon"),
+            TokenKind::LabelDef { sigil, label } => f
+                .debug_struct("LabelDef")
+                .field("sigil", &sigil.as_bstr())
+                .field("label", &label.as_bstr())
+                .finish(),
+            TokenKind::LabelRef { sigil, label } => f
+                .debug_struct("LabelRef")
+                .field("sigil", &sigil.as_bstr())
+                .field("label", &label.as_bstr())
+                .finish(),
+            TokenKind::InstSep => write!(f, "InstSep"),
+            TokenKind::ArgSep => write!(f, "ArgSep"),
+            TokenKind::Space => write!(f, "Space"),
+            TokenKind::LineTerm => write!(f, "LineTerm"),
+            TokenKind::Eof => write!(f, "Eof"),
+            TokenKind::LineComment { prefix, text } => f
+                .debug_struct("LineComment")
+                .field("prefix", &prefix.as_bstr())
+                .field("text", &text.as_bstr())
+                .finish(),
+            TokenKind::BlockComment {
+                open,
+                text,
+                close,
+                nested,
+                terminated,
+            } => f
+                .debug_struct("BlockComment")
+                .field("open", &open.as_bstr())
+                .field("text", &text.as_bstr())
+                .field("close", &close.as_bstr())
+                .field("nested", nested)
+                .field("terminated", terminated)
+                .finish(),
+            TokenKind::Spliced { tokens, spliced } => f
+                .debug_struct("Spliced")
+                .field("tokens", tokens)
+                .field("spliced", spliced)
+                .finish(),
+            TokenKind::Quoted {
+                open,
+                inner,
+                close,
+                terminated,
+            } => f
+                .debug_struct("Quoted")
+                .field("open", &open.as_bstr())
+                .field("inner", inner)
+                .field("close", &close.as_bstr())
+                .field("terminated", terminated)
+                .finish(),
+            TokenKind::Error(err) => f.debug_tuple("Error").field(err).finish(),
         }
     }
 }
