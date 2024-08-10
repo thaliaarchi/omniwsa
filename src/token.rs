@@ -14,7 +14,7 @@ use rug::Integer;
 /// assembly.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Token<'s> {
-    pub text: &'s [u8],
+    pub text: Cow<'s, [u8]>,
     pub kind: TokenKind<'s>,
 }
 
@@ -83,9 +83,10 @@ pub enum TokenKind<'s> {
         terminated: bool,
     },
     /// Tokens spliced by block comments (Burghard).
-    Splice {
+    Spliced {
         tokens: Vec<Token<'s>>,
-        spliced_text: Vec<u8>,
+        /// The effective token.
+        spliced: Box<Token<'s>>,
     },
     /// A token enclosed in non-semantic quotes (Burghard).
     Quoted {
@@ -165,6 +166,9 @@ pub enum Mnemonic {
     BurghardJmpPZ,
     /// Burghard `test`.
     BurghardTest,
+
+    /// An invalid mnemonic.
+    Error,
 }
 
 /// The sign of an integer literal.
@@ -212,16 +216,21 @@ pub enum TokenError {
 
 impl<'s> Token<'s> {
     /// Constructs a new token.
-    pub fn new(text: &'s [u8], kind: TokenKind<'s>) -> Self {
-        Token { text, kind }
+    #[inline]
+    pub fn new<T: Into<Cow<'s, [u8]>>>(text: T, kind: TokenKind<'s>) -> Self {
+        Token {
+            text: text.into(),
+            kind,
+        }
     }
 
     /// The text of this token with splices and non-semantic quotes processed.
     pub fn text(&self) -> &[u8] {
         match &self.kind {
-            TokenKind::Splice { spliced_text, .. } => spliced_text,
-            TokenKind::Quoted { inner, .. } => inner.text(),
-            _ => self.text,
+            TokenKind::Spliced { spliced: inner, .. } | TokenKind::Quoted { inner, .. } => {
+                inner.text()
+            }
+            _ => &self.text,
         }
     }
 
@@ -239,7 +248,7 @@ impl<'s> Token<'s> {
             TokenKind::Char { terminated, .. }
             | TokenKind::String { terminated, .. }
             | TokenKind::BlockComment { terminated, .. } => !terminated,
-            TokenKind::Splice { tokens, .. } => tokens.iter().any(Token::is_error),
+            TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::is_error),
             TokenKind::Quoted {
                 inner, terminated, ..
             } => !terminated || inner.is_error(),

@@ -172,7 +172,7 @@ impl<'s> Utf8Scanner<'s> {
     #[inline]
     pub fn wrap(&self, kind: TokenKind<'s>) -> Token<'s> {
         Token {
-            text: self.text().as_bytes(),
+            text: self.text().as_bytes().into(),
             kind,
         }
     }

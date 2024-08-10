@@ -1,24 +1,45 @@
 //! Parsing for the Burghard Whitespace assembly dialect.
 
-use std::str;
+use std::{mem, str};
 
 use crate::{
     scan::Utf8Scanner,
+    syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
     token::{StringKind, Token, TokenError, TokenKind},
 };
 
+// TODO:
+// - Lex tokens in contexts: e.g., mnemonic, number, string, and ident.
+// - Splice tokens.
+// - Resolve mnemonics.
+// - Structure option blocks.
+
+impl<'s> Cst<'s> {
+    /// Parses a program in the Burghard Whitespace assembly dialect.
+    pub fn parse_burghard(src: &'s [u8]) -> Self {
+        Parser::new(src).parse()
+    }
+}
+
 /// A lexer for tokens in the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
-pub struct Lexer<'s> {
+struct Lexer<'s> {
     scan: Utf8Scanner<'s>,
     /// The remaining text at the first UTF-8 error and the length of the
     /// invalid sequence.
     invalid_utf8: Option<(&'s [u8], usize)>,
 }
 
+/// A parser for the Burghard Whitespace assembly dialect.
+#[derive(Clone, Debug)]
+struct Parser<'s> {
+    lex: Lexer<'s>,
+    tok: Token<'s>,
+}
+
 impl<'s> Lexer<'s> {
     /// Constructs a new lexer for Burghard-dialect source text.
-    pub fn new(src: &'s [u8]) -> Self {
+    fn new(src: &'s [u8]) -> Self {
         let (src, invalid_utf8) = match str::from_utf8(src) {
             Ok(src) => (src, None),
             Err(err) => {
@@ -36,7 +57,7 @@ impl<'s> Lexer<'s> {
     }
 
     /// Scans the next token from the source.
-    pub fn next_token(&mut self) -> Token<'s> {
+    fn next_token(&mut self) -> Token<'s> {
         let scan = &mut self.scan;
         scan.reset();
 
@@ -76,6 +97,109 @@ impl<'s> Lexer<'s> {
                     terminated: true,
                 })
             }
+        }
+    }
+}
+
+impl<'s> Parser<'s> {
+    /// Constructs a new parser for Burghard-dialect source text.
+    fn new(src: &'s [u8]) -> Self {
+        let mut lex = Lexer::new(src);
+        let tok = lex.next_token();
+        Parser { lex, tok }
+    }
+
+    /// Parses the entire source.
+    fn parse(&mut self) -> Cst<'s> {
+        let mut nodes = Vec::new();
+        while let Some(inst) = self.next_inst() {
+            nodes.push(inst);
+        }
+        Cst::Dialect {
+            dialect: Dialect::Burghard,
+            inner: Box::new(Cst::Block { nodes }),
+        }
+    }
+
+    /// Parses the next instruction.
+    fn next_inst(&mut self) -> Option<Cst<'s>> {
+        if self.eof() {
+            return None;
+        }
+        let space_before = self.space();
+        let mnemonic = match self.curr() {
+            TokenKind::String { .. } => self.advance(),
+            _ => return Some(Cst::Empty(self.line_term_sep(space_before))),
+        };
+        let mut args = Vec::new();
+        let space_after = loop {
+            let space = self.space();
+            let arg = match self.curr() {
+                TokenKind::String { .. } => self.advance(),
+                _ => break space,
+            };
+            args.push((ArgSep::Space(space), arg));
+        };
+        Some(Cst::Inst(Inst {
+            space_before,
+            mnemonic,
+            args,
+            inst_sep: self.line_term_sep(space_after),
+        }))
+    }
+
+    /// Returns the kind of the current token.
+    fn curr(&self) -> &TokenKind<'s> {
+        &self.tok.kind
+    }
+
+    /// Returns the current token and advances to the next token.
+    fn advance(&mut self) -> Token<'s> {
+        mem::replace(&mut self.tok, self.lex.next_token())
+    }
+
+    /// Returns whether the parser is at EOF.
+    fn eof(&self) -> bool {
+        matches!(self.curr(), TokenKind::Eof)
+    }
+
+    /// Consumes space and block comment tokens.
+    fn space(&mut self) -> Space<'s> {
+        let mut space = Space::new();
+        while matches!(
+            self.curr(),
+            TokenKind::Space | TokenKind::BlockComment { .. }
+        ) {
+            space.push(self.advance());
+        }
+        space
+    }
+
+    /// Consumes a line comment token.
+    fn line_comment(&mut self) -> Option<Token<'s>> {
+        match self.curr() {
+            TokenKind::LineComment { .. } => Some(self.advance()),
+            _ => None,
+        }
+    }
+
+    /// Consumes a line terminator, EOF, or invalid UTF-8 error token.
+    fn line_term(&mut self) -> Option<Token<'s>> {
+        match self.curr() {
+            TokenKind::LineTerm
+            | TokenKind::Eof
+            | TokenKind::Error(TokenError::InvalidUtf8 { .. }) => Some(self.advance()),
+            _ => None,
+        }
+    }
+
+    /// Consumes an optional line comment, followed by a line terminator (or EOF
+    /// or invalid UTF-8 error). Panics if not at such a token.
+    fn line_term_sep(&mut self, space_before: Space<'s>) -> InstSep<'s> {
+        InstSep::LineTerm {
+            space_before,
+            line_comment: self.line_comment(),
+            line_term: self.line_term().expect("line terminator"),
         }
     }
 }

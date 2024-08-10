@@ -1,6 +1,6 @@
 //! Concrete syntax tree for interoperable Whitespace assembly.
 
-use crate::token::Token;
+use crate::token::{Token, TokenKind};
 
 // TODO:
 // - Macro definitions and invocations.
@@ -10,6 +10,8 @@ use crate::token::Token;
 pub enum Cst<'s> {
     /// Instruction.
     Inst(Inst<'s>),
+    /// A line with no instructions.
+    Empty(InstSep<'s>),
     /// Sequence of nodes.
     Block { nodes: Vec<Cst<'s>> },
     /// Conditional compilation
@@ -78,6 +80,42 @@ pub enum Dialect {
     Respace,
     Voliva,
     Whitelips,
+}
+
+impl<'s> Space<'s> {
+    /// Constructs a new, empty space sequence.
+    pub fn new() -> Self {
+        Space { tokens: Vec::new() }
+    }
+
+    /// Pushes a whitespace or block comment token to the sequence.
+    pub fn push(&mut self, token: Token<'s>) {
+        Self::assert_space(&token);
+        self.tokens.push(token)
+    }
+
+    fn assert_space(token: &Token<'s>) {
+        debug_assert!(matches!(
+            token.kind,
+            TokenKind::Space | TokenKind::BlockComment { .. }
+        ));
+    }
+}
+
+impl<'s> From<Vec<Token<'s>>> for Space<'s> {
+    fn from(tokens: Vec<Token<'s>>) -> Self {
+        tokens.iter().for_each(Self::assert_space);
+        Space { tokens }
+    }
+}
+
+impl<'s> From<Token<'s>> for Space<'s> {
+    fn from(token: Token<'s>) -> Self {
+        Self::assert_space(&token);
+        Space {
+            tokens: vec![token],
+        }
+    }
 }
 
 impl Dialect {
