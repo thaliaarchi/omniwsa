@@ -11,28 +11,27 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Lexer<'s> {
     scan: Utf8Scanner<'s>,
-    /// A sequence of invalid UTF-8.
-    invalid: &'s [u8],
-    /// Text following invalid UTF-8.
-    rest: &'s [u8],
+    /// The remaining text at the first UTF-8 error and the length of the
+    /// invalid sequence.
+    invalid_utf8: Option<(&'s [u8], usize)>,
 }
 
 impl<'s> Lexer<'s> {
     /// Constructs a new lexer for Burghard-dialect source text.
     pub fn new(src: &'s [u8]) -> Self {
-        let (valid, invalid, rest) = match str::from_utf8(src) {
-            Ok(src) => (src, &b""[..], &b""[..]),
+        let (src, invalid_utf8) = match str::from_utf8(src) {
+            Ok(src) => (src, None),
             Err(err) => {
                 let (valid, rest) = src.split_at(err.valid_up_to());
-                let (invalid, rest) = rest.split_at(err.error_len().unwrap_or(rest.len()));
+                let error_len = err.error_len().unwrap_or(rest.len());
                 // SAFETY: This sequence has been validated as UTF-8.
-                (unsafe { str::from_utf8_unchecked(valid) }, invalid, rest)
+                let valid = unsafe { str::from_utf8_unchecked(valid) };
+                (valid, Some((rest, error_len)))
             }
         };
         Lexer {
-            scan: Utf8Scanner::new(valid),
-            invalid,
-            rest,
+            scan: Utf8Scanner::new(src),
+            invalid_utf8,
         }
     }
 
@@ -41,25 +40,13 @@ impl<'s> Lexer<'s> {
         self.scan.reset();
 
         if self.scan.eof() {
-            if !self.invalid.is_empty() {
-                let text = self.invalid;
-                self.invalid = b"";
-                return Token::new(text, TokenKind::Error(TokenError::InvalidUtf8));
-            } else if !self.rest.is_empty() {
-                let text = self.rest;
-                self.rest = b"";
+            if let Some((rest, error_len)) = self.invalid_utf8.take() {
                 return Token::new(
-                    text,
-                    TokenKind::BlockComment {
-                        open: b"",
-                        text,
-                        close: b"",
-                        nested: false,
-                    },
+                    rest,
+                    TokenKind::Error(TokenError::InvalidUtf8 { error_len }),
                 );
-            } else {
-                return Token::new(b"", TokenKind::Eof);
             }
+            return Token::new(b"", TokenKind::Eof);
         }
 
         match self.scan.next_char() {

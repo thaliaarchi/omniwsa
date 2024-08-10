@@ -30,11 +30,12 @@ pub enum TokenKind<'s> {
         base: IntegerBase,
     },
     /// Character.
-    Char { value: char },
+    Char { value: char, terminated: bool },
     /// String.
     String {
         unquoted: Cow<'s, [u8]>,
         kind: StringKind,
+        terminated: bool,
     },
     /// Identifier.
     Ident {
@@ -79,6 +80,7 @@ pub enum TokenKind<'s> {
         text: &'s [u8],
         close: &'s [u8],
         nested: bool,
+        terminated: bool,
     },
     /// Tokens spliced by block comments (Burghard).
     Splice {
@@ -90,9 +92,10 @@ pub enum TokenKind<'s> {
         open: &'s [u8],
         inner: Box<Token<'s>>,
         close: &'s [u8],
+        terminated: bool,
     },
     /// An erroneous sequence.
-    Error(TokenError<'s>),
+    Error(TokenError),
 }
 
 /// Instruction or predefined macro mnemonic.
@@ -199,14 +202,16 @@ pub enum StringKind {
 
 /// A lexical error.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TokenError<'s> {
-    /// Unterminated block comment.
-    UnterminatedBlockComment { comment: Box<Token<'s>> },
+pub enum TokenError {
     /// Invalid UTF-8 sequence (Burghard).
-    InvalidUtf8,
+    InvalidUtf8 {
+        /// Length of the invalid sequence.
+        error_len: usize,
+    },
 }
 
 impl<'s> Token<'s> {
+    /// Constructs a new token.
     pub fn new(text: &'s [u8], kind: TokenKind<'s>) -> Self {
         Token { text, kind }
     }
@@ -217,6 +222,29 @@ impl<'s> Token<'s> {
             TokenKind::Splice { spliced_text, .. } => spliced_text,
             TokenKind::Quoted { inner, .. } => inner.text(),
             _ => self.text,
+        }
+    }
+
+    /// Unwrap non-semantic quotes.
+    pub fn unquote(&self) -> &Token<'s> {
+        match &self.kind {
+            TokenKind::Quoted { inner, .. } => inner,
+            _ => self,
+        }
+    }
+
+    /// Returns whether the token is invalid.
+    pub fn is_error(&self) -> bool {
+        match &self.kind {
+            TokenKind::Char { terminated, .. }
+            | TokenKind::String { terminated, .. }
+            | TokenKind::BlockComment { terminated, .. } => !terminated,
+            TokenKind::Splice { tokens, .. } => tokens.iter().any(Token::is_error),
+            TokenKind::Quoted {
+                inner, terminated, ..
+            } => !terminated || inner.is_error(),
+            TokenKind::Error(_) => true,
+            _ => false,
         }
     }
 }

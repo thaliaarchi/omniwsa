@@ -1,6 +1,6 @@
 //! Generic token scanning.
 
-use crate::token::{Token, TokenError, TokenKind};
+use crate::token::{Token, TokenKind};
 
 /// A scanner for generically reading tokens from UTF-8 text.
 #[derive(Clone, Debug)]
@@ -113,18 +113,13 @@ impl<'s> Utf8Scanner<'s> {
         };
         let text_end = self.end.offset;
         let src = self.src.as_bytes();
-        let mut token = TokenKind::BlockComment {
+        self.wrap(TokenKind::BlockComment {
             open: &src[self.start.offset..text_start],
             text: &src[text_start..text_end],
             close: &src[text_end..self.end.offset],
             nested: false,
-        };
-        if !terminated {
-            token = TokenKind::Error(TokenError::UnterminatedBlockComment {
-                comment: Box::new(self.wrap(token)),
-            });
-        }
-        self.wrap(token)
+            terminated,
+        })
     }
 
     /// Wraps a `TokenKind` with the text of the current token.
