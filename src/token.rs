@@ -8,6 +8,8 @@ use std::{
 use bstr::ByteSlice;
 use rug::Integer;
 
+pub use crate::mnemonics::Mnemonic;
+
 // TODO:
 // - Whitelips, Lime, and Respace macro definitions.
 // - Respace `@define`.
@@ -101,78 +103,6 @@ pub enum TokenKind<'s> {
     },
     /// An erroneous sequence.
     Error(TokenError),
-}
-
-/// Instruction or predefined macro mnemonic.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Mnemonic {
-    Push,
-    Dup,
-    Copy,
-    Swap,
-    Drop,
-    Slide,
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
-    Store,
-    Retrieve,
-    Label,
-    Call,
-    Jmp,
-    Jz,
-    Jn,
-    Ret,
-    End,
-    Printc,
-    Printi,
-    Readc,
-    Readi,
-
-    /// Burghard `pushs`.
-    PushString0,
-
-    /// Burghard `option`.
-    DefineOption,
-    /// Burghard `ifoption` and Respace `@ifdef`.
-    IfOption,
-    /// Burghard `elseifoption`.
-    ElseIfOption,
-    /// Burghard `elseoption` and Respace `@else`.
-    ElseOption,
-    /// Burghard `endoption` and Respace `@endif`.
-    EndOption,
-
-    /// Burghard `include`.
-    BurghardInclude,
-    /// Respace `@include`.
-    RespaceInclude,
-
-    /// Burghard `valueinteger`.
-    BurghardValueInteger,
-    /// Burghard `valuestring`.
-    BurghardValueString,
-
-    /// Burghard `debug_printstack`.
-    BurghardPrintStack,
-    /// Burghard `debug_printheap`.
-    BurghardPrintHeap,
-
-    /// Burghard `jumpp`.
-    BurghardJmpP,
-    /// Burghard `jumpnp` or `jumppn`.
-    BurghardJmpNP,
-    /// Burghard `jumpnz`.
-    BurghardJmpNZ,
-    /// Burghard `jumppz`.
-    BurghardJmpPZ,
-    /// Burghard `test`.
-    BurghardTest,
-
-    /// An invalid mnemonic.
-    Error,
 }
 
 /// The sign of an integer literal.
