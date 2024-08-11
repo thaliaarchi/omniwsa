@@ -9,6 +9,7 @@ use bstr::ByteSlice;
 use rug::Integer;
 
 pub use crate::mnemonics::Mnemonic;
+use crate::syntax::HasError;
 
 // TODO:
 // - Whitelips, Lime, and Respace macro definitions.
@@ -187,9 +188,10 @@ impl<'s> Token<'s> {
             }
         }
     }
+}
 
-    /// Returns whether the token is invalid.
-    pub fn is_error(&self) -> bool {
+impl HasError for Token<'_> {
+    fn has_error(&self) -> bool {
         match &self.kind {
             TokenKind::Mnemonic(Mnemonic::Error) | TokenKind::Error(_) => true,
             TokenKind::Char { terminated, .. }
@@ -197,8 +199,8 @@ impl<'s> Token<'s> {
             | TokenKind::BlockComment { terminated, .. } => !terminated,
             TokenKind::Quoted {
                 inner, terminated, ..
-            } => !terminated || inner.is_error(),
-            TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::is_error),
+            } => !terminated || inner.has_error(),
+            TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::has_error),
             _ => false,
         }
     }

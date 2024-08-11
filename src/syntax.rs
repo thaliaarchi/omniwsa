@@ -84,6 +84,11 @@ pub enum Dialect {
     Whitelips,
 }
 
+pub trait HasError {
+    /// Returns whether this contains any syntax errors.
+    fn has_error(&self) -> bool;
+}
+
 impl<'s> Space<'s> {
     /// Constructs a new, empty space sequence.
     pub fn new() -> Self {
@@ -147,6 +152,81 @@ impl Dialect {
             Dialect::Voliva => "voli",
             Dialect::Whitelips => "wlip",
         }
+    }
+}
+
+impl HasError for Cst<'_> {
+    fn has_error(&self) -> bool {
+        match self {
+            Cst::Inst(inst) => inst.has_error(),
+            Cst::Empty(sep) => sep.has_error(),
+            Cst::Block { nodes } => nodes.has_error(),
+            Cst::OptionBlock { options, end } => {
+                options
+                    .iter()
+                    .any(|(option, block)| option.has_error() || block.has_error())
+                    || end.has_error()
+            }
+            Cst::Dialect { dialect: _, inner } => inner.has_error(),
+        }
+    }
+}
+
+impl HasError for Inst<'_> {
+    fn has_error(&self) -> bool {
+        self.space_before.has_error()
+            || self.mnemonic.has_error()
+            || self
+                .args
+                .iter()
+                .any(|(sep, arg)| sep.has_error() || arg.has_error())
+            || self.inst_sep.has_error()
+    }
+}
+
+impl HasError for Space<'_> {
+    fn has_error(&self) -> bool {
+        self.tokens.has_error()
+    }
+}
+
+impl<T: HasError> HasError for Spaced<'_, T> {
+    fn has_error(&self) -> bool {
+        self.space_before.has_error() || self.inner.has_error() || self.space_after.has_error()
+    }
+}
+
+impl HasError for ArgSep<'_> {
+    fn has_error(&self) -> bool {
+        match self {
+            ArgSep::Space(space) => space.has_error(),
+            ArgSep::Sep(sep) => sep.has_error(),
+        }
+    }
+}
+
+impl HasError for InstSep<'_> {
+    fn has_error(&self) -> bool {
+        match self {
+            InstSep::LineTerm {
+                space_before,
+                line_comment,
+                line_term,
+            } => space_before.has_error() || line_comment.has_error() || line_term.has_error(),
+            InstSep::Sep(sep) => sep.has_error(),
+        }
+    }
+}
+
+impl<T: HasError> HasError for Option<T> {
+    fn has_error(&self) -> bool {
+        self.as_ref().is_some_and(T::has_error)
+    }
+}
+
+impl<T: HasError> HasError for Vec<T> {
+    fn has_error(&self) -> bool {
+        self.iter().any(T::has_error)
     }
 }
 
