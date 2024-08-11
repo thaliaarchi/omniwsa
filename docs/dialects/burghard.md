@@ -23,17 +23,22 @@ string ::= "\"" [^"]* "\""
 rest ::= …
 ```
 
-Then, it is split into lines and lines into word and string tokens. Space is
-required between two words, but not around strings. `{-`, `-}`, `;`, and `--`
-cannot occur within a word, but can be in a string. `"` cannot occur in either a
-word or string, since it has no escapes.
+Then, it is split into lines. Here, strings may not contain LF, unlike the
+previous step, so such strings count as unterminated.
 
-This step unquotes strings, making them indistinguishable from words afterwards,
-so, for example, `"add""'A'"` is parsed as `add` `'A'`. When block comments are
-removed, they are replaced with nothing and splice adjacent unquoted words.
-Strings here cannot include LF, but can when removing comments, making it
-inconsistent. Everything is also lowercased, which makes mnemonics
-case-insensitive, but also lowercases strings and chars.
+Lines are split into word and string tokens. Space is required between two
+words, but not around strings. `{-`, `-}`, `;`, and `--` cannot occur within a
+word, but can be in a string. `"` cannot occur in either a word or string, since
+it has no escapes.
+
+Strings are unquoted, making them indistinguishable from words afterwards. When
+block comments are removed, they are replaced with nothing and splice adjacent
+unquoted words, when no whitespace is between. For example, `add 1`, `add"1"`,
+`"add"1`, `"add""1"`, `add{-c-}"1"`, `"add"{-c-}1`, and `"add"{-c-}"1"` are
+parsed as `add` `1`, but `add{-c-}1` is parsed as `add1`.
+
+Everything is also lowercased, which makes mnemonics case-insensitive, but also
+lowercases strings and chars.
 
 ```bnf
 lines ::= line*
@@ -189,10 +194,8 @@ An extra `\n\n\n` is appended to the encoded program.
 ## Bugs in assembler
 
 - Anything can be `"`-quoted.
-- Strings can contain LF in the step stripping comments and cannot in the step
-  unquoting strings.
 - Strings and chars are lowercased.
-- Strings starting with `_` cannot be represented.
+- Strings containing `"` or starting with `_` cannot be represented.
 - Block quotes are replaced with nothing, instead of with a space or LF, which
   splices adjacent unquoted words.
 - `elseoption` can appear before `elseoption` or there can be multiple

@@ -1,6 +1,6 @@
 //! Generic token scanning.
 
-use crate::token::{StringKind, Token, TokenKind};
+use crate::token::{Token, TokenKind};
 
 /// A scanner for generically reading tokens from UTF-8 text.
 #[derive(Clone, Debug)]
@@ -85,35 +85,21 @@ impl<'s> Utf8Scanner<'s> {
         }
     }
 
-    /// Consumes a string without escapes. The cursor must start after the open
-    /// `"`.
-    pub fn string_no_escape(&mut self) -> Token<'s> {
-        let text_start = self.end.offset;
-        self.bump_while(|c| c != '"');
-        let text_end = self.end.offset;
-        let terminated = self.bump_if(|c| c == '"');
-        self.wrap(TokenKind::String {
-            unquoted: self.src.as_bytes()[text_start..text_end].into(),
-            kind: StringKind::Quoted,
-            terminated,
-        })
-    }
-
     /// Consumes a line comment. The cursor must start after the comment prefix.
     pub fn line_comment(&mut self) -> Token<'s> {
-        let text_start = self.end.offset;
+        let text_start = self.offset();
         self.bump_while(|c| c != '\n');
         let src = self.src.as_bytes();
         self.wrap(TokenKind::LineComment {
-            prefix: &src[self.start.offset..text_start],
-            text: &src[text_start..self.end.offset],
+            prefix: &src[self.start_offset()..text_start],
+            text: &src[text_start..self.offset()],
         })
     }
 
     /// Consumes a non-nested block comment. The cursor must start after the
     /// opening sequence.
     pub fn block_comment(&mut self, close: [u8; 2]) -> Token<'s> {
-        let text_start = self.end.offset;
+        let text_start = self.offset();
         let (text_end, terminated) = loop {
             let rest = self.rest().as_bytes();
             if rest.len() < 2 {
@@ -127,9 +113,9 @@ impl<'s> Utf8Scanner<'s> {
         };
         let src = self.src.as_bytes();
         self.wrap(TokenKind::BlockComment {
-            open: &src[self.start.offset..text_start],
+            open: &src[self.start_offset()..text_start],
             text: &src[text_start..text_end],
-            close: &src[text_end..self.end.offset],
+            close: &src[text_end..self.offset()],
             nested: false,
             terminated,
         })
@@ -139,7 +125,7 @@ impl<'s> Utf8Scanner<'s> {
     /// sequence.
     pub fn nested_block_comment(&mut self, open: [u8; 2], close: [u8; 2]) -> Token<'s> {
         let mut level = 1;
-        let text_start = self.end.offset;
+        let text_start = self.offset();
         let (text_end, terminated) = loop {
             let rest = self.rest().as_bytes();
             if rest.len() < 2 {
@@ -160,9 +146,9 @@ impl<'s> Utf8Scanner<'s> {
         };
         let src = self.src.as_bytes();
         self.wrap(TokenKind::BlockComment {
-            open: &src[self.start.offset..text_start],
+            open: &src[self.start_offset()..text_start],
             text: &src[text_start..text_end],
-            close: &src[text_end..self.end.offset],
+            close: &src[text_end..self.offset()],
             nested: true,
             terminated,
         })
@@ -172,7 +158,7 @@ impl<'s> Utf8Scanner<'s> {
     #[inline]
     pub fn wrap(&self, kind: TokenKind<'s>) -> Token<'s> {
         Token {
-            text: self.text().as_bytes().into(),
+            text: self.text().into(),
             kind,
         }
     }
@@ -189,16 +175,28 @@ impl<'s> Utf8Scanner<'s> {
         self.src
     }
 
+    /// Returns the text for the previous token as bytes.
+    #[inline]
+    pub fn text(&self) -> &'s [u8] {
+        self.text_str().as_bytes()
+    }
+
     /// Returns the text for the previous token.
     #[inline]
-    pub fn text(&self) -> &'s str {
-        &self.src[self.start.offset..self.end.offset]
+    pub fn text_str(&self) -> &'s str {
+        &self.src[self.start_offset()..self.offset()]
     }
 
     /// Returns the remaining text.
     #[inline]
     pub fn rest(&self) -> &'s str {
-        &self.src[self.end.offset..]
+        &self.src[self.offset()..]
+    }
+
+    /// Returns the starting offset into the source of the current token.
+    #[inline]
+    pub fn start_offset(&self) -> usize {
+        self.start.offset
     }
 
     /// Returns the current offset into the source.

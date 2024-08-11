@@ -12,7 +12,6 @@ use crate::{
 // - Lex tokens in contexts: e.g., mnemonic, number, string, and ident.
 // - Resolve mnemonics.
 // - Structure option blocks.
-// - Handle the inconsistent inclusion of LF in strings.
 
 impl<'s> Cst<'s> {
     /// Parses a program in the Burghard Whitespace assembly dialect.
@@ -75,12 +74,22 @@ impl<'s> Lexer<'s> {
             ';' => scan.line_comment(),
             '-' if scan.bump_if(|c| c == '-') => scan.line_comment(),
             '{' if scan.bump_if(|c| c == '-') => scan.nested_block_comment(*b"{-", *b"-}"),
-            '"' => scan.string_no_escape(),
             ' ' | '\t' => {
                 scan.bump_while(|c| c == ' ' || c == '\t');
                 scan.wrap(TokenKind::Space)
             }
             '\n' => scan.wrap(TokenKind::LineTerm),
+            '"' => {
+                let text_start = scan.offset();
+                scan.bump_while(|c| c != '"' && c != '\n');
+                let text_end = scan.offset();
+                let terminated = scan.bump_if(|c| c == '"');
+                scan.wrap(TokenKind::String {
+                    unquoted: scan.src().as_bytes()[text_start..text_end].into(),
+                    kind: StringKind::Quoted,
+                    terminated,
+                })
+            }
             _ => {
                 while !scan.eof() {
                     let rest = scan.rest().as_bytes();
@@ -92,7 +101,7 @@ impl<'s> Lexer<'s> {
                     scan.next_char();
                 }
                 scan.wrap(TokenKind::String {
-                    unquoted: scan.text().as_bytes().into(),
+                    unquoted: scan.text().into(),
                     kind: StringKind::Unquoted,
                     terminated: true,
                 })
