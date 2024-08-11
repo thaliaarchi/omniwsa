@@ -5,7 +5,7 @@ use std::{mem, str};
 use crate::{
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-    token::{StringKind, Token, TokenError, TokenKind},
+    token::{Token, TokenError, TokenKind},
 };
 
 // TODO:
@@ -80,13 +80,12 @@ impl<'s> Lexer<'s> {
             }
             '\n' => scan.wrap(TokenKind::LineTerm),
             '"' => {
-                let text_start = scan.offset();
+                let word_start = scan.offset();
                 scan.bump_while(|c| c != '"' && c != '\n');
-                let text_end = scan.offset();
+                let word = &scan.src().as_bytes()[word_start..scan.offset()];
                 let terminated = scan.bump_if(|c| c == '"');
-                scan.wrap(TokenKind::String {
-                    unquoted: scan.src().as_bytes()[text_start..text_end].into(),
-                    kind: StringKind::Quoted,
+                scan.wrap(TokenKind::Quoted {
+                    inner: Box::new(Token::new(word, TokenKind::Word)),
                     terminated,
                 })
             }
@@ -100,11 +99,7 @@ impl<'s> Lexer<'s> {
                     }
                     scan.next_char();
                 }
-                scan.wrap(TokenKind::String {
-                    unquoted: scan.text().into(),
-                    kind: StringKind::Unquoted,
-                    terminated: true,
-                })
+                scan.wrap(TokenKind::Word)
             }
         }
     }
@@ -138,7 +133,7 @@ impl<'s> Parser<'s> {
 
         let space_before = self.space();
         let mut mnemonic = match self.curr() {
-            TokenKind::String { .. } => self.advance(),
+            TokenKind::Word | TokenKind::Quoted { .. } => self.advance(),
             _ => return Some(Cst::Empty(self.line_term_sep(space_before))),
         };
 
@@ -147,7 +142,7 @@ impl<'s> Parser<'s> {
         let space_after = loop {
             let space = self.space();
             let arg = match self.curr() {
-                TokenKind::String { .. } => self.advance(),
+                TokenKind::Word | TokenKind::Quoted { .. } => self.advance(),
                 _ => break space,
             };
             if should_splice_tokens(prev_word, &space, &arg) {
@@ -228,41 +223,17 @@ fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Space<'s>, rhs: &Token<'s>)
         .tokens
         .iter()
         .all(|tok| matches!(tok.kind, TokenKind::BlockComment { .. }))
-        && matches!(
-            lhs.kind,
-            TokenKind::String {
-                kind: StringKind::Unquoted,
-                ..
-            } | TokenKind::Spliced { .. }
-        )
-        && matches!(
-            rhs.kind,
-            TokenKind::String {
-                kind: StringKind::Unquoted,
-                ..
-            }
-        )
+        && matches!(lhs.kind, TokenKind::Word | TokenKind::Spliced { .. })
+        && matches!(rhs.kind, TokenKind::Word)
 }
 
 /// Splices adjacent tokens, if they are only separated by block comments.
 fn splice_tokens<'s>(lhs: &mut Token<'s>, mut space: Space<'s>, rhs: Token<'s>) {
-    match &mut lhs.kind {
-        TokenKind::String { unquoted, .. } => {
-            let unquoted = mem::replace(unquoted, unquoted.clone());
-            let kind = mem::replace(&mut lhs.kind, TokenKind::Eof);
-            lhs.kind = TokenKind::Spliced {
-                tokens: vec![Token::new(lhs.text.clone(), kind)],
-                spliced: Box::new(Token::new(
-                    lhs.text.clone(),
-                    TokenKind::String {
-                        unquoted,
-                        kind: StringKind::Unquoted,
-                        terminated: true,
-                    },
-                )),
-            };
-        }
-        _ => {}
+    if lhs.kind == TokenKind::Word {
+        lhs.kind = TokenKind::Spliced {
+            tokens: vec![lhs.clone()],
+            spliced: Box::new(lhs.clone()),
+        };
     }
     match &mut lhs.kind {
         TokenKind::Spliced { tokens, spliced } => {
@@ -271,15 +242,7 @@ fn splice_tokens<'s>(lhs: &mut Token<'s>, mut space: Space<'s>, rhs: Token<'s>) 
                 text.extend_from_slice(&tok.text);
             }
             text.extend_from_slice(&rhs.text);
-
             spliced.text.to_mut().extend_from_slice(&rhs.text);
-            match &mut spliced.kind {
-                TokenKind::String { unquoted, .. } => {
-                    unquoted.to_mut().extend_from_slice(&rhs.unwrap().text);
-                }
-                _ => panic!("unhandled token"),
-            }
-
             tokens.reserve(space.tokens.len() + 1);
             tokens.append(&mut space.tokens);
             tokens.push(rhs);
@@ -292,19 +255,9 @@ fn splice_tokens<'s>(lhs: &mut Token<'s>, mut space: Space<'s>, rhs: Token<'s>) 
 mod tests {
     use crate::{
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-        token::{StringKind, Token, TokenKind},
+        token::{Token, TokenKind},
     };
 
-    macro_rules! word(($word:literal) => {
-        Token::new(
-            $word,
-            TokenKind::String {
-                unquoted: $word.into(),
-                kind: StringKind::Unquoted,
-                terminated: true,
-            },
-        )
-    });
     macro_rules! block_comment(($text:literal) => {
         Token::new(
             // TODO: Use concat_bytes! once stabilized.
@@ -335,11 +288,11 @@ mod tests {
                         b"hello{-splice-}world",
                         TokenKind::Spliced {
                             tokens: vec![
-                                word!(b"hello"),
+                                Token::new(b"hello", TokenKind::Word),
                                 block_comment!("splice"),
-                                word!(b"world"),
+                                Token::new(b"world", TokenKind::Word),
                             ],
-                            spliced: Box::new(word!(b"helloworld")),
+                            spliced: Box::new(Token::new(b"helloworld", TokenKind::Word)),
                         },
                     ),
                     args: vec![(
@@ -347,7 +300,7 @@ mod tests {
                             block_comment!("c2"),
                             Token::new(b"\t", TokenKind::Space),
                         ])),
-                        word!(b"!"),
+                        Token::new(b"!", TokenKind::Word),
                     )],
                     inst_sep: InstSep::LineTerm {
                         space_before: Space::new(),

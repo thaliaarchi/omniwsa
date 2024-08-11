@@ -86,18 +86,18 @@ pub enum TokenKind<'s> {
         nested: bool,
         terminated: bool,
     },
+    /// A word of uninterpreted meaning.
+    Word,
+    /// A token enclosed in non-semantic quotes (Burghard).
+    Quoted {
+        inner: Box<Token<'s>>,
+        terminated: bool,
+    },
     /// Tokens spliced by block comments (Burghard).
     Spliced {
         tokens: Vec<Token<'s>>,
         /// The effective token.
         spliced: Box<Token<'s>>,
-    },
-    /// A token enclosed in non-semantic quotes (Burghard).
-    Quoted {
-        open: &'s [u8],
-        inner: Box<Token<'s>>,
-        close: &'s [u8],
-        terminated: bool,
     },
     /// An erroneous sequence.
     Error(TokenError),
@@ -233,7 +233,7 @@ impl<'s> Token<'s> {
         let mut tok = self;
         loop {
             match &tok.kind {
-                TokenKind::Spliced { spliced: inner, .. } | TokenKind::Quoted { inner, .. } => {
+                TokenKind::Quoted { inner, .. } | TokenKind::Spliced { spliced: inner, .. } => {
                     tok = inner;
                 }
                 _ => return tok,
@@ -247,10 +247,10 @@ impl<'s> Token<'s> {
             TokenKind::Char { terminated, .. }
             | TokenKind::String { terminated, .. }
             | TokenKind::BlockComment { terminated, .. } => !terminated,
-            TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::is_error),
             TokenKind::Quoted {
                 inner, terminated, ..
             } => !terminated || inner.is_error(),
+            TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::is_error),
             TokenKind::Error(_) => true,
             _ => false,
         }
@@ -331,22 +331,16 @@ impl Debug for TokenKind<'_> {
                 .field("nested", nested)
                 .field("terminated", terminated)
                 .finish(),
+            TokenKind::Word => write!(f, "Word"),
+            TokenKind::Quoted { inner, terminated } => f
+                .debug_struct("Quoted")
+                .field("inner", inner)
+                .field("terminated", terminated)
+                .finish(),
             TokenKind::Spliced { tokens, spliced } => f
                 .debug_struct("Spliced")
                 .field("tokens", tokens)
                 .field("spliced", spliced)
-                .finish(),
-            TokenKind::Quoted {
-                open,
-                inner,
-                close,
-                terminated,
-            } => f
-                .debug_struct("Quoted")
-                .field("open", &open.as_bstr())
-                .field("inner", inner)
-                .field("close", &close.as_bstr())
-                .field("terminated", terminated)
                 .finish(),
             TokenKind::Error(err) => f.debug_tuple("Error").field(err).finish(),
         }
