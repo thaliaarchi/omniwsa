@@ -171,9 +171,27 @@ impl<'s> Token<'s> {
         }
     }
 
+    /// Unwrap non-semantic splices and quotes and return a mutable reference.
+    pub fn unwrap_mut(&mut self) -> &mut Token<'s> {
+        let mut tok = self;
+        loop {
+            match tok.kind {
+                TokenKind::Quoted { ref mut inner, .. }
+                | TokenKind::Spliced {
+                    spliced: ref mut inner,
+                    ..
+                } => {
+                    tok = inner;
+                }
+                _ => return tok,
+            }
+        }
+    }
+
     /// Returns whether the token is invalid.
     pub fn is_error(&self) -> bool {
         match &self.kind {
+            TokenKind::Mnemonic(Mnemonic::Error) | TokenKind::Error(_) => true,
             TokenKind::Char { terminated, .. }
             | TokenKind::String { terminated, .. }
             | TokenKind::BlockComment { terminated, .. } => !terminated,
@@ -181,7 +199,6 @@ impl<'s> Token<'s> {
                 inner, terminated, ..
             } => !terminated || inner.is_error(),
             TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::is_error),
-            TokenKind::Error(_) => true,
             _ => false,
         }
     }

@@ -1,23 +1,22 @@
 //! Parsing for the Burghard Whitespace assembly dialect.
 
-use std::{mem, str};
+use std::{collections::HashMap, mem, str};
 
 use crate::{
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-    token::{Token, TokenError, TokenKind},
+    token::{Mnemonic, Token, TokenError, TokenKind},
 };
 
 // TODO:
-// - Lex tokens in contexts: e.g., mnemonic, number, string, and ident.
-// - Resolve mnemonics.
+// - Resolve mnemonics with case folding.
+// - Parse arguments by type.
 // - Structure option blocks.
 
-impl<'s> Cst<'s> {
-    /// Parses a program in the Burghard Whitespace assembly dialect.
-    pub fn parse_burghard(src: &'s [u8]) -> Self {
-        Parser::new(src).parse()
-    }
+/// State for parsing the Burghard Whitespace assembly dialect.
+#[derive(Clone, Debug)]
+pub struct Burghard {
+    mnemonics: HashMap<&'static str, Mnemonic>,
 }
 
 /// A lexer for tokens in the Burghard Whitespace assembly dialect.
@@ -31,9 +30,70 @@ struct Lexer<'s> {
 
 /// A parser for the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
-struct Parser<'s> {
+struct Parser<'s, 'd> {
     lex: Lexer<'s>,
     tok: Token<'s>,
+    dialect: &'d Burghard,
+}
+
+macro_rules! mnemonics[($($s:literal => $variant:ident,)*) => {
+    &[$(($s, Mnemonic::$variant),)+]
+}];
+static MNEMONICS: &[(&str, Mnemonic)] = mnemonics![
+    "push" => Push,         // integer
+    "pushs" => PushString0, // string
+    "doub" => Dup,
+    "swap" => Swap,
+    "pop" => Drop,
+    "add" => Add,          // integer?
+    "sub" => Sub,          // integer?
+    "mul" => Mul,          // integer?
+    "div" => Div,          // integer?
+    "mod" => Mod,          // integer?
+    "store" => Store,      // integer?
+    "retrive" => Retrieve, // integer?
+    "label" => Label,      // label
+    "call" => Call,        // label
+    "jump" => Jmp,         // label
+    "jumpz" => Jz,         // label
+    "jumpn" => Jn,         // label
+    "jumpp" => BurghardJmpP, // label
+    "jumpnp" => BurghardJmpNP, // label
+    "jumppn" => BurghardJmpNP, // label
+    "jumpnz" => BurghardJmpNZ, // label
+    "jumppz" => BurghardJmpPZ, // label
+    "ret" => Ret,
+    "exit" => End,
+    "outC" => Printc,
+    "outN" => Printi,
+    "inC" => Readc,
+    "inN" => Readi,
+    "debug_printstack" => BurghardPrintStack,
+    "debug_printheap" => BurghardPrintHeap,
+    "test" => BurghardTest, // integer
+    "valueinteger" => BurghardValueInteger, // integer_variable integer
+    "valuestring" => BurghardValueString, // string_variable string
+    "include" => BurghardInclude, // word
+    "option" => DefineOption, // word
+    "ifoption" => IfOption, // word
+    "elseifoption" => ElseIfOption, // word
+    "elseoption" => ElseOption,
+    "endoption" => EndOption,
+];
+
+impl Burghard {
+    /// Constructs state for the Burghard dialect. Only one needs to be
+    /// constructed for parsing any number of programs.
+    pub fn new() -> Self {
+        Burghard {
+            mnemonics: MNEMONICS.iter().copied().collect(),
+        }
+    }
+
+    /// Parses a Whitespace assembly program in the Burghard dialect.
+    pub fn parse<'s>(&self, src: &'s [u8]) -> Cst<'s> {
+        Parser::new(src, self).parse()
+    }
 }
 
 impl<'s> Lexer<'s> {
@@ -105,12 +165,12 @@ impl<'s> Lexer<'s> {
     }
 }
 
-impl<'s> Parser<'s> {
+impl<'s, 'd> Parser<'s, 'd> {
     /// Constructs a new parser for Burghard-dialect source text.
-    fn new(src: &'s [u8]) -> Self {
+    fn new(src: &'s [u8], dialect: &'d Burghard) -> Self {
         let mut lex = Lexer::new(src);
         let tok = lex.next_token();
-        Parser { lex, tok }
+        Parser { lex, tok, dialect }
     }
 
     /// Parses the entire source.
@@ -132,12 +192,12 @@ impl<'s> Parser<'s> {
         }
 
         let space_before = self.space();
-        let mut mnemonic = match self.curr() {
+        let mut mnemonic_tok = match self.curr() {
             TokenKind::Word | TokenKind::Quoted { .. } => self.advance(),
             _ => return Some(Cst::Empty(self.line_term_sep(space_before))),
         };
 
-        let mut prev_word = &mut mnemonic;
+        let mut prev_word = &mut mnemonic_tok;
         let mut args = Vec::new();
         let space_after = loop {
             let space = self.space();
@@ -152,12 +212,21 @@ impl<'s> Parser<'s> {
                 prev_word = &mut args.last_mut().unwrap().1;
             }
         };
+        let inst_sep = self.line_term_sep(space_after);
+
+        let mnemonic_word = mnemonic_tok.unwrap_mut();
+        let mnemonic = str::from_utf8(&mnemonic_word.text)
+            .ok()
+            .and_then(|mnemonic| self.dialect.mnemonics.get(mnemonic))
+            .copied()
+            .unwrap_or(Mnemonic::Error);
+        mnemonic_word.kind = TokenKind::Mnemonic(mnemonic);
 
         Some(Cst::Inst(Inst {
             space_before,
-            mnemonic,
+            mnemonic: mnemonic_tok,
             args,
-            inst_sep: self.line_term_sep(space_after),
+            inst_sep,
         }))
     }
 
@@ -254,8 +323,9 @@ fn splice_tokens<'s>(lhs: &mut Token<'s>, mut space: Space<'s>, rhs: Token<'s>) 
 #[cfg(test)]
 mod tests {
     use crate::{
+        dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-        token::{Token, TokenKind},
+        token::{Mnemonic, Token, TokenKind},
     };
 
     macro_rules! block_comment(($text:literal) => {
@@ -275,7 +345,7 @@ mod tests {
     #[test]
     fn spliced() {
         let src = b" {-c1-}hello{-splice-}world{-c2-}\t!";
-        let cst = Cst::parse_burghard(src);
+        let cst = Burghard::new().parse(src);
         let expect = Cst::Dialect {
             dialect: Dialect::Burghard,
             inner: Box::new(Cst::Block {
@@ -292,7 +362,10 @@ mod tests {
                                 block_comment!("splice"),
                                 Token::new(b"world", TokenKind::Word),
                             ],
-                            spliced: Box::new(Token::new(b"helloworld", TokenKind::Word)),
+                            spliced: Box::new(Token::new(
+                                b"helloworld",
+                                TokenKind::Mnemonic(Mnemonic::Error),
+                            )),
                         },
                     ),
                     args: vec![(
@@ -302,6 +375,36 @@ mod tests {
                         ])),
                         Token::new(b"!", TokenKind::Word),
                     )],
+                    inst_sep: InstSep::LineTerm {
+                        space_before: Space::new(),
+                        line_comment: None,
+                        line_term: Token::new(b"", TokenKind::Eof),
+                    },
+                })],
+            }),
+        };
+        assert_eq!(cst, expect);
+    }
+
+    #[test]
+    fn mnemonics() {
+        let cst = Burghard::new().parse("\"Debug_PrİntStacK".as_bytes());
+        let expect = Cst::Dialect {
+            dialect: Dialect::Burghard,
+            inner: Box::new(Cst::Block {
+                nodes: vec![Cst::Inst(Inst {
+                    space_before: Space::new(),
+                    mnemonic: Token::new(
+                        "\"Debug_PrİntStacK".as_bytes(),
+                        TokenKind::Quoted {
+                            inner: Box::new(Token::new(
+                                "Debug_PrİntStacK".as_bytes(),
+                                TokenKind::Mnemonic(Mnemonic::BurghardPrintStack),
+                            )),
+                            terminated: false,
+                        },
+                    ),
+                    args: vec![],
                     inst_sep: InstSep::LineTerm {
                         space_before: Space::new(),
                         line_comment: None,

@@ -191,6 +191,23 @@ share names. They are visible to any successive instructions.
 
 An extra `\n\n\n` is appended to the encoded program.
 
+## Mnemonics
+
+Mnemonics are case-insensitive. All are consistently written as lowercase,
+except for the I/O instructions, which are mostly written as `outC`, `outN`,
+`inC`, and `inN`.
+
+In programs, they occur with the following counts:
+
+- wsinterws.wsa: `outN` (17), `outn` (6), `outc` (1), `inC` (1), `inc` (1),
+  `inn` (1)
+- libs/io.wsa: `outC` (3)
+- examples/prim.wsa: `outN` (1)
+
+In wsintercpp, `debug_printstack` and `debug_printheap` are known as
+`debugprintstack` and `debugprintheap`, which it prints in a listing when the
+`-d` debug flag is passed.
+
 ## Bugs in assembler
 
 - Anything can be `"`-quoted.
