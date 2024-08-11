@@ -228,21 +228,16 @@ impl<'s> Token<'s> {
         }
     }
 
-    /// The text of this token with splices and non-semantic quotes processed.
-    pub fn text(&self) -> &[u8] {
-        match &self.kind {
-            TokenKind::Spliced { spliced: inner, .. } | TokenKind::Quoted { inner, .. } => {
-                inner.text()
+    /// Unwrap non-semantic splices and quotes.
+    pub fn unwrap(&self) -> &Token<'s> {
+        let mut tok = self;
+        loop {
+            match &tok.kind {
+                TokenKind::Spliced { spliced: inner, .. } | TokenKind::Quoted { inner, .. } => {
+                    tok = inner;
+                }
+                _ => return tok,
             }
-            _ => &self.text,
-        }
-    }
-
-    /// Unwrap non-semantic quotes.
-    pub fn unquote(&self) -> &Token<'s> {
-        match &self.kind {
-            TokenKind::Quoted { inner, .. } => inner,
-            _ => self,
         }
     }
 

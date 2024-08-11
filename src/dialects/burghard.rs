@@ -10,9 +10,9 @@ use crate::{
 
 // TODO:
 // - Lex tokens in contexts: e.g., mnemonic, number, string, and ident.
-// - Splice tokens.
 // - Resolve mnemonics.
 // - Structure option blocks.
+// - Handle the inconsistent inclusion of LF in strings.
 
 impl<'s> Cst<'s> {
     /// Parses a program in the Burghard Whitespace assembly dialect.
@@ -126,11 +126,14 @@ impl<'s> Parser<'s> {
         if self.eof() {
             return None;
         }
+
         let space_before = self.space();
-        let mnemonic = match self.curr() {
+        let mut mnemonic = match self.curr() {
             TokenKind::String { .. } => self.advance(),
             _ => return Some(Cst::Empty(self.line_term_sep(space_before))),
         };
+
+        let mut prev_word = &mut mnemonic;
         let mut args = Vec::new();
         let space_after = loop {
             let space = self.space();
@@ -138,8 +141,14 @@ impl<'s> Parser<'s> {
                 TokenKind::String { .. } => self.advance(),
                 _ => break space,
             };
-            args.push((ArgSep::Space(space), arg));
+            if should_splice_tokens(prev_word, &space, &arg) {
+                splice_tokens(prev_word, space, arg);
+            } else {
+                args.push((ArgSep::Space(space), arg));
+                prev_word = &mut args.last_mut().unwrap().1;
+            }
         };
+
         Some(Cst::Inst(Inst {
             space_before,
             mnemonic,
@@ -201,5 +210,144 @@ impl<'s> Parser<'s> {
             line_comment: self.line_comment(),
             line_term: self.line_term().expect("line terminator"),
         }
+    }
+}
+
+/// Returns whether these tokens should be spliced by block comments.
+fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Space<'s>, rhs: &Token<'s>) -> bool {
+    space
+        .tokens
+        .iter()
+        .all(|tok| matches!(tok.kind, TokenKind::BlockComment { .. }))
+        && matches!(
+            lhs.kind,
+            TokenKind::String {
+                kind: StringKind::Unquoted,
+                ..
+            } | TokenKind::Spliced { .. }
+        )
+        && matches!(
+            rhs.kind,
+            TokenKind::String {
+                kind: StringKind::Unquoted,
+                ..
+            }
+        )
+}
+
+/// Splices adjacent tokens, if they are only separated by block comments.
+fn splice_tokens<'s>(lhs: &mut Token<'s>, mut space: Space<'s>, rhs: Token<'s>) {
+    match &mut lhs.kind {
+        TokenKind::String { unquoted, .. } => {
+            let unquoted = mem::replace(unquoted, unquoted.clone());
+            let kind = mem::replace(&mut lhs.kind, TokenKind::Eof);
+            lhs.kind = TokenKind::Spliced {
+                tokens: vec![Token::new(lhs.text.clone(), kind)],
+                spliced: Box::new(Token::new(
+                    lhs.text.clone(),
+                    TokenKind::String {
+                        unquoted,
+                        kind: StringKind::Unquoted,
+                        terminated: true,
+                    },
+                )),
+            };
+        }
+        _ => {}
+    }
+    match &mut lhs.kind {
+        TokenKind::Spliced { tokens, spliced } => {
+            let text = lhs.text.to_mut();
+            for tok in &space.tokens {
+                text.extend_from_slice(&tok.text);
+            }
+            text.extend_from_slice(&rhs.text);
+
+            spliced.text.to_mut().extend_from_slice(&rhs.text);
+            match &mut spliced.kind {
+                TokenKind::String { unquoted, .. } => {
+                    unquoted.to_mut().extend_from_slice(&rhs.unwrap().text);
+                }
+                _ => panic!("unhandled token"),
+            }
+
+            tokens.reserve(space.tokens.len() + 1);
+            tokens.append(&mut space.tokens);
+            tokens.push(rhs);
+        }
+        _ => panic!("unhandled token"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
+        token::{StringKind, Token, TokenKind},
+    };
+
+    macro_rules! word(($word:literal) => {
+        Token::new(
+            $word,
+            TokenKind::String {
+                unquoted: $word.into(),
+                kind: StringKind::Unquoted,
+                terminated: true,
+            },
+        )
+    });
+    macro_rules! block_comment(($text:literal) => {
+        Token::new(
+            // TODO: Use concat_bytes! once stabilized.
+            concat!("{-", $text, "-}").as_bytes(),
+            TokenKind::BlockComment {
+                open: b"{-",
+                text: $text.as_bytes(),
+                close: b"-}",
+                nested: true,
+                terminated: true,
+            },
+        )
+    });
+
+    #[test]
+    fn spliced() {
+        let src = b" {-c1-}hello{-splice-}world{-c2-}\t!";
+        let cst = Cst::parse_burghard(src);
+        let expect = Cst::Dialect {
+            dialect: Dialect::Burghard,
+            inner: Box::new(Cst::Block {
+                nodes: vec![Cst::Inst(Inst {
+                    space_before: Space::from(vec![
+                        Token::new(b" ", TokenKind::Space),
+                        block_comment!("c1"),
+                    ]),
+                    mnemonic: Token::new(
+                        b"hello{-splice-}world",
+                        TokenKind::Spliced {
+                            tokens: vec![
+                                word!(b"hello"),
+                                block_comment!("splice"),
+                                word!(b"world"),
+                            ],
+                            spliced: Box::new(word!(b"helloworld")),
+                        },
+                    ),
+                    args: vec![(
+                        ArgSep::Space(Space::from(vec![
+                            block_comment!("c2"),
+                            Token::new(b"\t", TokenKind::Space),
+                        ])),
+                        word!(b"!"),
+                    )],
+                    inst_sep: InstSep::LineTerm {
+                        space_before: Space::new(),
+                        line_comment: None,
+                        line_term: Token::new(b"", TokenKind::Eof),
+                    },
+                })],
+            }),
+        };
+        assert_eq!(cst, expect);
     }
 }

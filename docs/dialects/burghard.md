@@ -11,11 +11,16 @@ The file must be valid UTF-8. It is decoded strictly (in effect), because
 everything is demanded before it starts writing to a file.
 
 The file is first preprocessed by removing comments, that are outside of
-strings. Comments are of the form:
+strings.
 
 ```bnf
+preprocess_program ::=
+    (block_comment | line_comment "\n" | string | rest)* line_comment?
 line_comment ::= (";" | "--") [^\n]*
-block_comment ::= "{-" .*? (block_comment .*?)*? "-}"
+block_comment ::= "{-" block_comment_text (block_comment block_comment_text)* "-}"
+block_comment_text ::= ([^{-] | "{" [^-] | "-" [^}])* [{-]?
+string ::= "\"" [^"]* "\""
+rest ::= …
 ```
 
 Then, it is split into lines and lines into word and string tokens. Space is
@@ -25,9 +30,10 @@ word or string, since it has no escapes.
 
 This step unquotes strings, making them indistinguishable from words afterwards,
 so, for example, `"add""'A'"` is parsed as `add` `'A'`. When block comments are
-removed, they are replaced with nothing, so can be used to splice words.
-Everything is also lowercased, which makes mnemonics case-insensitive, but also
-lowercases strings and chars.
+removed, they are replaced with nothing and splice adjacent unquoted words.
+Strings here cannot include LF, but can when removing comments, making it
+inconsistent. Everything is also lowercased, which makes mnemonics
+case-insensitive, but also lowercases strings and chars.
 
 ```bnf
 lines ::= line*
@@ -36,7 +42,7 @@ line ::=
     | lf
 token ::= word | string
 word ::= [^ \t"]+
-string ::= "\"" [^"]* "\""
+string ::= "\"" [^"\n]* "\""
 space ::= [ \t]+
 lf ::= "\n" | EOF
 ```
@@ -182,9 +188,12 @@ An extra `\n\n\n` is appended to the encoded program.
 
 ## Bugs in assembler
 
-- Anything can be `"`-quoted
+- Anything can be `"`-quoted.
+- Strings can contain LF in the step stripping comments and cannot in the step
+  unquoting strings.
+- Strings and chars are lowercased.
+- Strings starting with `_` cannot be represented.
 - Block quotes are replaced with nothing, instead of with a space or LF, which
-  can concatenate adjacent tokens
-- Strings and chars are lowercased
+  splices adjacent unquoted words.
 - `elseoption` can appear before `elseoption` or there can be multiple
-  `elseoption`
+  `elseoption`.
