@@ -56,8 +56,9 @@ impl<'s> Utf8Scanner<'s> {
     /// Consumes and returns the next char.
     #[inline]
     pub fn next_char(&mut self) -> char {
-        let ch = self.peek_char();
-        self.end.offset += 1;
+        let mut chars = self.src[self.end.offset..].chars();
+        let ch = chars.next().unwrap();
+        self.end.offset = self.src.len() - chars.as_str().len();
         self.end.col += 1;
         if ch == '\n' {
             self.end.line += 1;
