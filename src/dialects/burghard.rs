@@ -1,16 +1,19 @@
 //! Parsing for the Burghard Whitespace assembly dialect.
 
-use std::{collections::HashMap, mem, str};
+use std::{borrow::Cow, collections::HashMap, mem, str};
 
 use crate::{
+    integer::ReadIntegerLit,
     mnemonics::LowerToAscii,
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-    token::{Mnemonic, Token, TokenError, TokenKind},
+    token::{Mnemonic, StringKind, Token, TokenError, TokenKind},
 };
 
 // TODO:
-// - Parse arguments by type.
+// - Add shape of arguments to Inst. This should subsume Args, Type,
+//   Inst::valid_arity, and Inst::valid_types.
+// - Assign stricter tokens to `include` and options.
 // - Structure option blocks.
 
 /// State for parsing the Burghard Whitespace assembly dialect.
@@ -31,9 +34,10 @@ struct Lexer<'s> {
 /// A parser for the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 struct Parser<'s, 'd> {
+    dialect: &'d Burghard,
     lex: Lexer<'s>,
     tok: Token<'s>,
-    dialect: &'d Burghard,
+    digit_buf: Vec<u8>,
 }
 
 /// The shape of the arguments for a mnemonic.
@@ -51,8 +55,23 @@ enum Args {
     VariableAndInteger,
     /// A variable and a string or variable.
     VariableAndString,
+    /// A label.
+    Label,
     /// A word.
     Word,
+}
+
+/// The allowed types of an argument.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Type {
+    /// An integer or variable.
+    Integer,
+    /// A string or variable.
+    String,
+    /// A variable.
+    Variable,
+    /// A label.
+    Label,
 }
 
 macro_rules! mnemonics[($($canon:literal => $mnemonic:ident $args:ident,)*) => {
@@ -71,16 +90,16 @@ static MNEMONICS: &[(LowerToAscii<'static>, Mnemonic, Args)] = mnemonics![
     "mod" => Mod IntegerOpt,
     "store" => Store IntegerOpt,
     "retrive" => Retrieve IntegerOpt,
-    "label" => Label Word,
-    "call" => Call Word,
-    "jump" => Jmp Word,
-    "jumpz" => Jz Word,
-    "jumpn" => Jn Word,
-    "jumpp" => BurghardJmpP Word,
-    "jumpnp" => BurghardJmpNP Word,
-    "jumppn" => BurghardJmpNP Word,
-    "jumpnz" => BurghardJmpNZ Word,
-    "jumppz" => BurghardJmpPZ Word,
+    "label" => Label Label,
+    "call" => Call Label,
+    "jump" => Jmp Label,
+    "jumpz" => Jz Label,
+    "jumpn" => Jn Label,
+    "jumpp" => BurghardJmpP Label,
+    "jumpnp" => BurghardJmpNP Label,
+    "jumppn" => BurghardJmpNP Label,
+    "jumpnz" => BurghardJmpNZ Label,
+    "jumppz" => BurghardJmpPZ Label,
     "ret" => Ret None,
     "exit" => End None,
     "outC" => Printc None,
@@ -144,10 +163,7 @@ impl<'s> Lexer<'s> {
 
         if scan.eof() {
             if let Some((rest, error_len)) = self.invalid_utf8.take() {
-                return Token::new(
-                    rest,
-                    TokenKind::Error(TokenError::InvalidUtf8 { error_len }),
-                );
+                return Token::new(rest, TokenKind::Error(TokenError::Utf8 { error_len }));
             }
             return Token::new(b"", TokenKind::Eof);
         }
@@ -192,7 +208,12 @@ impl<'s, 'd> Parser<'s, 'd> {
     fn new(src: &'s [u8], dialect: &'d Burghard) -> Self {
         let mut lex = Lexer::new(src);
         let tok = lex.next_token();
-        Parser { lex, tok, dialect }
+        Parser {
+            dialect,
+            lex,
+            tok,
+            digit_buf: Vec::new(),
+        }
     }
 
     /// Parses the entire source.
@@ -242,13 +263,14 @@ impl<'s, 'd> Parser<'s, 'd> {
             args,
             inst_sep,
             valid_arity: false,
+            valid_types: false,
         };
         self.parse_inst(&mut inst);
         Some(Cst::Inst(inst))
     }
 
     /// Parses the mnemonic and arguments of an instruction.
-    fn parse_inst(&self, inst: &mut Inst<'s>) {
+    fn parse_inst(&mut self, inst: &mut Inst<'s>) {
         let mnemonic_word = inst.mnemonic.unwrap_mut();
         debug_assert_eq!(mnemonic_word.kind, TokenKind::Word);
         let (mnemonic, args) = self
@@ -259,17 +281,86 @@ impl<'s, 'd> Parser<'s, 'd> {
             .unwrap_or((Mnemonic::Error, Args::None));
         mnemonic_word.kind = TokenKind::Mnemonic(mnemonic);
 
-        let n = inst.args.len();
         inst.valid_arity = true;
-        match (args, n) {
-            (Args::None | Args::IntegerOpt, 0) => {}
-            (Args::Integer | Args::IntegerOpt, 1) => {}
-            (Args::String, 1) => {}
-            (Args::VariableAndInteger, 2) => {}
-            (Args::VariableAndString, 2) => {}
-            (Args::Word, 1) => {}
-            _ => inst.valid_arity = false,
+        inst.valid_types = match (args, &mut inst.args[..]) {
+            (Args::None | Args::IntegerOpt, []) => true,
+            (Args::Integer | Args::IntegerOpt, [(_, x)]) => self.parse_arg(x, Type::Integer),
+            (Args::String, [(_, x)]) => self.parse_arg(x, Type::String),
+            (Args::VariableAndInteger, [(_, x), (_, y)]) => {
+                self.parse_arg(x, Type::Variable) & self.parse_arg(y, Type::Integer)
+            }
+            (Args::VariableAndString, [(_, x), (_, y)]) => {
+                self.parse_arg(x, Type::Variable) & self.parse_arg(y, Type::String)
+            }
+            (Args::Label, [(_, x)]) => self.parse_arg(x, Type::Label),
+            (Args::Word, [_]) => true,
+            _ => {
+                inst.valid_arity = false;
+                false
+            }
+        };
+    }
+
+    /// Parses an argument according to its type and returns whether it is
+    /// valid.
+    fn parse_arg(&mut self, tok: &mut Token<'_>, ty: Type) -> bool {
+        let quoted = matches!(tok.kind, TokenKind::Quoted { .. });
+        let inner = tok.unwrap_mut();
+        debug_assert_eq!(inner.kind, TokenKind::Word);
+
+        // Parse it as a label.
+        if ty == Type::Label {
+            inner.kind = TokenKind::Label {
+                sigil: b"",
+                label: inner.text.clone(),
+            };
+            return true;
         }
+
+        // Try to parse it as a variable.
+        if inner.text.starts_with(b"_") {
+            let ident = match &inner.text {
+                Cow::Borrowed(text) => text[1..].into(),
+                Cow::Owned(text) => text[1..].to_vec().into(),
+            };
+            inner.kind = TokenKind::Ident { sigil: b"_", ident };
+            return true;
+        }
+
+        // Try to parse it as an integer.
+        if ty == Type::Integer || ty == Type::Variable && !quoted {
+            // TODO: Use if-let chains once stabilized.
+            if let Some(int) = str::from_utf8(&inner.text)
+                .ok()
+                .and_then(|s| ReadIntegerLit::parse_with_buffer(s, &mut self.digit_buf).ok())
+            {
+                inner.kind = TokenKind::from(int);
+                return ty == Type::Integer;
+            }
+        }
+
+        // Convert it to a string, including quotes if quoted.
+        let tok = match &mut tok.kind {
+            TokenKind::Spliced { spliced, .. } => spliced,
+            _ => tok,
+        };
+        tok.kind = match mem::replace(&mut tok.kind, TokenKind::Word) {
+            TokenKind::Word => TokenKind::String {
+                unquoted: tok.text.clone(),
+                kind: StringKind::Unquoted,
+                terminated: true,
+            },
+            TokenKind::Quoted { inner, terminated } => {
+                debug_assert_eq!(inner.kind, TokenKind::Word);
+                TokenKind::String {
+                    unquoted: inner.text,
+                    kind: StringKind::Quoted,
+                    terminated,
+                }
+            }
+            _ => panic!("unhandled token"),
+        };
+        ty == Type::String
     }
 
     /// Returns the kind of the current token.
@@ -310,9 +401,9 @@ impl<'s, 'd> Parser<'s, 'd> {
     /// Consumes a line terminator, EOF, or invalid UTF-8 error token.
     fn line_term(&mut self) -> Option<Token<'s>> {
         match self.curr() {
-            TokenKind::LineTerm
-            | TokenKind::Eof
-            | TokenKind::Error(TokenError::InvalidUtf8 { .. }) => Some(self.advance()),
+            TokenKind::LineTerm | TokenKind::Eof | TokenKind::Error(TokenError::Utf8 { .. }) => {
+                Some(self.advance())
+            }
             _ => None,
         }
     }
@@ -364,12 +455,22 @@ fn splice_tokens<'s>(lhs: &mut Token<'s>, mut space: Space<'s>, rhs: Token<'s>) 
 
 #[cfg(test)]
 mod tests {
+    use rug::Integer;
+
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-        token::{Mnemonic, Token, TokenKind},
+        token::{IntegerBase, IntegerSign, Mnemonic, StringKind, Token, TokenKind},
     };
 
+    macro_rules! root[($($node:expr),* $(,)?) => {
+        Cst::Dialect {
+            dialect: Dialect::Burghard,
+            inner: Box::new(Cst::Block {
+                nodes: vec![$($node),*],
+            }),
+        }
+    }];
     macro_rules! block_comment(($text:literal) => {
         Token::new(
             // TODO: Use concat_bytes! once stabilized.
@@ -383,80 +484,117 @@ mod tests {
             },
         )
     });
+    macro_rules! eof(() => {
+        InstSep::LineTerm {
+            space_before: Space::new(),
+            line_comment: None,
+            line_term: Token::new(b"", TokenKind::Eof),
+        }
+    });
 
     #[test]
     fn spliced() {
         let src = b" {-c1-}hello{-splice-}world{-c2-}\t!";
         let cst = Burghard::new().parse(src);
-        let expect = Cst::Dialect {
-            dialect: Dialect::Burghard,
-            inner: Box::new(Cst::Block {
-                nodes: vec![Cst::Inst(Inst {
-                    space_before: Space::from(vec![
-                        Token::new(b" ", TokenKind::Space),
-                        block_comment!("c1"),
-                    ]),
-                    mnemonic: Token::new(
-                        b"hello{-splice-}world",
-                        TokenKind::Spliced {
-                            tokens: vec![
-                                Token::new(b"hello", TokenKind::Word),
-                                block_comment!("splice"),
-                                Token::new(b"world", TokenKind::Word),
-                            ],
-                            spliced: Box::new(Token::new(
-                                b"helloworld",
-                                TokenKind::Mnemonic(Mnemonic::Error),
-                            )),
-                        },
-                    ),
-                    args: vec![(
-                        ArgSep::Space(Space::from(vec![
-                            block_comment!("c2"),
-                            Token::new(b"\t", TokenKind::Space),
-                        ])),
-                        Token::new(b"!", TokenKind::Word),
-                    )],
-                    inst_sep: InstSep::LineTerm {
-                        space_before: Space::new(),
-                        line_comment: None,
-                        line_term: Token::new(b"", TokenKind::Eof),
-                    },
-                    valid_arity: false,
-                })],
-            }),
-        };
+        let expect = root![Cst::Inst(Inst {
+            space_before: Space::from(vec![
+                Token::new(b" ", TokenKind::Space),
+                block_comment!("c1"),
+            ]),
+            mnemonic: Token::new(
+                b"hello{-splice-}world",
+                TokenKind::Spliced {
+                    tokens: vec![
+                        Token::new(b"hello", TokenKind::Word),
+                        block_comment!("splice"),
+                        Token::new(b"world", TokenKind::Word),
+                    ],
+                    spliced: Box::new(Token::new(
+                        b"helloworld",
+                        TokenKind::Mnemonic(Mnemonic::Error),
+                    )),
+                },
+            ),
+            args: vec![(
+                ArgSep::Space(Space::from(vec![
+                    block_comment!("c2"),
+                    Token::new(b"\t", TokenKind::Space),
+                ])),
+                Token::new(b"!", TokenKind::Word),
+            )],
+            inst_sep: eof!(),
+            valid_arity: false,
+            valid_types: false,
+        })];
         assert_eq!(cst, expect);
     }
 
     #[test]
     fn mnemonics() {
         let cst = Burghard::new().parse("\"Debug_PrİntStacK".as_bytes());
-        let expect = Cst::Dialect {
-            dialect: Dialect::Burghard,
-            inner: Box::new(Cst::Block {
-                nodes: vec![Cst::Inst(Inst {
-                    space_before: Space::new(),
-                    mnemonic: Token::new(
-                        "\"Debug_PrİntStacK".as_bytes(),
-                        TokenKind::Quoted {
-                            inner: Box::new(Token::new(
-                                "Debug_PrİntStacK".as_bytes(),
-                                TokenKind::Mnemonic(Mnemonic::BurghardPrintStack),
-                            )),
-                            terminated: false,
+        let expect = root![Cst::Inst(Inst {
+            space_before: Space::new(),
+            mnemonic: Token::new(
+                "\"Debug_PrİntStacK".as_bytes(),
+                TokenKind::Quoted {
+                    inner: Box::new(Token::new(
+                        "Debug_PrİntStacK".as_bytes(),
+                        TokenKind::Mnemonic(Mnemonic::BurghardPrintStack),
+                    )),
+                    terminated: false,
+                },
+            ),
+            args: vec![],
+            inst_sep: eof!(),
+            valid_arity: true,
+            valid_types: true,
+        })];
+        assert_eq!(cst, expect);
+    }
+
+    #[test]
+    fn bad_args() {
+        let cst = Burghard::new().parse(b"valueinteger \"1\" \"2\"");
+        let expect = root![Cst::Inst(Inst {
+            space_before: Space::new(),
+            mnemonic: Token::new(
+                b"valueinteger",
+                TokenKind::Mnemonic(Mnemonic::BurghardValueInteger),
+            ),
+            args: vec![
+                (
+                    ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
+                    Token::new(
+                        b"\"1\"",
+                        TokenKind::String {
+                            unquoted: b"1".into(),
+                            kind: StringKind::Quoted,
+                            terminated: true,
                         },
                     ),
-                    args: vec![],
-                    inst_sep: InstSep::LineTerm {
-                        space_before: Space::new(),
-                        line_comment: None,
-                        line_term: Token::new(b"", TokenKind::Eof),
-                    },
-                    valid_arity: true,
-                })],
-            }),
-        };
+                ),
+                (
+                    ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
+                    Token::new(
+                        b"\"2\"",
+                        TokenKind::Quoted {
+                            inner: Box::new(Token::new(
+                                b"2",
+                                TokenKind::Integer {
+                                    value: Integer::from(2),
+                                    sign: IntegerSign::None,
+                                    base: IntegerBase::Decimal,
+                                },
+                            )),
+                            terminated: true,
+                        },
+                    ),
+                ),
+            ],
+            inst_sep: eof!(),
+            valid_arity: true,
+            valid_types: false,
+        })];
         assert_eq!(cst, expect);
     }
 }

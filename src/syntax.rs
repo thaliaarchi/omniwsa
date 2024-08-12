@@ -38,6 +38,7 @@ pub struct Inst<'s> {
     pub args: Vec<(ArgSep<'s>, Token<'s>)>,
     pub inst_sep: InstSep<'s>,
     pub valid_arity: bool,
+    pub valid_types: bool,
 }
 
 /// A sequence of whitespace and block comments.
@@ -183,6 +184,7 @@ impl HasError for Inst<'_> {
                 .any(|(sep, arg)| sep.has_error() || arg.has_error())
             || self.inst_sep.has_error()
             || !self.valid_arity
+            || !self.valid_types
     }
 }
 

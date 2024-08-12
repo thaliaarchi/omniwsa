@@ -1,9 +1,13 @@
 //! Parsing for Haskell `Integer`.
 
-use std::fmt::{self, Display, Formatter};
-use std::str::FromStr;
+use std::{
+    fmt::{self, Display, Formatter},
+    str::FromStr,
+};
 
 use rug::Integer;
+
+use crate::token::{IntegerBase, IntegerSign, TokenKind};
 
 /// An integer with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
 /// in Haskell.
@@ -231,5 +235,29 @@ impl Display for ReadIntegerLit {
             }
         }
         Ok(())
+    }
+}
+
+impl From<ReadIntegerLit> for TokenKind<'_> {
+    fn from(int: ReadIntegerLit) -> Self {
+        TokenKind::Integer {
+            value: int.value,
+            sign: if int.is_negative {
+                IntegerSign::Neg
+            } else {
+                IntegerSign::None
+            },
+            base: int.base.into(),
+        }
+    }
+}
+
+impl From<ReadIntegerBase> for IntegerBase {
+    fn from(base: ReadIntegerBase) -> Self {
+        match base {
+            ReadIntegerBase::Decimal => IntegerBase::Decimal,
+            ReadIntegerBase::Octal => IntegerBase::Octal,
+            ReadIntegerBase::Hexadecimal => IntegerBase::Hexadecimal,
+        }
     }
 }

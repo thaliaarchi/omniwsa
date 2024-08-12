@@ -49,24 +49,17 @@ pub enum TokenKind<'s> {
         /// A prefix sigil to mark identifiers (e.g., Burghard `_`).
         sigil: &'s [u8],
         /// The identifier with its sigil removed.
-        ident: &'s [u8],
+        ident: Cow<'s, [u8]>,
+    },
+    /// Label.
+    Label {
+        /// A prefix sigil to mark labels (e.g., Palaiologos `@` and `%`).
+        sigil: &'s [u8],
+        /// The label with its sigil removed.
+        label: Cow<'s, [u8]>,
     },
     /// Label colon marker (i.e., `:`).
     LabelColon,
-    /// Label definition.
-    LabelDef {
-        /// A prefix sigil to mark label definitions (e.g., Palaiologos `@`).
-        sigil: &'s [u8],
-        /// The label with its sigil removed.
-        label: &'s [u8],
-    },
-    /// Label reference.
-    LabelRef {
-        /// A prefix sigil to mark label references (e.g., Palaiologos `%`).
-        sigil: &'s [u8],
-        /// The label with its sigil removed.
-        label: &'s [u8],
-    },
     /// Instruction separator (e.g., Respace `;` or Palaiologos `/`).
     InstSep,
     /// Argument separator (e.g., Palaiologos `,`).
@@ -127,7 +120,7 @@ pub enum IntegerBase {
     /// Base 8.
     Octal,
     /// Base 16.
-    Hex,
+    Hexadecimal,
 }
 
 /// The style of a string literal.
@@ -143,7 +136,7 @@ pub enum StringKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TokenError {
     /// Invalid UTF-8 sequence (Burghard).
-    InvalidUtf8 {
+    Utf8 {
         /// Length of the invalid sequence.
         error_len: usize,
     },
@@ -245,17 +238,12 @@ impl Debug for TokenKind<'_> {
                 .field("sigil", &sigil.as_bstr())
                 .field("ident", &ident.as_bstr())
                 .finish(),
+            TokenKind::Label { sigil, label } => f
+                .debug_struct("Label")
+                .field("sigil", &sigil.as_bstr())
+                .field("label", &label.as_bstr())
+                .finish(),
             TokenKind::LabelColon => write!(f, "LabelColon"),
-            TokenKind::LabelDef { sigil, label } => f
-                .debug_struct("LabelDef")
-                .field("sigil", &sigil.as_bstr())
-                .field("label", &label.as_bstr())
-                .finish(),
-            TokenKind::LabelRef { sigil, label } => f
-                .debug_struct("LabelRef")
-                .field("sigil", &sigil.as_bstr())
-                .field("label", &label.as_bstr())
-                .finish(),
             TokenKind::InstSep => write!(f, "InstSep"),
             TokenKind::ArgSep => write!(f, "ArgSep"),
             TokenKind::Space => write!(f, "Space"),
