@@ -36,9 +36,14 @@ struct Parser<'s, 'd> {
     dialect: &'d Burghard,
     lex: Lexer<'s>,
     tok: Token<'s>,
+    digit_buf: Vec<u8>,
+}
+
+/// A builder, which structures options into blocks.
+#[derive(Clone, Debug)]
+struct OptionNester<'s> {
     root: Vec<Cst<'s>>,
     option_stack: Vec<OptionBlock<'s>>,
-    digit_buf: Vec<u8>,
 }
 
 /// The shape of the arguments for a mnemonic.
@@ -134,7 +139,7 @@ impl Burghard {
 
     /// Parses a Whitespace assembly program in the Burghard dialect.
     pub fn parse<'s>(&self, src: &'s [u8]) -> Cst<'s> {
-        Parser::new(src, self).parse_options()
+        OptionNester::new().nest(&mut Parser::new(src, self))
     }
 }
 
@@ -213,79 +218,16 @@ impl<'s, 'd> Parser<'s, 'd> {
             dialect,
             lex,
             tok,
-            root: Vec::new(),
-            option_stack: Vec::new(),
             digit_buf: Vec::new(),
         }
     }
+}
 
-    /// Parses instructions into structured option blocks.
-    fn parse_options(&mut self) -> Cst<'s> {
-        while let Some(line) = self.next_line() {
-            if let Cst::Inst(inst) = line {
-                match inst.mnemonic() {
-                    Mnemonic::IfOption => {
-                        self.option_stack.push(OptionBlock {
-                            options: vec![(inst, Vec::new())],
-                            end: None,
-                        });
-                    }
-                    Mnemonic::ElseIfOption | Mnemonic::ElseOption => {
-                        match self.option_stack.last_mut() {
-                            Some(block) => {
-                                block.options.push((inst, Vec::new()));
-                            }
-                            None => {
-                                self.option_stack.push(OptionBlock {
-                                    options: vec![(inst, Vec::new())],
-                                    end: None,
-                                });
-                            }
-                        }
-                    }
-                    Mnemonic::EndOption => match self.option_stack.pop() {
-                        Some(mut block) => {
-                            block.end = Some(inst);
-                            self.curr_block().push(Cst::OptionBlock(block));
-                        }
-                        None => {
-                            self.root.push(Cst::OptionBlock(OptionBlock {
-                                options: Vec::new(),
-                                end: Some(inst),
-                            }));
-                        }
-                    },
-                    _ => self.curr_block().push(Cst::Inst(inst)),
-                }
-            } else {
-                self.curr_block().push(line);
-            }
-        }
-        let mut parent = &mut self.root;
-        for block in self.option_stack.drain(..) {
-            parent.push(Cst::OptionBlock(block));
-            let Cst::OptionBlock(last) = parent.last_mut().unwrap() else {
-                unreachable!();
-            };
-            parent = &mut last.options.last_mut().unwrap().1;
-        }
-        let nodes = mem::take(&mut self.root);
-        Cst::Dialect {
-            dialect: Dialect::Burghard,
-            inner: Box::new(Cst::Block { nodes }),
-        }
-    }
-
-    /// Returns the current block for instructions to be inserted into.
-    fn curr_block(&mut self) -> &mut Vec<Cst<'s>> {
-        match self.option_stack.last_mut() {
-            Some(last) => &mut last.options.last_mut().unwrap().1,
-            None => &mut self.root,
-        }
-    }
+impl<'s> Iterator for Parser<'s, '_> {
+    type Item = Cst<'s>;
 
     /// Parses the next line.
-    fn next_line(&mut self) -> Option<Cst<'s>> {
+    fn next(&mut self) -> Option<Self::Item> {
         if self.eof() {
             return None;
         }
@@ -324,7 +266,9 @@ impl<'s, 'd> Parser<'s, 'd> {
         self.parse_inst(&mut inst);
         Some(Cst::Inst(inst))
     }
+}
 
+impl<'s> Parser<'s, '_> {
     /// Parses the mnemonic and arguments of an instruction.
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
         let mnemonic_word = inst.mnemonic.unwrap_mut();
@@ -506,6 +450,81 @@ fn splice_tokens<'s>(lhs: &mut Token<'s>, mut space: Space<'s>, rhs: Token<'s>) 
             tokens.push(rhs);
         }
         _ => panic!("unhandled token"),
+    }
+}
+
+impl<'s> OptionNester<'s> {
+    /// Constructs a builder, which structures options into blocks.
+    fn new() -> Self {
+        OptionNester {
+            root: Vec::new(),
+            option_stack: Vec::new(),
+        }
+    }
+
+    /// Nests instructions into structured option blocks.
+    fn nest(&mut self, lines: &mut Parser<'s, '_>) -> Cst<'s> {
+        while let Some(line) = lines.next() {
+            if let Cst::Inst(inst) = line {
+                match inst.mnemonic() {
+                    Mnemonic::IfOption => {
+                        self.option_stack.push(OptionBlock {
+                            options: vec![(inst, Vec::new())],
+                            end: None,
+                        });
+                    }
+                    Mnemonic::ElseIfOption | Mnemonic::ElseOption => {
+                        match self.option_stack.last_mut() {
+                            Some(block) => {
+                                block.options.push((inst, Vec::new()));
+                            }
+                            None => {
+                                self.option_stack.push(OptionBlock {
+                                    options: vec![(inst, Vec::new())],
+                                    end: None,
+                                });
+                            }
+                        }
+                    }
+                    Mnemonic::EndOption => match self.option_stack.pop() {
+                        Some(mut block) => {
+                            block.end = Some(inst);
+                            self.curr_block().push(Cst::OptionBlock(block));
+                        }
+                        None => {
+                            self.root.push(Cst::OptionBlock(OptionBlock {
+                                options: Vec::new(),
+                                end: Some(inst),
+                            }));
+                        }
+                    },
+                    _ => self.curr_block().push(Cst::Inst(inst)),
+                }
+            } else {
+                self.curr_block().push(line);
+            }
+        }
+        let mut parent = &mut self.root;
+        for block in self.option_stack.drain(..) {
+            parent.push(Cst::OptionBlock(block));
+            let Cst::OptionBlock(last) = parent.last_mut().unwrap() else {
+                unreachable!();
+            };
+            parent = &mut last.options.last_mut().unwrap().1;
+        }
+        let nodes = mem::take(&mut self.root);
+        Cst::Dialect {
+            dialect: Dialect::Burghard,
+            inner: Box::new(Cst::Block { nodes }),
+        }
+    }
+
+    /// Returns the current block for instructions to be inserted into.
+    fn curr_block(&mut self) -> &mut Vec<Cst<'s>> {
+        match self.option_stack.last_mut() {
+            Some(last) => &mut last.options.last_mut().unwrap().1,
+            None => &mut self.root,
+        }
     }
 }
 
