@@ -6,3 +6,4 @@ mod pretty;
 mod scan;
 pub mod syntax;
 pub mod token;
+pub mod visit;

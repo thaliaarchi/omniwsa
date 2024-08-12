@@ -14,6 +14,7 @@ use crate::{
 // - Add shape of arguments to Inst. This should subsume Args, Type,
 //   Inst::valid_arity, and Inst::valid_types.
 // - Assign stricter tokens to `include` and options.
+// - Move Cst macros to syntax.
 
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]

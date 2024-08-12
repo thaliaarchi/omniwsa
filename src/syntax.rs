@@ -8,6 +8,8 @@ use crate::token::{Opcode, Token, TokenKind};
 // TODO:
 // - Macro definitions and invocations.
 // - Use bit flags for errors.
+// - Rename `Cst` -> `Node` and combine `Node::Block` and `Node::Dialect` as
+//   `struct Cst`.
 
 /// A node in a concrete syntax tree for interoperable Whitespace assembly.
 #[derive(Clone, Debug, PartialEq, Eq)]

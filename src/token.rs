@@ -16,6 +16,7 @@ use crate::syntax::HasError;
 // - Respace `@define`.
 // - How to represent escapes in strings and chars?
 // - How to represent equivalent integers?
+// - Store byte string uniformly, instead of a mix of &[u8] and Cow.
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
