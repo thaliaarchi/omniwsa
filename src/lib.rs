@@ -1,6 +1,7 @@
 pub mod dialects;
-pub(crate) mod mnemonics;
+mod integer;
+mod mnemonics;
 #[allow(dead_code)]
-pub(crate) mod scan;
+mod scan;
 pub mod syntax;
 pub mod token;
