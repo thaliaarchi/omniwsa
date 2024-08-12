@@ -6,7 +6,7 @@ use crate::{
     integer::ReadIntegerLit,
     mnemonics::LowerToAscii,
     scan::Utf8Scanner,
-    syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
+    syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
     token::{Mnemonic, StringKind, Token, TokenError, TokenKind},
 };
 
@@ -14,7 +14,6 @@ use crate::{
 // - Add shape of arguments to Inst. This should subsume Args, Type,
 //   Inst::valid_arity, and Inst::valid_types.
 // - Assign stricter tokens to `include` and options.
-// - Structure option blocks.
 
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -133,7 +132,7 @@ impl Burghard {
 
     /// Parses a Whitespace assembly program in the Burghard dialect.
     pub fn parse<'s>(&self, src: &'s [u8]) -> Cst<'s> {
-        Parser::new(src, self).parse()
+        Parser::new(src, self).parse_options()
     }
 }
 
@@ -216,20 +215,78 @@ impl<'s, 'd> Parser<'s, 'd> {
         }
     }
 
-    /// Parses the entire source.
-    fn parse(&mut self) -> Cst<'s> {
-        let mut nodes = Vec::new();
-        while let Some(inst) = self.next_inst() {
-            nodes.push(inst);
+    /// Parses instructions into structured option blocks.
+    fn parse_options(&mut self) -> Cst<'s> {
+        let mut root = Vec::new();
+        let mut stack = Vec::new();
+        while let Some(line) = self.next_line() {
+            if let Cst::Inst(inst) = line {
+                match inst.mnemonic() {
+                    Mnemonic::IfOption => {
+                        stack.push(OptionBlock {
+                            options: vec![(inst, Vec::new())],
+                            end: None,
+                        });
+                    }
+                    Mnemonic::ElseIfOption | Mnemonic::ElseOption => match stack.last_mut() {
+                        Some(block) => {
+                            block.options.push((inst, Vec::new()));
+                        }
+                        None => {
+                            stack.push(OptionBlock {
+                                options: vec![(inst, Vec::new())],
+                                end: None,
+                            });
+                        }
+                    },
+                    Mnemonic::EndOption => match stack.pop() {
+                        Some(mut block) => {
+                            block.end = Some(inst);
+                            let top = match stack.last_mut() {
+                                Some(last) => &mut last.options.last_mut().unwrap().1,
+                                None => &mut root,
+                            };
+                            top.push(Cst::OptionBlock(block));
+                        }
+                        None => {
+                            root.push(Cst::OptionBlock(OptionBlock {
+                                options: Vec::new(),
+                                end: Some(inst),
+                            }));
+                        }
+                    },
+                    _ => {
+                        let top = match stack.last_mut() {
+                            Some(block) => &mut block.options.last_mut().unwrap().1,
+                            None => &mut root,
+                        };
+                        top.push(Cst::Inst(inst));
+                    }
+                }
+            } else {
+                let top = match stack.last_mut() {
+                    Some(block) => &mut block.options.last_mut().unwrap().1,
+                    None => &mut root,
+                };
+                top.push(line);
+            }
+        }
+        let mut parent = &mut root;
+        for block in stack.drain(..) {
+            parent.push(Cst::OptionBlock(block));
+            let Cst::OptionBlock(last) = parent.last_mut().unwrap() else {
+                unreachable!();
+            };
+            parent = &mut last.options.last_mut().unwrap().1;
         }
         Cst::Dialect {
             dialect: Dialect::Burghard,
-            inner: Box::new(Cst::Block { nodes }),
+            inner: Box::new(Cst::Block { nodes: root }),
         }
     }
 
-    /// Parses the next instruction.
-    fn next_inst(&mut self) -> Option<Cst<'s>> {
+    /// Parses the next line.
+    fn next_line(&mut self) -> Option<Cst<'s>> {
         if self.eof() {
             return None;
         }
@@ -459,7 +516,7 @@ mod tests {
 
     use crate::{
         dialects::Burghard,
-        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
+        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
         token::{IntegerBase, IntegerSign, Mnemonic, StringKind, Token, TokenKind},
     };
 
@@ -483,6 +540,16 @@ mod tests {
                 terminated: true,
             },
         )
+    });
+    macro_rules! space(($space:literal) => {
+        Space::from(vec![Token::new($space, TokenKind::Space)])
+    });
+    macro_rules! lf(() => {
+        InstSep::LineTerm {
+            space_before: Space::new(),
+            line_comment: None,
+            line_term: Token::new(b"\n", TokenKind::LineTerm),
+        }
     });
     macro_rules! eof(() => {
         InstSep::LineTerm {
@@ -563,7 +630,7 @@ mod tests {
             ),
             args: vec![
                 (
-                    ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
+                    ArgSep::Space(space!(b" ")),
                     Token::new(
                         b"\"1\"",
                         TokenKind::String {
@@ -574,7 +641,7 @@ mod tests {
                     ),
                 ),
                 (
-                    ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
+                    ArgSep::Space(space!(b" ")),
                     Token::new(
                         b"\"2\"",
                         TokenKind::Quoted {
@@ -595,6 +662,118 @@ mod tests {
             valid_arity: true,
             valid_types: false,
         })];
+        assert_eq!(cst, expect);
+    }
+
+    #[test]
+    fn option_blocks() {
+        macro_rules! letter(($letter:literal) => {
+            Cst::Inst(Inst {
+                space_before: Space::new(),
+                mnemonic: Token::new($letter, TokenKind::Mnemonic(Mnemonic::Error)),
+                args: vec![],
+                inst_sep: lf!(),
+                valid_arity: true,
+                valid_types: true,
+            })
+        });
+        macro_rules! ifoption(($option:literal) => {
+            Inst {
+                space_before: Space::new(),
+                mnemonic: Token::new(
+                    b"ifoption",
+                    TokenKind::Mnemonic(Mnemonic::IfOption),
+                ),
+                args: vec![(
+                    ArgSep::Space(space!(b" ")),
+                    Token::new($option, TokenKind::Word),
+                )],
+                inst_sep: lf!(),
+                valid_arity: true,
+                valid_types: true,
+            }
+        });
+        macro_rules! elseifoption(($option:literal) => {
+            Inst {
+                space_before: Space::new(),
+                mnemonic: Token::new(
+                    b"elseifoption",
+                    TokenKind::Mnemonic(Mnemonic::ElseIfOption),
+                ),
+                args: vec![(
+                    ArgSep::Space(space!(b" ")),
+                    Token::new($option, TokenKind::Word),
+                )],
+                inst_sep: lf!(),
+                valid_arity: true,
+                valid_types: true,
+            }
+        });
+        macro_rules! elseoption(() => {
+            Inst {
+                space_before: Space::new(),
+                mnemonic: Token::new(
+                    b"elseoption",
+                    TokenKind::Mnemonic(Mnemonic::ElseOption)
+                ),
+                args: vec![],
+                inst_sep: lf!(),
+                valid_arity: true,
+                valid_types: true,
+            }
+        });
+        macro_rules! endoption(() => {
+            Inst {
+                space_before: Space::new(),
+                mnemonic: Token::new(b"endoption", TokenKind::Mnemonic(Mnemonic::EndOption)),
+                args: vec![],
+                inst_sep: lf!(),
+                valid_arity: true,
+                valid_types: true,
+            }
+        });
+        let src = b"a
+endoption
+b
+ifoption x
+c
+elseoption
+d
+elseifoption y
+e
+endoption
+f
+endoption
+g
+elseoption
+";
+        let cst = Burghard::new().parse(src);
+        let expect = root![
+            letter!(b"a"),
+            Cst::OptionBlock(OptionBlock {
+                options: vec![],
+                end: Some(endoption!()),
+            }),
+            letter!(b"b"),
+            Cst::OptionBlock(OptionBlock {
+                options: vec![
+                    (ifoption!(b"x"), vec![letter!(b"c")]),
+                    (elseoption!(), vec![letter!(b"d")]),
+                    (elseifoption!(b"y"), vec![letter!(b"e")]),
+                ],
+                end: Some(endoption!()),
+            }),
+            letter!(b"f"),
+            Cst::OptionBlock(OptionBlock {
+                options: vec![],
+                end: Some(endoption!()),
+            }),
+            letter!(b"g"),
+            Cst::OptionBlock(OptionBlock {
+                options: vec![(elseoption!(), vec![])],
+                end: None,
+            }),
+        ];
         assert_eq!(cst, expect);
     }
 }

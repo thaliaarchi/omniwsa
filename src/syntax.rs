@@ -2,10 +2,12 @@
 
 use std::fmt::{self, Debug, Formatter};
 
-use crate::token::{Token, TokenKind};
+use crate::token::{Mnemonic, Token, TokenKind};
 
 // TODO:
 // - Macro definitions and invocations.
+// - Rename mnemonic to opcode.
+// - Use bit flags for errors.
 
 /// A node in a concrete syntax tree for interoperable Whitespace assembly.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -16,13 +18,8 @@ pub enum Cst<'s> {
     Empty(InstSep<'s>),
     /// Sequence of nodes.
     Block { nodes: Vec<Cst<'s>> },
-    /// Conditional compilation
-    /// (Burghard `ifoption`/`elseifoption`/`elseoption`/`endoption` and
-    /// Respace `@ifdef`/`@else`/`@endif`).
-    OptionBlock {
-        options: Vec<(Inst<'s>, Vec<Cst<'s>>)>,
-        end: Inst<'s>,
-    },
+    /// Conditionally compiled block.
+    OptionBlock(OptionBlock<'s>),
     /// Marker for the dialect of the contained CST.
     Dialect {
         dialect: Dialect,
@@ -30,7 +27,7 @@ pub enum Cst<'s> {
     },
 }
 
-/// Instruction.
+/// An instruction.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inst<'s> {
     pub space_before: Space<'s>,
@@ -73,6 +70,15 @@ pub enum InstSep<'s> {
     Sep(Spaced<'s, Token<'s>>),
 }
 
+/// A conditionally compiled block
+/// (Burghard `ifoption`/`elseifoption`/`elseoption`/`endoption` and
+/// Respace `@ifdef`/`@else`/`@endif`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OptionBlock<'s> {
+    pub options: Vec<(Inst<'s>, Vec<Cst<'s>>)>,
+    pub end: Option<Inst<'s>>,
+}
+
 /// A Whitespace assembly dialect.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Dialect {
@@ -89,6 +95,17 @@ pub enum Dialect {
 pub trait HasError {
     /// Returns whether this contains any syntax errors.
     fn has_error(&self) -> bool;
+}
+
+impl Inst<'_> {
+    /// Returns the mnemonic for this instruction. Panics if `self.mnemonic` is
+    /// not a mnemonic token.
+    pub fn mnemonic(&self) -> Mnemonic {
+        match self.mnemonic.unwrap().kind {
+            TokenKind::Mnemonic(mnemonic) => mnemonic,
+            _ => panic!("not a mnemonic"),
+        }
+    }
 }
 
 impl<'s> Space<'s> {
@@ -163,12 +180,7 @@ impl HasError for Cst<'_> {
             Cst::Inst(inst) => inst.has_error(),
             Cst::Empty(sep) => sep.has_error(),
             Cst::Block { nodes } => nodes.has_error(),
-            Cst::OptionBlock { options, end } => {
-                options
-                    .iter()
-                    .any(|(option, block)| option.has_error() || block.has_error())
-                    || end.has_error()
-            }
+            Cst::OptionBlock(block) => block.has_error(),
             Cst::Dialect { dialect: _, inner } => inner.has_error(),
         }
     }
@@ -219,6 +231,19 @@ impl HasError for InstSep<'_> {
             } => space_before.has_error() || line_comment.has_error() || line_term.has_error(),
             InstSep::Sep(sep) => sep.has_error(),
         }
+    }
+}
+
+impl HasError for OptionBlock<'_> {
+    fn has_error(&self) -> bool {
+        self.options.is_empty()
+            || self.options.first().unwrap().0.mnemonic() != Mnemonic::IfOption
+            || self
+                .options
+                .iter()
+                .any(|(option, block)| option.has_error() || block.has_error())
+            || self.end.is_none()
+            || self.end.has_error()
     }
 }
 
