@@ -2,6 +2,7 @@
 
 use std::fmt::{self, Debug, Formatter};
 
+pub use crate::pretty::Pretty;
 use crate::token::{Opcode, Token, TokenKind};
 
 // TODO:
