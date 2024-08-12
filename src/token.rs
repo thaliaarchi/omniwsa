@@ -17,6 +17,11 @@ use crate::syntax::HasError;
 // - How to represent escapes in strings and chars?
 // - How to represent equivalent integers?
 // - Store byte string uniformly, instead of a mix of &[u8] and Cow.
+//   - Create utilities for slicing and manipulating easier than Cow.
+// - Move `Token::text` into token variants, so text is not stored redundantly,
+//   and rename `TokenKind` -> `Token`. For example, the line comment prefix
+//   needs to be manipulated in both `Token::text` and `LineComment::prefix`.
+// - Extract each token as a struct to manage manipulation routines.
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
@@ -180,6 +185,25 @@ impl<'s> Token<'s> {
                 }
                 _ => return tok,
             }
+        }
+    }
+
+    /// Trim trailing whitespace in a line comment.
+    pub fn line_comment_trim_trailing(&mut self) {
+        match &mut self.kind {
+            TokenKind::LineComment { prefix, text } => {
+                let i = text
+                    .iter()
+                    .rposition(|&b| b != b' ' && b != b'\t')
+                    .map(|i| i + 1)
+                    .unwrap_or(0);
+                *text = &text[..i];
+                match &mut self.text {
+                    Cow::Borrowed(text) => *text = &text[..prefix.len() + i],
+                    Cow::Owned(text) => text.truncate(prefix.len() + i),
+                }
+            }
+            _ => panic!("not a line comment"),
         }
     }
 }

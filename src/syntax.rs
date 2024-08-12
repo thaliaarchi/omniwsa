@@ -122,6 +122,27 @@ impl<'s> Space<'s> {
         self.tokens.push(token)
     }
 
+    /// Trims leading spaces.
+    pub fn trim_leading(&mut self) {
+        let i = self
+            .tokens
+            .iter()
+            .position(|tok| tok.kind != TokenKind::Space)
+            .unwrap_or(self.tokens.len());
+        self.tokens.drain(..i);
+    }
+
+    /// Trims trailing spaces.
+    pub fn trim_trailing(&mut self) {
+        let i = self
+            .tokens
+            .iter()
+            .rposition(|tok| tok.kind != TokenKind::Space)
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        self.tokens.drain(i..);
+    }
+
     fn assert_space(token: &Token<'s>) {
         debug_assert!(matches!(
             token.kind,

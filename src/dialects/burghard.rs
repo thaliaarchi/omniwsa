@@ -13,6 +13,7 @@ use crate::{
 // TODO:
 // - Add shape of arguments to Inst. This should subsume Args, Type,
 //   Inst::valid_arity, and Inst::valid_types.
+// - Transform strings to lowercase.
 // - Assign stricter tokens to `include` and options.
 // - Move Cst macros to syntax.
 

@@ -23,8 +23,9 @@ string ::= "\"" [^"]* "\""
 rest ::= …
 ```
 
-Then, it is split into lines. Here, strings may not contain LF, unlike the
-previous step, so such strings count as unterminated.
+Then, it is split into lines separated by LF. Here, strings may not contain LF,
+unlike the previous step, so such strings count as unterminated. CRLF and CR
+do not count as line terminators.
 
 Lines are split into word and string tokens. Space is required between two
 words, but not around strings. `{-`, `-}`, `;`, and `--` cannot occur within a
