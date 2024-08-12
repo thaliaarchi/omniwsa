@@ -10,7 +10,7 @@
   - [Respace](dialects/respace.md) (cpp/thaliaarchi-respace)
   - [rdebath](dialects/rdebath.md) (c/rdebath)
   - [Palaiologos](dialects/palaiologos.md) (c/kspalaiologos-asm2ws)
-  - [Lime Whitespace](dialects/limews.md) (c/manarice)
+  - [Lime](dialects/lime.md) (c/manarice)
   - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
   - [voliva](dialects/voliva.md) (typescript/voliva-wsa)
   - [Other](dialects/other_dialects.md)
