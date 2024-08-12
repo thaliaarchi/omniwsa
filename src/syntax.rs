@@ -2,11 +2,10 @@
 
 use std::fmt::{self, Debug, Formatter};
 
-use crate::token::{Mnemonic, Token, TokenKind};
+use crate::token::{Opcode, Token, TokenKind};
 
 // TODO:
 // - Macro definitions and invocations.
-// - Rename mnemonic to opcode.
 // - Use bit flags for errors.
 
 /// A node in a concrete syntax tree for interoperable Whitespace assembly.
@@ -31,7 +30,7 @@ pub enum Cst<'s> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inst<'s> {
     pub space_before: Space<'s>,
-    pub mnemonic: Token<'s>,
+    pub opcode: Token<'s>,
     pub args: Vec<(ArgSep<'s>, Token<'s>)>,
     pub inst_sep: InstSep<'s>,
     pub valid_arity: bool,
@@ -98,12 +97,12 @@ pub trait HasError {
 }
 
 impl Inst<'_> {
-    /// Returns the mnemonic for this instruction. Panics if `self.mnemonic` is
-    /// not a mnemonic token.
-    pub fn mnemonic(&self) -> Mnemonic {
-        match self.mnemonic.unwrap().kind {
-            TokenKind::Mnemonic(mnemonic) => mnemonic,
-            _ => panic!("not a mnemonic"),
+    /// Returns the opcode for this instruction. Panics if `self.opcode` is not
+    /// an opcode token.
+    pub fn opcode(&self) -> Opcode {
+        match self.opcode.unwrap().kind {
+            TokenKind::Opcode(opcode) => opcode,
+            _ => panic!("not an opcode"),
         }
     }
 }
@@ -189,7 +188,7 @@ impl HasError for Cst<'_> {
 impl HasError for Inst<'_> {
     fn has_error(&self) -> bool {
         self.space_before.has_error()
-            || self.mnemonic.has_error()
+            || self.opcode.has_error()
             || self
                 .args
                 .iter()
@@ -237,7 +236,7 @@ impl HasError for InstSep<'_> {
 impl HasError for OptionBlock<'_> {
     fn has_error(&self) -> bool {
         self.options.is_empty()
-            || self.options.first().unwrap().0.mnemonic() != Mnemonic::IfOption
+            || self.options.first().unwrap().0.opcode() != Opcode::IfOption
             || self
                 .options
                 .iter()

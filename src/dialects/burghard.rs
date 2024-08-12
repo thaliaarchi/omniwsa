@@ -7,7 +7,7 @@ use crate::{
     mnemonics::LowerToAscii,
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
-    token::{Mnemonic, StringKind, Token, TokenError, TokenKind},
+    token::{Opcode, StringKind, Token, TokenError, TokenKind},
 };
 
 // TODO:
@@ -18,7 +18,7 @@ use crate::{
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Burghard {
-    mnemonics: HashMap<LowerToAscii<'static>, (Mnemonic, Args)>,
+    mnemonics: HashMap<LowerToAscii<'static>, (Opcode, Args)>,
 }
 
 /// A lexer for tokens in the Burghard Whitespace assembly dialect.
@@ -46,7 +46,7 @@ struct OptionNester<'s> {
     option_stack: Vec<OptionBlock<'s>>,
 }
 
-/// The shape of the arguments for a mnemonic.
+/// The shape of the arguments for an opcode.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Args {
     /// No arguments.
@@ -80,10 +80,10 @@ enum Type {
     Label,
 }
 
-macro_rules! mnemonics[($($canon:literal => $mnemonic:ident $args:ident,)*) => {
-    &[$((LowerToAscii($canon.as_bytes()), Mnemonic::$mnemonic, Args::$args),)+]
+macro_rules! mnemonics[($($mnemonic:literal => $opcode:ident $args:ident,)*) => {
+    &[$((LowerToAscii($mnemonic.as_bytes()), Opcode::$opcode, Args::$args),)+]
 }];
-static MNEMONICS: &[(LowerToAscii<'static>, Mnemonic, Args)] = mnemonics![
+static MNEMONICS: &[(LowerToAscii<'static>, Opcode, Args)] = mnemonics![
     "push" => Push Integer,
     "pushs" => PushString0 String,
     "doub" => Dup None,
@@ -132,7 +132,7 @@ impl Burghard {
         Burghard {
             mnemonics: MNEMONICS
                 .iter()
-                .map(|&(canon, mnemonic, args)| (canon, (mnemonic, args)))
+                .map(|&(mnemonic, opcode, args)| (mnemonic, (opcode, args)))
                 .collect(),
         }
     }
@@ -233,12 +233,12 @@ impl<'s> Iterator for Parser<'s, '_> {
         }
 
         let space_before = self.space();
-        let mut mnemonic = match self.curr() {
+        let mut opcode = match self.curr() {
             TokenKind::Word | TokenKind::Quoted { .. } => self.advance(),
             _ => return Some(Cst::Empty(self.line_term_sep(space_before))),
         };
 
-        let mut prev_word = &mut mnemonic;
+        let mut prev_word = &mut opcode;
         let mut args = Vec::new();
         let space_after = loop {
             let space = self.space();
@@ -257,7 +257,7 @@ impl<'s> Iterator for Parser<'s, '_> {
 
         let mut inst = Inst {
             space_before,
-            mnemonic,
+            opcode,
             args,
             inst_sep,
             valid_arity: false,
@@ -269,17 +269,17 @@ impl<'s> Iterator for Parser<'s, '_> {
 }
 
 impl<'s> Parser<'s, '_> {
-    /// Parses the mnemonic and arguments of an instruction.
+    /// Parses the opcode and arguments of an instruction.
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
-        let mnemonic_word = inst.mnemonic.unwrap_mut();
-        debug_assert_eq!(mnemonic_word.kind, TokenKind::Word);
-        let (mnemonic, args) = self
+        let opcode_word = inst.opcode.unwrap_mut();
+        debug_assert_eq!(opcode_word.kind, TokenKind::Word);
+        let (opcode, args) = self
             .dialect
             .mnemonics
-            .get(&LowerToAscii(&mnemonic_word.text))
+            .get(&LowerToAscii(&opcode_word.text))
             .copied()
-            .unwrap_or((Mnemonic::Error, Args::None));
-        mnemonic_word.kind = TokenKind::Mnemonic(mnemonic);
+            .unwrap_or((Opcode::Invalid, Args::None));
+        opcode_word.kind = TokenKind::Opcode(opcode);
 
         inst.valid_arity = true;
         inst.valid_types = match (args, &mut inst.args[..]) {
@@ -466,14 +466,14 @@ impl<'s> OptionNester<'s> {
     fn nest(&mut self, lines: &mut Parser<'s, '_>) -> Cst<'s> {
         while let Some(line) = lines.next() {
             if let Cst::Inst(inst) = line {
-                match inst.mnemonic() {
-                    Mnemonic::IfOption => {
+                match inst.opcode() {
+                    Opcode::IfOption => {
                         self.option_stack.push(OptionBlock {
                             options: vec![(inst, Vec::new())],
                             end: None,
                         });
                     }
-                    Mnemonic::ElseIfOption | Mnemonic::ElseOption => {
+                    Opcode::ElseIfOption | Opcode::ElseOption => {
                         match self.option_stack.last_mut() {
                             Some(block) => {
                                 block.options.push((inst, Vec::new()));
@@ -486,7 +486,7 @@ impl<'s> OptionNester<'s> {
                             }
                         }
                     }
-                    Mnemonic::EndOption => match self.option_stack.pop() {
+                    Opcode::EndOption => match self.option_stack.pop() {
                         Some(mut block) => {
                             block.end = Some(inst);
                             self.curr_block().push(Cst::OptionBlock(block));
@@ -535,7 +535,7 @@ mod tests {
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
-        token::{IntegerBase, IntegerSign, Mnemonic, StringKind, Token, TokenKind},
+        token::{IntegerBase, IntegerSign, Opcode, StringKind, Token, TokenKind},
     };
 
     macro_rules! root[($($node:expr),* $(,)?) => {
@@ -586,7 +586,7 @@ mod tests {
                 Token::new(b" ", TokenKind::Space),
                 block_comment!("c1"),
             ]),
-            mnemonic: Token::new(
+            opcode: Token::new(
                 b"hello{-splice-}world",
                 TokenKind::Spliced {
                     tokens: vec![
@@ -596,7 +596,7 @@ mod tests {
                     ],
                     spliced: Box::new(Token::new(
                         b"helloworld",
-                        TokenKind::Mnemonic(Mnemonic::Error),
+                        TokenKind::Opcode(Opcode::Invalid),
                     )),
                 },
             ),
@@ -615,16 +615,16 @@ mod tests {
     }
 
     #[test]
-    fn mnemonics() {
+    fn mnemonic_utf8_folding() {
         let cst = Burghard::new().parse("\"Debug_PrİntStacK".as_bytes());
         let expect = root![Cst::Inst(Inst {
             space_before: Space::new(),
-            mnemonic: Token::new(
+            opcode: Token::new(
                 "\"Debug_PrİntStacK".as_bytes(),
                 TokenKind::Quoted {
                     inner: Box::new(Token::new(
                         "Debug_PrİntStacK".as_bytes(),
-                        TokenKind::Mnemonic(Mnemonic::BurghardPrintStack),
+                        TokenKind::Opcode(Opcode::BurghardPrintStack),
                     )),
                     terminated: false,
                 },
@@ -642,9 +642,9 @@ mod tests {
         let cst = Burghard::new().parse(b"valueinteger \"1\" \"2\"");
         let expect = root![Cst::Inst(Inst {
             space_before: Space::new(),
-            mnemonic: Token::new(
+            opcode: Token::new(
                 b"valueinteger",
-                TokenKind::Mnemonic(Mnemonic::BurghardValueInteger),
+                TokenKind::Opcode(Opcode::BurghardValueInteger),
             ),
             args: vec![
                 (
@@ -688,7 +688,7 @@ mod tests {
         macro_rules! letter(($letter:literal) => {
             Cst::Inst(Inst {
                 space_before: Space::new(),
-                mnemonic: Token::new($letter, TokenKind::Mnemonic(Mnemonic::Error)),
+                opcode: Token::new($letter, TokenKind::Opcode(Opcode::Invalid)),
                 args: vec![],
                 inst_sep: lf!(),
                 valid_arity: true,
@@ -698,9 +698,9 @@ mod tests {
         macro_rules! ifoption(($option:literal) => {
             Inst {
                 space_before: Space::new(),
-                mnemonic: Token::new(
+                opcode: Token::new(
                     b"ifoption",
-                    TokenKind::Mnemonic(Mnemonic::IfOption),
+                    TokenKind::Opcode(Opcode::IfOption),
                 ),
                 args: vec![(
                     ArgSep::Space(space!(b" ")),
@@ -714,9 +714,9 @@ mod tests {
         macro_rules! elseifoption(($option:literal) => {
             Inst {
                 space_before: Space::new(),
-                mnemonic: Token::new(
+                opcode: Token::new(
                     b"elseifoption",
-                    TokenKind::Mnemonic(Mnemonic::ElseIfOption),
+                    TokenKind::Opcode(Opcode::ElseIfOption),
                 ),
                 args: vec![(
                     ArgSep::Space(space!(b" ")),
@@ -730,9 +730,9 @@ mod tests {
         macro_rules! elseoption(() => {
             Inst {
                 space_before: Space::new(),
-                mnemonic: Token::new(
+                opcode: Token::new(
                     b"elseoption",
-                    TokenKind::Mnemonic(Mnemonic::ElseOption)
+                    TokenKind::Opcode(Opcode::ElseOption)
                 ),
                 args: vec![],
                 inst_sep: lf!(),
@@ -743,7 +743,7 @@ mod tests {
         macro_rules! endoption(() => {
             Inst {
                 space_before: Space::new(),
-                mnemonic: Token::new(b"endoption", TokenKind::Mnemonic(Mnemonic::EndOption)),
+                opcode: Token::new(b"endoption", TokenKind::Opcode(Opcode::EndOption)),
                 args: vec![],
                 inst_sep: lf!(),
                 valid_arity: true,

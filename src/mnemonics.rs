@@ -1,3 +1,5 @@
+//! Resolution of mnemonics to opcodes.
+
 use std::{
     fmt::{self, Debug, Display, Formatter},
     hash::{Hash, Hasher},
@@ -5,9 +7,9 @@ use std::{
 
 use bstr::ByteSlice;
 
-/// Instruction or predefined macro mnemonic.
+/// Instruction or predefined macro opcode.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Mnemonic {
+pub enum Opcode {
     Push,
     Dup,
     Copy,
@@ -74,7 +76,7 @@ pub enum Mnemonic {
     BurghardTest,
 
     /// An invalid mnemonic.
-    Error,
+    Invalid,
 }
 
 /// A string which compares by folding to lowercase. Only characters that fold

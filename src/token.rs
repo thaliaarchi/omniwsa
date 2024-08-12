@@ -8,7 +8,7 @@ use std::{
 use bstr::ByteSlice;
 use rug::Integer;
 
-pub use crate::mnemonics::Mnemonic;
+pub use crate::mnemonics::Opcode;
 use crate::syntax::HasError;
 
 // TODO:
@@ -28,8 +28,8 @@ pub struct Token<'s> {
 /// A kind of token.
 #[derive(Clone, PartialEq, Eq)]
 pub enum TokenKind<'s> {
-    /// Instruction or predefined macro mnemonic.
-    Mnemonic(Mnemonic),
+    /// Instruction or predefined macro opcode.
+    Opcode(Opcode),
     /// Integer.
     Integer {
         value: Integer,
@@ -186,7 +186,7 @@ impl<'s> Token<'s> {
 impl HasError for Token<'_> {
     fn has_error(&self) -> bool {
         match &self.kind {
-            TokenKind::Mnemonic(Mnemonic::Error) | TokenKind::Error(_) => true,
+            TokenKind::Opcode(Opcode::Invalid) | TokenKind::Error(_) => true,
             TokenKind::Char { terminated, .. }
             | TokenKind::String { terminated, .. }
             | TokenKind::BlockComment { terminated, .. } => !terminated,
@@ -211,7 +211,7 @@ impl Debug for Token<'_> {
 impl Debug for TokenKind<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            TokenKind::Mnemonic(mnemonic) => f.debug_tuple("Mnemonic").field(mnemonic).finish(),
+            TokenKind::Opcode(opcode) => f.debug_tuple("Opcode").field(opcode).finish(),
             TokenKind::Integer { value, sign, base } => f
                 .debug_struct("Integer")
                 .field("value", value)
