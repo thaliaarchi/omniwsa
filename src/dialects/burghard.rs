@@ -16,7 +16,7 @@ use crate::{
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Burghard {
-    mnemonics: HashMap<LowerToAscii<'static>, Mnemonic>,
+    mnemonics: HashMap<LowerToAscii<'static>, (Mnemonic, Args)>,
 }
 
 /// A lexer for tokens in the Burghard Whitespace assembly dialect.
@@ -36,49 +36,68 @@ struct Parser<'s, 'd> {
     dialect: &'d Burghard,
 }
 
-macro_rules! mnemonics[($($s:literal => $variant:ident,)*) => {
-    &[$((LowerToAscii($s.as_bytes()), Mnemonic::$variant),)+]
+/// The shape of the arguments for a mnemonic.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Args {
+    /// No arguments.
+    None,
+    /// An integer or variable.
+    Integer,
+    /// An optional integer or variable.
+    IntegerOpt,
+    /// A string or variable.
+    String,
+    /// A variable and an integer or variable.
+    VariableAndInteger,
+    /// A variable and a string or variable.
+    VariableAndString,
+    /// A word.
+    Word,
+}
+
+macro_rules! mnemonics[($($canon:literal => $mnemonic:ident $args:ident,)*) => {
+    &[$((LowerToAscii($canon.as_bytes()), Mnemonic::$mnemonic, Args::$args),)+]
 }];
-static MNEMONICS: &[(LowerToAscii<'static>, Mnemonic)] = mnemonics![
-    "push" => Push,         // integer
-    "pushs" => PushString0, // string
-    "doub" => Dup,
-    "swap" => Swap,
-    "pop" => Drop,
-    "add" => Add,          // integer?
-    "sub" => Sub,          // integer?
-    "mul" => Mul,          // integer?
-    "div" => Div,          // integer?
-    "mod" => Mod,          // integer?
-    "store" => Store,      // integer?
-    "retrive" => Retrieve, // integer?
-    "label" => Label,      // label
-    "call" => Call,        // label
-    "jump" => Jmp,         // label
-    "jumpz" => Jz,         // label
-    "jumpn" => Jn,         // label
-    "jumpp" => BurghardJmpP, // label
-    "jumpnp" => BurghardJmpNP, // label
-    "jumppn" => BurghardJmpNP, // label
-    "jumpnz" => BurghardJmpNZ, // label
-    "jumppz" => BurghardJmpPZ, // label
-    "ret" => Ret,
-    "exit" => End,
-    "outC" => Printc,
-    "outN" => Printi,
-    "inC" => Readc,
-    "inN" => Readi,
-    "debug_printstack" => BurghardPrintStack,
-    "debug_printheap" => BurghardPrintHeap,
-    "test" => BurghardTest, // integer
-    "valueinteger" => BurghardValueInteger, // integer_variable integer
-    "valuestring" => BurghardValueString, // string_variable string
-    "include" => BurghardInclude, // word
-    "option" => DefineOption, // word
-    "ifoption" => IfOption, // word
-    "elseifoption" => ElseIfOption, // word
-    "elseoption" => ElseOption,
-    "endoption" => EndOption,
+static MNEMONICS: &[(LowerToAscii<'static>, Mnemonic, Args)] = mnemonics![
+    "push" => Push Integer,
+    "pushs" => PushString0 String,
+    "doub" => Dup None,
+    "swap" => Swap None,
+    "pop" => Drop None,
+    "add" => Add IntegerOpt,
+    "sub" => Sub IntegerOpt,
+    "mul" => Mul IntegerOpt,
+    "div" => Div IntegerOpt,
+    "mod" => Mod IntegerOpt,
+    "store" => Store IntegerOpt,
+    "retrive" => Retrieve IntegerOpt,
+    "label" => Label Word,
+    "call" => Call Word,
+    "jump" => Jmp Word,
+    "jumpz" => Jz Word,
+    "jumpn" => Jn Word,
+    "jumpp" => BurghardJmpP Word,
+    "jumpnp" => BurghardJmpNP Word,
+    "jumppn" => BurghardJmpNP Word,
+    "jumpnz" => BurghardJmpNZ Word,
+    "jumppz" => BurghardJmpPZ Word,
+    "ret" => Ret None,
+    "exit" => End None,
+    "outC" => Printc None,
+    "outN" => Printi None,
+    "inC" => Readc None,
+    "inN" => Readi None,
+    "debug_printstack" => BurghardPrintStack None,
+    "debug_printheap" => BurghardPrintHeap None,
+    "test" => BurghardTest Integer,
+    "valueinteger" => BurghardValueInteger VariableAndInteger,
+    "valuestring" => BurghardValueString VariableAndString,
+    "include" => BurghardInclude Word,
+    "option" => DefineOption Word,
+    "ifoption" => IfOption Word,
+    "elseifoption" => ElseIfOption Word,
+    "elseoption" => ElseOption None,
+    "endoption" => EndOption None,
 ];
 
 impl Burghard {
@@ -86,7 +105,10 @@ impl Burghard {
     /// constructed for parsing any number of programs.
     pub fn new() -> Self {
         Burghard {
-            mnemonics: MNEMONICS.iter().copied().collect(),
+            mnemonics: MNEMONICS
+                .iter()
+                .map(|&(canon, mnemonic, args)| (canon, (mnemonic, args)))
+                .collect(),
         }
     }
 
@@ -192,12 +214,12 @@ impl<'s, 'd> Parser<'s, 'd> {
         }
 
         let space_before = self.space();
-        let mut mnemonic_tok = match self.curr() {
+        let mut mnemonic = match self.curr() {
             TokenKind::Word | TokenKind::Quoted { .. } => self.advance(),
             _ => return Some(Cst::Empty(self.line_term_sep(space_before))),
         };
 
-        let mut prev_word = &mut mnemonic_tok;
+        let mut prev_word = &mut mnemonic;
         let mut args = Vec::new();
         let space_after = loop {
             let space = self.space();
@@ -214,21 +236,40 @@ impl<'s, 'd> Parser<'s, 'd> {
         };
         let inst_sep = self.line_term_sep(space_after);
 
-        let mnemonic_word = mnemonic_tok.unwrap_mut();
-        let mnemonic = self
+        let mut inst = Inst {
+            space_before,
+            mnemonic,
+            args,
+            inst_sep,
+            valid_arity: false,
+        };
+        self.parse_inst(&mut inst);
+        Some(Cst::Inst(inst))
+    }
+
+    /// Parses the mnemonic and arguments of an instruction.
+    fn parse_inst(&self, inst: &mut Inst<'s>) {
+        let mnemonic_word = inst.mnemonic.unwrap_mut();
+        debug_assert_eq!(mnemonic_word.kind, TokenKind::Word);
+        let (mnemonic, args) = self
             .dialect
             .mnemonics
             .get(&LowerToAscii(&mnemonic_word.text))
             .copied()
-            .unwrap_or(Mnemonic::Error);
+            .unwrap_or((Mnemonic::Error, Args::None));
         mnemonic_word.kind = TokenKind::Mnemonic(mnemonic);
 
-        Some(Cst::Inst(Inst {
-            space_before,
-            mnemonic: mnemonic_tok,
-            args,
-            inst_sep,
-        }))
+        let n = inst.args.len();
+        inst.valid_arity = true;
+        match (args, n) {
+            (Args::None | Args::IntegerOpt, 0) => {}
+            (Args::Integer | Args::IntegerOpt, 1) => {}
+            (Args::String, 1) => {}
+            (Args::VariableAndInteger, 2) => {}
+            (Args::VariableAndString, 2) => {}
+            (Args::Word, 1) => {}
+            _ => inst.valid_arity = false,
+        }
     }
 
     /// Returns the kind of the current token.
@@ -381,6 +422,7 @@ mod tests {
                         line_comment: None,
                         line_term: Token::new(b"", TokenKind::Eof),
                     },
+                    valid_arity: false,
                 })],
             }),
         };
@@ -411,6 +453,7 @@ mod tests {
                         line_comment: None,
                         line_term: Token::new(b"", TokenKind::Eof),
                     },
+                    valid_arity: true,
                 })],
             }),
         };
