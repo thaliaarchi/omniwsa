@@ -1,4 +1,9 @@
-use std::fmt::{self, Debug, Display, Formatter};
+use std::{
+    fmt::{self, Debug, Display, Formatter},
+    hash::{Hash, Hasher},
+};
+
+use bstr::ByteSlice;
 
 /// Instruction or predefined macro mnemonic.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -72,100 +77,77 @@ pub enum Mnemonic {
     Error,
 }
 
-/// A string validated to be in canonical form, that is, that it consists only
-/// of the characters `[A-Za-z_]`
-#[derive(Eq, PartialEq, Hash, PartialOrd, Ord)]
-pub struct CanonStr(str);
+/// A string which compares by folding to lowercase. Only characters that fold
+/// to ASCII are folded; outside of ASCII, those are 'İ' (U+0130, LATIN CAPITAL
+/// LETTER I WITH DOT ABOVE), which maps to 'i', and 'K' (U+212A, KELVIN SIGN),
+/// which maps to 'k'. This matches the case folding behavior of Haskell
+/// `toLower` from `Data.Char`, which performs single character-to-character
+/// mappings.
+#[derive(Clone, Copy)]
+pub struct LowerToAscii<'s>(pub &'s [u8]);
 
-impl CanonStr {
-    /// Validates that a string is in canonical form and wrap it. Panics if it
-    /// is not canonical.
-    pub const fn new(s: &str) -> &Self {
-        match CanonStr::validate(s) {
-            Some(canon) => canon,
-            None => panic!("string not canonical"),
-        }
-    }
+impl Iterator for LowerToAscii<'_> {
+    type Item = u8;
 
-    /// Validates that a string is in canonical form and wrap it.
-    pub const fn validate(s: &str) -> Option<&Self> {
-        if Self::is_canon(s) {
-            Some(unsafe { &*(s as *const str as *const Self) })
-        } else {
-            None
-        }
-    }
-
-    /// Returns whether a string is in canonical form.
-    pub const fn is_canon(s: &str) -> bool {
-        let s = s.as_bytes();
-        let mut i = 0;
-        while i < s.len() {
-            if !matches!(s[i], b'A'..=b'Z' | b'a'..=b'z' | b'_') {
-                return false;
-            }
-            i += 1;
-        }
-        true
-    }
-
-    /// Returns a reference to the canonical string.
-    #[inline]
-    pub const fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    /// Returns a reference to the canonical string as bytes.
-    #[inline]
-    pub const fn as_bytes(&self) -> &[u8] {
-        self.0.as_bytes()
-    }
-
-    /// Compare two strings for equality, ignoring case. In addition to ASCII
-    /// case folding, 'İ' (U+0130, LATIN CAPITAL LETTER I WITH DOT ABOVE) maps
-    /// to 'i' and 'K' (U+212A, KELVIN SIGN) maps to 'k'. This matches the case
-    /// folding behavior of Haskell `toLower` from `Data.Char`, which performs
-    /// single character-to-character mappings.
-    pub fn eq_lower(&self, other: &str) -> bool {
-        let (canon, other) = (self.as_bytes(), other.as_bytes());
-        let (mut i, mut j) = (0, 0);
-        while i < canon.len() && j < other.len() {
-            // Map b1 and b2 to lowercase and check that they match, but exclude
-            // "lowercase" underscore (DEL). Then test special cases.
-            let (b1, b2) = (canon[i] | 0x20, other[j]);
-            i += 1;
-            if (b1 == b2 | 0x20) & (b2 != b'_' | 0x20) {
-                j += 1;
-            } else if b1 == b'i' && other[j..].starts_with("İ".as_bytes()) {
-                j += "İ".len();
-            } else if b1 == b'k' && other[j..].starts_with("K".as_bytes()) {
-                j += "K".len();
+    fn next(&mut self) -> Option<Self::Item> {
+        let s = &mut self.0;
+        let Some(&b) = s.first() else {
+            return None;
+        };
+        let (lower, len) = if b <= b'\x7f' {
+            if (b'A'..=b'Z').contains(&b) {
+                (b | 0x20, 1)
             } else {
-                return false;
+                (b, 1)
             }
-        }
-        true
+        } else if s.starts_with("İ".as_bytes()) {
+            (b'i', "İ".len())
+        } else if s.starts_with("K".as_bytes()) {
+            (b'k', "K".len())
+        } else {
+            // Don't bother decoding codepoints that don't lower to ASCII.
+            (b, 1)
+        };
+        *s = &s[len..];
+        Some(lower)
     }
 }
 
-impl Debug for &CanonStr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Debug::fmt(self.as_str(), f)
+impl PartialEq for LowerToAscii<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        Iterator::eq(*self, *other)
     }
 }
 
-impl Display for &CanonStr {
+impl Eq for LowerToAscii<'_> {}
+
+impl Hash for LowerToAscii<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.for_each(|b| b.hash(state));
+    }
+}
+
+impl Debug for LowerToAscii<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Display::fmt(self.as_str(), f)
+        Debug::fmt(self.0.as_bstr(), f)
+    }
+}
+
+impl Display for LowerToAscii<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(self.0.as_bstr(), f)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::mnemonics::CanonStr;
+    use crate::mnemonics::LowerToAscii;
 
     #[test]
     fn utf8_folding() {
-        assert!(CanonStr::new("debug_printStack").eq_lower("Debug_PrİntStacK"));
+        assert_eq!(
+            LowerToAscii(b"debug_printStack"),
+            LowerToAscii("Debug_PrİntStacK".as_bytes()),
+        );
     }
 }

@@ -3,20 +3,20 @@
 use std::{collections::HashMap, mem, str};
 
 use crate::{
+    mnemonics::LowerToAscii,
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
     token::{Mnemonic, Token, TokenError, TokenKind},
 };
 
 // TODO:
-// - Resolve mnemonics with case folding.
 // - Parse arguments by type.
 // - Structure option blocks.
 
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Burghard {
-    mnemonics: HashMap<&'static str, Mnemonic>,
+    mnemonics: HashMap<LowerToAscii<'static>, Mnemonic>,
 }
 
 /// A lexer for tokens in the Burghard Whitespace assembly dialect.
@@ -37,9 +37,9 @@ struct Parser<'s, 'd> {
 }
 
 macro_rules! mnemonics[($($s:literal => $variant:ident,)*) => {
-    &[$(($s, Mnemonic::$variant),)+]
+    &[$((LowerToAscii($s.as_bytes()), Mnemonic::$variant),)+]
 }];
-static MNEMONICS: &[(&str, Mnemonic)] = mnemonics![
+static MNEMONICS: &[(LowerToAscii<'static>, Mnemonic)] = mnemonics![
     "push" => Push,         // integer
     "pushs" => PushString0, // string
     "doub" => Dup,
@@ -215,9 +215,10 @@ impl<'s, 'd> Parser<'s, 'd> {
         let inst_sep = self.line_term_sep(space_after);
 
         let mnemonic_word = mnemonic_tok.unwrap_mut();
-        let mnemonic = str::from_utf8(&mnemonic_word.text)
-            .ok()
-            .and_then(|mnemonic| self.dialect.mnemonics.get(mnemonic))
+        let mnemonic = self
+            .dialect
+            .mnemonics
+            .get(&LowerToAscii(&mnemonic_word.text))
             .copied()
             .unwrap_or(Mnemonic::Error);
         mnemonic_word.kind = TokenKind::Mnemonic(mnemonic);
