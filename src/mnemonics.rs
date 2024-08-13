@@ -75,20 +75,28 @@ pub enum Opcode {
     /// Burghard `test`.
     BurghardTest,
 
+    /// Palaiologos `rep`.
+    PalaiologosRep,
+
     /// An invalid mnemonic.
     Invalid,
 }
 
-/// A string which compares by folding to lowercase. Only characters that fold
-/// to ASCII are folded; outside of ASCII, those are 'İ' (U+0130, LATIN CAPITAL
+/// A conventionally UTF-8 string which compares by folding to lowercase. Only
+/// characters that fold to ASCII are folded, as those are all that are needed
+/// for mnemonics. In addition to `[A-Z]`, those are 'İ' (U+0130, LATIN CAPITAL
 /// LETTER I WITH DOT ABOVE), which maps to 'i', and 'K' (U+212A, KELVIN SIGN),
-/// which maps to 'k'. This matches the case folding behavior of Haskell
-/// `toLower` from `Data.Char`, which performs single character-to-character
-/// mappings.
+/// which maps to 'k'. This matches a subset of the case folding behavior of
+/// Haskell `toLower` from `Data.Char`, which performs single
+/// character-to-character mappings.
 #[derive(Clone, Copy)]
-pub struct LowerToAscii<'s>(pub &'s [u8]);
+pub struct Utf8LowerToAscii<'s>(pub &'s [u8]);
 
-impl Iterator for LowerToAscii<'_> {
+/// A byte string which compares by folding ASCII letters to lowercase.
+#[derive(Clone, Copy)]
+pub struct AsciiLower<'s>(pub &'s [u8]);
+
+impl Iterator for Utf8LowerToAscii<'_> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -115,41 +123,63 @@ impl Iterator for LowerToAscii<'_> {
     }
 }
 
-impl PartialEq for LowerToAscii<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        Iterator::eq(*self, *other)
+impl Iterator for AsciiLower<'_> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let s = &mut self.0;
+        let Some(&b) = s.first() else {
+            return None;
+        };
+        *s = &s[1..];
+        Some(if (b'A'..=b'Z').contains(&b) {
+            b | 0x20
+        } else {
+            b
+        })
     }
 }
 
-impl Eq for LowerToAscii<'_> {}
-
-impl Hash for LowerToAscii<'_> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.for_each(|b| b.hash(state));
+macro_rules! impl_folding_traits(($Ty:ty) => {
+    impl PartialEq for $Ty {
+        fn eq(&self, other: &Self) -> bool {
+            Iterator::eq(*self, *other)
+        }
     }
-}
 
-impl Debug for LowerToAscii<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Debug::fmt(self.0.as_bstr(), f)
-    }
-}
+    impl Eq for $Ty {}
 
-impl Display for LowerToAscii<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Display::fmt(self.0.as_bstr(), f)
+    impl Hash for $Ty {
+        fn hash<H: Hasher>(&self, state: &mut H) {
+            self.for_each(|b| b.hash(state));
+        }
     }
-}
+
+    impl Debug for $Ty {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            Debug::fmt(self.0.as_bstr(), f)
+        }
+    }
+
+    impl Display for $Ty {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            Display::fmt(self.0.as_bstr(), f)
+        }
+    }
+});
+
+impl_folding_traits!(Utf8LowerToAscii<'_>);
+impl_folding_traits!(AsciiLower<'_>);
 
 #[cfg(test)]
 mod tests {
-    use crate::mnemonics::LowerToAscii;
+    use crate::mnemonics::Utf8LowerToAscii;
 
     #[test]
     fn utf8_folding() {
         assert_eq!(
-            LowerToAscii(b"debug_printStack"),
-            LowerToAscii("Debug_PrİntStacK".as_bytes()),
+            Utf8LowerToAscii(b"debug_printStack"),
+            Utf8LowerToAscii("Debug_PrİntStacK".as_bytes()),
         );
     }
 }

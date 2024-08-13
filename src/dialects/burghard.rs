@@ -4,7 +4,7 @@ use std::{borrow::Cow, collections::HashMap, mem, str};
 
 use crate::{
     integer::ReadIntegerLit,
-    mnemonics::LowerToAscii,
+    mnemonics::Utf8LowerToAscii,
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
     token::{Opcode, QuoteStyle, StringData, Token, TokenError, TokenKind},
@@ -22,7 +22,7 @@ use crate::{
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Burghard {
-    mnemonics: HashMap<LowerToAscii<'static>, (Opcode, Args)>,
+    mnemonics: HashMap<Utf8LowerToAscii<'static>, (Opcode, Args)>,
 }
 
 /// A lexer for tokens in the Burghard Whitespace assembly dialect.
@@ -85,9 +85,9 @@ enum Type {
 }
 
 macro_rules! mnemonics[($($mnemonic:literal => $opcode:ident $args:ident,)*) => {
-    &[$((LowerToAscii($mnemonic.as_bytes()), Opcode::$opcode, Args::$args),)+]
+    &[$(($mnemonic, Opcode::$opcode, Args::$args),)+]
 }];
-static MNEMONICS: &[(LowerToAscii<'static>, Opcode, Args)] = mnemonics![
+static MNEMONICS: &[(&'static str, Opcode, Args)] = mnemonics![
     "push" => Push Integer,
     "pushs" => PushString0 String,
     "doub" => Dup None,
@@ -136,7 +136,9 @@ impl Burghard {
         Burghard {
             mnemonics: MNEMONICS
                 .iter()
-                .map(|&(mnemonic, opcode, args)| (mnemonic, (opcode, args)))
+                .map(|&(mnemonic, opcode, args)| {
+                    (Utf8LowerToAscii(mnemonic.as_bytes()), (opcode, args))
+                })
                 .collect(),
         }
     }
@@ -284,7 +286,7 @@ impl<'s> Parser<'s, '_> {
         let (opcode, args) = self
             .dialect
             .mnemonics
-            .get(&LowerToAscii(&opcode_word.text))
+            .get(&Utf8LowerToAscii(&opcode_word.text))
             .copied()
             .unwrap_or((Opcode::Invalid, Args::None));
         opcode_word.kind = TokenKind::Opcode(opcode);

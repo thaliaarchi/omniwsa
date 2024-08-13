@@ -262,6 +262,12 @@ impl<'s> ByteScanner<'s> {
         self.src[self.end.offset]
     }
 
+    /// Tries to get the byte a number of bytes ahead and returns it.
+    #[inline]
+    pub fn try_peek_byte(&mut self, count: usize) -> Option<u8> {
+        self.src.get(self.end.offset + count).copied()
+    }
+
     /// Consumes and returns the next byte.
     #[inline]
     pub fn next_byte(&mut self) -> u8 {
@@ -292,6 +298,26 @@ impl<'s> ByteScanner<'s> {
         while !self.eof() && predicate(self.peek_byte()) {
             self.next_byte();
         }
+    }
+
+    /// Consumes a number of bytes.
+    #[inline]
+    pub fn bump_bytes(&mut self, count: usize) {
+        for _ in 0..count {
+            self.next_byte();
+        }
+    }
+
+    /// Consumes a number of bytes. The caller must guarantee that at least this
+    /// many bytes remain and that these bytes do not contain LF.
+    #[inline]
+    pub fn bump_bytes_no_lf(&mut self, count: usize) {
+        self.end.offset += count;
+        self.end.col += count;
+        debug_assert!(
+            self.end.offset <= self.src.len()
+                && !self.src[self.end.offset - count..self.end.offset].contains(&b'\n')
+        );
     }
 
     /// Consumes a line comment. The cursor must start after the comment prefix.

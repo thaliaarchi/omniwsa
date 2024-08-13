@@ -133,12 +133,14 @@ pub enum IntegerBase {
 }
 
 /// The unescaped data of a char literal.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum CharData {
     /// A char encoded as a Unicode code point.
     Unicode(char),
     /// A char encoded as a byte.
     Byte(u8),
+    /// A char literal with no or more than one char.
+    Error,
 }
 
 /// The unescaped data of a string literal.
@@ -174,6 +176,8 @@ pub enum TokenError {
         /// Length of the invalid sequence.
         error_len: usize,
     },
+    /// Unrecognized characters.
+    UnrecognizedChar,
 }
 
 impl<'s> Token<'s> {
@@ -279,11 +283,21 @@ impl HasError for Token<'_> {
     fn has_error(&self) -> bool {
         match &self.kind {
             TokenKind::Opcode(Opcode::Invalid) | TokenKind::Error(_) => true,
-            TokenKind::Char { quotes, .. } | TokenKind::String { quotes, .. } => quotes.has_error(),
+            TokenKind::Char { data, quotes } => data.has_error() || quotes.has_error(),
+            TokenKind::String { quotes, .. } => quotes.has_error(),
             TokenKind::BlockComment { terminated, .. } => !terminated,
             TokenKind::Quoted { inner, quotes, .. } => inner.has_error() || quotes.has_error(),
             TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::has_error),
             _ => false,
+        }
+    }
+}
+
+impl HasError for CharData {
+    fn has_error(&self) -> bool {
+        match self {
+            CharData::Unicode(_) | CharData::Byte(_) => false,
+            CharData::Error => true,
         }
     }
 }
@@ -373,6 +387,16 @@ impl Debug for TokenKind<'_> {
                 .field("spliced", spliced)
                 .finish(),
             TokenKind::Error(err) => f.debug_tuple("Error").field(err).finish(),
+        }
+    }
+}
+
+impl Debug for CharData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            CharData::Unicode(c) => f.debug_tuple("Unicode").field(c).finish(),
+            CharData::Byte(b) => f.debug_tuple("Byte").field(&[*b].as_bstr()).finish(),
+            CharData::Error => write!(f, "Error"),
         }
     }
 }

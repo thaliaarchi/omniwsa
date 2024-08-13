@@ -70,10 +70,10 @@ putc  ::= (?i)"putc"
 putn  ::= (?i)"putn"
 getc  ::= (?i)"getc"
 getn  ::= (?i)"getn"
+rep   ::= (?i)"rep"
 
 lbl ::= "@" [a-zA-Z_] [a-zA-Z0-9_]*
 ref ::= "%" [a-zA-Z_] [a-zA-Z0-9_]*
-rep ::= (?i)"rep"
 number ::=
     | "-"? [0-9]+
     | "-"? [01]+ [bB]
@@ -91,6 +91,8 @@ comment ::= ";" .+? "\n"
 space ::= [ \t\r\f]
 ```
 
+## Mnemonics
+
 The first mnemonic in the grammar listed for each instruction is the name of the
 corresponding token in `asm.y`.
 
@@ -101,12 +103,24 @@ the AST kind `STOP`.
 
 - Instructions prefixed with `rep` are repeated as many times as specified.
 - Bare `push` is `push 0`.
+- `xchg / xchg` is replaced with nothing. This is always done and is the only
+  optimization, regardless of the optimization level with `-Os` or `-Of` or
+  neither.
 
 TODO: Labels
 
+## Notes
+
+- The assembler is run with `./wsi --masm <file>`.
+- Byte–oriented.
+- NUL does not truncate the file and is just an invalid char.
+- A binary number takes precedence over a decimal number juxtaposed with `b`.
+
 ## Bugs in the assembler
 
-- String tokens are unused in parser.
-- A comment may not be terminated with EOF
-- Comments consume `\n`, rather than emit an `lf` token
-- `lf` pattern should be `[\n/]+` to allow consecutive `\n` and `/`
+- Mnemonics do not need to be followed by spaces, so, e.g., `repdrop5` is valid.
+- A comment may not be terminated with EOF.
+- Comments consume `\n`, rather than emit an `lf` token.
+- `lf` pattern should be `[\n/]+` to allow consecutive `\n` and `/`.
+- Char token `'\'` is parsed as `'\''`.
+- String tokens are unused in the parser.
