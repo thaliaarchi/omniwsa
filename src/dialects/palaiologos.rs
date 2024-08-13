@@ -1,11 +1,13 @@
 //! Parsing for the Palaiologos Whitespace assembly dialect.
 
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
+
+use bstr::ByteSlice;
 
 use crate::{
     mnemonics::AsciiLower,
     scan::ByteScanner,
-    token::{CharData, Opcode, QuoteStyle, Token, TokenError, TokenKind},
+    token::{CharData, Opcode, QuoteStyle, StringData, Token, TokenError, TokenKind},
 };
 
 // TODO:
@@ -150,9 +152,17 @@ impl<'s, 'd> Lexer<'s, 'd> {
                 scan.bump_bytes(len);
                 scan.wrap(TokenKind::Char { data, quotes })
             }
-            b'"' => self.todo(),
+            b'"' => {
+                let (unquoted, quotes, len) = scan_string(scan.rest());
+                scan.bump_bytes(len);
+                scan.wrap(TokenKind::String {
+                    data: StringData::Bytes(unquoted),
+                    quotes,
+                })
+            }
             b';' => self.todo(),
             b',' => scan.wrap(TokenKind::ArgSep),
+            // Handle repetitions in the parser.
             b'/' | b'\n' => scan.wrap(TokenKind::InstSep),
             b' ' | b'\t' | b'\r' | b'\x0c' => {
                 scan.bump_while(|b| matches!(b, b' ' | b'\t' | b'\r' | b'\x0c'));
@@ -191,8 +201,8 @@ impl<'s, 'd> Lexer<'s, 'd> {
 }
 
 /// Tries to scan a mnemonic at the start of the bytes.
-fn scan_mnemonic<'s>(rest: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], Opcode)> {
-    let chunk = &rest[..MAX_MNEMONIC_LEN.min(rest.len())];
+fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], Opcode)> {
+    let chunk = &s[..MAX_MNEMONIC_LEN.min(s.len())];
     let mut chunk_lower = [0; MAX_MNEMONIC_LEN];
     chunk_lower[..chunk.len()].copy_from_slice(chunk);
     chunk_lower.iter_mut().for_each(|b| *b |= 0x20);
@@ -204,4 +214,40 @@ fn scan_mnemonic<'s>(rest: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8],
         }
     }
     None
+}
+
+/// Scans a string at the start of the bytes and returns the unquoted and
+/// unescaped string, and the number of bytes consumed. The string must start at
+/// the byte after the open `"`.
+fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, QuoteStyle, usize) {
+    let Some(mut j) = s.find_byteset(b"\"\\") else {
+        return (s.into(), QuoteStyle::UnclosedDouble, s.len());
+    };
+    if s[j] == b'"' {
+        return (s[..j].into(), QuoteStyle::Double, j + 1);
+    }
+    let mut unquoted = Vec::new();
+    let mut i = 0;
+    loop {
+        unquoted.extend_from_slice(&s[i..j]);
+        match s[j] {
+            b'"' => {
+                return (unquoted.into(), QuoteStyle::Double, j + 1);
+            }
+            b'\\' => {
+                j += 1;
+                if j >= s.len() {
+                    break;
+                }
+                unquoted.push(s[j]);
+            }
+            _ => unreachable!(),
+        }
+        i = j + 1;
+        let Some(j2) = s[i..].find_byteset(b"\"\\") else {
+            break;
+        };
+        j = j2;
+    }
+    (unquoted.into(), QuoteStyle::UnclosedDouble, s.len())
 }
