@@ -9,6 +9,7 @@ use crate::{
 
 // TODO:
 // - Adapt allowed indentation according to dialect.
+// - Multi-instruction lines are incorrectly indented.
 // - Fold multiple adjacent blank lines and add a final line terminator when
 //   missing.
 

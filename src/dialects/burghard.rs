@@ -7,7 +7,7 @@ use crate::{
     mnemonics::LowerToAscii,
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
-    token::{Opcode, StringKind, Token, TokenError, TokenKind},
+    token::{Opcode, QuoteStyle, StringData, Token, TokenError, TokenKind},
 };
 
 // TODO:
@@ -16,6 +16,8 @@ use crate::{
 // - Transform strings to lowercase.
 // - Assign stricter tokens to `include` and options.
 // - Move Cst macros to syntax.
+// - Clean up UTF-8 decoding in parse_arg, since tokens are already validated as
+//   UTF-8.
 
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -189,10 +191,14 @@ impl<'s> Lexer<'s> {
                 let word_start = scan.offset();
                 scan.bump_while(|c| c != '"' && c != '\n');
                 let word = &scan.src().as_bytes()[word_start..scan.offset()];
-                let terminated = scan.bump_if(|c| c == '"');
+                let quotes = if scan.bump_if(|c| c == '"') {
+                    QuoteStyle::Double
+                } else {
+                    QuoteStyle::UnclosedDouble
+                };
                 scan.wrap(TokenKind::Quoted {
                     inner: Box::new(Token::new(word, TokenKind::Word)),
-                    terminated,
+                    quotes,
                 })
             }
             _ => {
@@ -332,10 +338,10 @@ impl<'s> Parser<'s, '_> {
         // Try to parse it as an integer.
         if ty == Type::Integer || ty == Type::Variable && !quoted {
             // TODO: Use if-let chains once stabilized.
-            if let Some(int) = str::from_utf8(&inner.text)
-                .ok()
-                .and_then(|s| ReadIntegerLit::parse_with_buffer(s, &mut self.digit_buf).ok())
-            {
+            if let Ok(int) = ReadIntegerLit::parse_with_buffer(
+                str::from_utf8(&inner.text).unwrap(),
+                &mut self.digit_buf,
+            ) {
                 inner.kind = TokenKind::from(int);
                 return ty == Type::Integer;
             }
@@ -348,16 +354,14 @@ impl<'s> Parser<'s, '_> {
         };
         tok.kind = match mem::replace(&mut tok.kind, TokenKind::Word) {
             TokenKind::Word => TokenKind::String {
-                unquoted: tok.text.clone(),
-                kind: StringKind::Unquoted,
-                terminated: true,
+                data: StringData::from_utf8(tok.text.clone()).unwrap(),
+                quotes: QuoteStyle::Bare,
             },
-            TokenKind::Quoted { inner, terminated } => {
+            TokenKind::Quoted { inner, quotes } => {
                 debug_assert_eq!(inner.kind, TokenKind::Word);
                 TokenKind::String {
-                    unquoted: inner.text,
-                    kind: StringKind::Quoted,
-                    terminated,
+                    data: StringData::from_utf8(inner.text).unwrap(),
+                    quotes,
                 }
             }
             _ => panic!("unhandled token"),
@@ -537,7 +541,7 @@ mod tests {
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
-        token::{IntegerBase, IntegerSign, Opcode, StringKind, Token, TokenKind},
+        token::{IntegerBase, IntegerSign, Opcode, QuoteStyle, StringData, Token, TokenKind},
     };
 
     macro_rules! root[($($node:expr),* $(,)?) => {
@@ -628,7 +632,7 @@ mod tests {
                         "Debug_PrİntStacK".as_bytes(),
                         TokenKind::Opcode(Opcode::BurghardPrintStack),
                     )),
-                    terminated: false,
+                    quotes: QuoteStyle::UnclosedDouble,
                 },
             ),
             args: vec![],
@@ -654,9 +658,8 @@ mod tests {
                     Token::new(
                         b"\"1\"",
                         TokenKind::String {
-                            unquoted: b"1".into(),
-                            kind: StringKind::Quoted,
-                            terminated: true,
+                            data: StringData::Utf8("1".into()),
+                            quotes: QuoteStyle::Double,
                         },
                     ),
                 ),
@@ -673,7 +676,7 @@ mod tests {
                                     base: IntegerBase::Decimal,
                                 },
                             )),
-                            terminated: true,
+                            quotes: QuoteStyle::Double,
                         },
                     ),
                 ),
