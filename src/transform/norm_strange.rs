@@ -8,12 +8,10 @@ use crate::{
     visit::Visitor,
 };
 
-// TODO:
-// - Normalize Burghard quoted words.
-
 impl<'s> Cst<'s> {
     /// Normalizes strange, non-portable constructs.
     ///
+    /// - Removes non-semantic quotes (Burghard).
     /// - Moves block comments out of a token splice to after it (Burghard).
     pub fn normalize_strange(&mut self) {
         self.visit(&mut StrangeVisitor);
@@ -24,17 +22,30 @@ struct StrangeVisitor;
 
 impl<'s> Visitor<'s> for StrangeVisitor {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
-        if matches!(inst.opcode.kind, TokenKind::Spliced { .. }) {
-            unsplice(inst.opcode_space_after_mut());
+        match inst.opcode.kind {
+            TokenKind::Quoted { .. } => unquote(&mut inst.opcode),
+            TokenKind::Spliced { .. } => unsplice(inst.opcode_space_after_mut()),
+            _ => {}
         }
         for arg in 0..inst.args.len() {
-            if matches!(inst.args[arg].1.kind, TokenKind::Spliced { .. }) {
-                unsplice(inst.arg_space_after_mut(arg));
+            match inst.args[arg].1.kind {
+                TokenKind::Quoted { .. } => unquote(&mut inst.args[arg].1),
+                TokenKind::Spliced { .. } => unsplice(inst.arg_space_after_mut(arg)),
+                _ => {}
             }
         }
     }
 
     fn visit_empty(&mut self, _empty: &mut InstSep<'s>) {}
+}
+
+/// Removes non-semantic quotes.
+#[inline]
+fn unquote<'s>(word: &mut Token<'s>) {
+    let TokenKind::Quoted { inner, .. } = mem::replace(&mut word.kind, TokenKind::Word) else {
+        panic!("not quoted");
+    };
+    *word = *inner;
 }
 
 /// Moves block comments out of a token splice to after it.
@@ -80,8 +91,8 @@ mod tests {
     });
 
     #[test]
-    fn unsplice() {
-        let src = b" {-h-}p{-e-}u{-l-}s{-l-}h{-o-} {-!-}42";
+    fn unquote_and_unsplice() {
+        let src = b" {-h-}p{-e-}u{-l-}s{-l-}h{-o-} {-!-}\"42\"";
         let mut cst = Burghard::new().parse(src);
         cst.normalize_strange();
         let expect = Cst::Dialect {
