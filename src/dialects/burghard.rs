@@ -5,11 +5,13 @@ use std::{borrow::Cow, collections::HashMap, mem, str};
 use enumset::EnumSet;
 
 use crate::{
-    integer::parse_haskell_integer,
     mnemonics::Utf8LowerToAscii,
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, HasError, Inst, InstSep, OptionBlock, Space},
-    token::{Opcode, QuoteStyle, StringData, Token, TokenError, TokenKind},
+    tokens::{
+        integer::parse_haskell_integer, Opcode, QuoteStyle, StringData, Token, TokenError,
+        TokenKind,
+    },
 };
 
 // TODO:
@@ -542,14 +544,13 @@ impl<'s> OptionNester<'s> {
 #[cfg(test)]
 mod tests {
     use enumset::EnumSet;
-    use rug::Integer;
 
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
-        token::{
-            IntegerBase, IntegerSign, IntegerToken, Opcode, QuoteStyle, StringData, Token,
-            TokenKind,
+        tokens::{
+            integer::{Integer, IntegerBase, IntegerSign, IntegerToken},
+            Opcode, QuoteStyle, StringData, Token, TokenKind,
         },
     };
 

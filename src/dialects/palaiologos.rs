@@ -6,12 +6,12 @@ use bstr::ByteSlice;
 use enumset::EnumSet;
 
 use crate::{
-    integer::parse_integer_digits,
     mnemonics::AsciiLower,
     scan::ByteScanner,
-    token::{
-        CharData, IntegerBase, IntegerError, IntegerSign, IntegerToken, LabelError,
-        LineCommentError, Opcode, QuoteStyle, StringData, Token, TokenError, TokenKind,
+    tokens::{
+        integer::{parse_integer_digits, IntegerBase, IntegerError, IntegerSign, IntegerToken},
+        CharData, LabelError, LineCommentError, Opcode, QuoteStyle, StringData, Token, TokenError,
+        TokenKind,
     },
 };
 

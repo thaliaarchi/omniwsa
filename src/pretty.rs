@@ -2,7 +2,7 @@
 
 use crate::{
     syntax::{ArgSep, Cst, Inst, InstSep, OptionBlock, Space, Spaced},
-    token::Token,
+    tokens::Token,
 };
 
 /// Pretty-prints this node as Whitespace assembly syntax.

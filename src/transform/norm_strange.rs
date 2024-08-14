@@ -4,7 +4,7 @@ use std::mem;
 
 use crate::{
     syntax::{Cst, Inst, InstSep, Space},
-    token::{Token, TokenKind},
+    tokens::{Token, TokenKind},
     visit::Visitor,
 };
 
@@ -55,12 +55,14 @@ fn unsplice<'s>((word, space_after): (&mut Token<'s>, &mut Space<'s>)) {
 #[cfg(test)]
 mod tests {
     use enumset::EnumSet;
-    use rug::Integer;
 
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-        token::{IntegerBase, IntegerSign, IntegerToken, Opcode, Token, TokenKind},
+        tokens::{
+            integer::{Integer, IntegerBase, IntegerSign, IntegerToken},
+            Opcode, Token, TokenKind,
+        },
     };
 
     macro_rules! block_comment(($text:literal) => {

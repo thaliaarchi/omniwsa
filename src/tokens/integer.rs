@@ -1,9 +1,58 @@
 //! Parsing for Haskell `Integer`.
 
-use enumset::EnumSet;
-use rug::Integer;
+use enumset::{EnumSet, EnumSetType};
+pub use rug::Integer;
 
-use crate::token::{IntegerBase, IntegerError, IntegerSign, IntegerToken};
+/// An integer token.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IntegerToken {
+    pub value: Integer,
+    pub sign: IntegerSign,
+    pub base: IntegerBase,
+    pub leading_zeros: usize,
+    pub errors: EnumSet<IntegerError>,
+}
+
+/// The sign of an integer literal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IntegerSign {
+    /// Implicit positive sign.
+    None,
+    /// Positive sign.
+    Pos,
+    /// Negative sign.
+    Neg,
+}
+
+/// The base (radix) of an integer literal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum IntegerBase {
+    /// Base 2.
+    Binary = 2,
+    /// Base 8.
+    Octal = 8,
+    /// Base 10.
+    Decimal = 10,
+    /// Base 16.
+    Hexadecimal = 16,
+}
+
+/// A parse error for an integer literal.
+#[derive(EnumSetType, Debug)]
+pub enum IntegerError {
+    /// An invalid digit.
+    InvalidDigit,
+    /// No digits, excluding a possible base prefix.
+    NoDigits,
+    /// Has a sign that is invalid or not supported.
+    InvalidSign,
+    /// Has a base that is not supported.
+    InvalidBase,
+    /// Uses digit separators, which are not supported.
+    InvalidDigitSep,
+    /// An unpaired parenthesis (Burghard via Haskell `Integer`).
+    UnpairedParen,
+}
 
 /// Parses an integer with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
 /// in Haskell, given a buffer of digits to reuse allocations.
@@ -247,11 +296,9 @@ fn is_whitespace(ch: char) -> bool {
 #[cfg(test)]
 mod tests {
     use enumset::EnumSet;
-    use rug::Integer;
 
-    use crate::{
-        integer::parse_haskell_integer,
-        token::{IntegerBase, IntegerError, IntegerSign, IntegerToken},
+    use crate::tokens::integer::{
+        parse_haskell_integer, Integer, IntegerBase, IntegerError, IntegerSign, IntegerToken,
     };
 
     use IntegerBase::{Binary as Bin, Decimal as Dec, Hexadecimal as Hex, Octal as Oct};

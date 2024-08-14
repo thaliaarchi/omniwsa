@@ -1,10 +1,9 @@
 pub mod dialects;
-mod integer;
 mod mnemonics;
 mod pretty;
 #[allow(dead_code)]
 mod scan;
 pub mod syntax;
-pub mod token;
+pub mod tokens;
 pub mod transform;
 pub mod visit;

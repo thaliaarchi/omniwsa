@@ -3,7 +3,7 @@
 use std::fmt::{self, Debug, Formatter};
 
 pub use crate::pretty::Pretty;
-use crate::token::{Opcode, Token, TokenKind};
+use crate::tokens::{Opcode, Token, TokenKind};
 
 // TODO:
 // - Macro definitions and invocations.

@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use crate::{
     syntax::{Cst, Inst, InstSep},
-    token::{Opcode, Token, TokenKind},
+    tokens::{Opcode, Token, TokenKind},
     visit::Visitor,
 };
 
@@ -75,12 +75,14 @@ impl<'s> Visitor<'s> for SpaceVisitor<'s> {
 #[cfg(test)]
 mod tests {
     use enumset::EnumSet;
-    use rug::Integer;
 
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-        token::{IntegerBase, IntegerSign, IntegerToken, Opcode, Token, TokenKind},
+        tokens::{
+            integer::{Integer, IntegerBase, IntegerSign, IntegerToken},
+            Opcode, Token, TokenKind,
+        },
     };
 
     #[test]

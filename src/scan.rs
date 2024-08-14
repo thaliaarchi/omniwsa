@@ -2,7 +2,7 @@
 
 use enumset::EnumSet;
 
-use crate::token::{Token, TokenKind};
+use crate::tokens::{Token, TokenKind};
 
 // TODO:
 // - Abstract common functionality between scanners to trait.
