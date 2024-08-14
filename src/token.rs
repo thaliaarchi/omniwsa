@@ -7,6 +7,7 @@ use std::{
 };
 
 use bstr::ByteSlice;
+use enumset::{EnumSet, EnumSetType};
 use rug::Integer;
 
 pub use crate::mnemonics::Opcode;
@@ -66,6 +67,8 @@ pub enum TokenKind<'s> {
         sigil: &'s [u8],
         /// The label with its sigil removed.
         label: Cow<'s, [u8]>,
+        /// Errors for this label.
+        errors: EnumSet<LabelError>,
     },
     /// Label colon marker (i.e., `:`).
     LabelColon,
@@ -80,7 +83,12 @@ pub enum TokenKind<'s> {
     /// End of file.
     Eof,
     /// Line comment (e.g., `//`).
-    LineComment { prefix: &'s [u8], text: &'s [u8] },
+    LineComment {
+        prefix: &'s [u8],
+        text: &'s [u8],
+        /// Errors for this line comment.
+        errors: EnumSet<LineCommentError>,
+    },
     /// Block comment (e.g., `/* */`).
     /// Sequences ignored due to a bug in the reference parser also count as
     /// block comments (e.g., voliva ignored arguments).
@@ -168,6 +176,22 @@ pub enum QuoteStyle {
     Bare,
 }
 
+/// An error for a label.
+#[derive(EnumSetType, Debug)]
+pub enum LabelError {
+    /// The label has no characters (Palaiologos).
+    Empty,
+    /// The first character is a digit, which is not allowed (Palaiologos).
+    StartsWithDigit,
+}
+
+/// An error for a line comment.
+#[derive(EnumSetType, Debug)]
+pub enum LineCommentError {
+    /// The line comment is not terminated by a LF (Palaiologos).
+    MissingLf,
+}
+
 /// A lexical error.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TokenError {
@@ -223,7 +247,7 @@ impl<'s> Token<'s> {
     /// Trim trailing whitespace in a line comment.
     pub fn line_comment_trim_trailing(&mut self) {
         match &mut self.kind {
-            TokenKind::LineComment { prefix, text } => {
+            TokenKind::LineComment { prefix, text, .. } => {
                 let i = text
                     .iter()
                     .rposition(|&b| b != b' ' && b != b'\t')
@@ -285,6 +309,7 @@ impl HasError for Token<'_> {
             TokenKind::Opcode(Opcode::Invalid) | TokenKind::Error(_) => true,
             TokenKind::Char { data, quotes } => data.has_error() || quotes.has_error(),
             TokenKind::String { quotes, .. } => quotes.has_error(),
+            TokenKind::LineComment { errors, .. } => !errors.is_empty(),
             TokenKind::BlockComment { terminated, .. } => !terminated,
             TokenKind::Quoted { inner, quotes, .. } => inner.has_error() || quotes.has_error(),
             TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::has_error),
@@ -345,10 +370,15 @@ impl Debug for TokenKind<'_> {
                 .field("sigil", &sigil.as_bstr())
                 .field("ident", &ident.as_bstr())
                 .finish(),
-            TokenKind::Label { sigil, label } => f
+            TokenKind::Label {
+                sigil,
+                label,
+                errors,
+            } => f
                 .debug_struct("Label")
                 .field("sigil", &sigil.as_bstr())
                 .field("label", &label.as_bstr())
+                .field("errors", errors)
                 .finish(),
             TokenKind::LabelColon => write!(f, "LabelColon"),
             TokenKind::InstSep => write!(f, "InstSep"),
@@ -356,10 +386,15 @@ impl Debug for TokenKind<'_> {
             TokenKind::Space => write!(f, "Space"),
             TokenKind::LineTerm => write!(f, "LineTerm"),
             TokenKind::Eof => write!(f, "Eof"),
-            TokenKind::LineComment { prefix, text } => f
+            TokenKind::LineComment {
+                prefix,
+                text,
+                errors,
+            } => f
                 .debug_struct("LineComment")
                 .field("prefix", &prefix.as_bstr())
                 .field("text", &text.as_bstr())
+                .field("errors", errors)
                 .finish(),
             TokenKind::BlockComment {
                 open,

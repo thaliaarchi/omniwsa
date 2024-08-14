@@ -2,6 +2,8 @@
 
 use std::{borrow::Cow, collections::HashMap, mem, str};
 
+use enumset::EnumSet;
+
 use crate::{
     integer::ReadIntegerLit,
     mnemonics::Utf8LowerToAscii,
@@ -323,6 +325,7 @@ impl<'s> Parser<'s, '_> {
             inner.kind = TokenKind::Label {
                 sigil: b"",
                 label: inner.text.clone(),
+                errors: EnumSet::empty(),
             };
             return true;
         }

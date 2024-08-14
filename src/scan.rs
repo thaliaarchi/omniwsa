@@ -1,5 +1,7 @@
 //! Generic token scanning.
 
+use enumset::EnumSet;
+
 use crate::token::{Token, TokenKind};
 
 // TODO:
@@ -108,6 +110,7 @@ impl<'s> Utf8Scanner<'s> {
         self.wrap(TokenKind::LineComment {
             prefix: &src[self.start_offset()..text_start],
             text: &src[text_start..self.offset()],
+            errors: EnumSet::empty(),
         })
     }
 
@@ -327,6 +330,7 @@ impl<'s> ByteScanner<'s> {
         self.wrap(TokenKind::LineComment {
             prefix: &self.src[self.start_offset()..text_start],
             text: &self.src[text_start..self.offset()],
+            errors: EnumSet::empty(),
         })
     }
 

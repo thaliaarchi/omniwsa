@@ -3,11 +3,15 @@
 use std::{borrow::Cow, collections::HashMap};
 
 use bstr::ByteSlice;
+use enumset::EnumSet;
 
 use crate::{
     mnemonics::AsciiLower,
     scan::ByteScanner,
-    token::{CharData, Opcode, QuoteStyle, StringData, Token, TokenError, TokenKind},
+    token::{
+        CharData, LabelError, LineCommentError, Opcode, QuoteStyle, StringData, Token, TokenError,
+        TokenKind,
+    },
 };
 
 // TODO:
@@ -137,8 +141,20 @@ impl<'s, 'd> Lexer<'s, 'd> {
                 }
             }
             b'0'..=b'9' | b'-' => self.todo(),
-            b'@' => self.todo(),
-            b'%' => self.todo(),
+            b'@' | b'%' => {
+                scan.bump_while(|b| matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_'));
+                let text = scan.text();
+                let errors = match text.get(1) {
+                    None => LabelError::Empty.into(),
+                    Some(b'0'..=b'9') => LabelError::StartsWithDigit.into(),
+                    _ => EnumSet::empty(),
+                };
+                scan.wrap(TokenKind::Label {
+                    sigil: &text[..1],
+                    label: text[1..].into(),
+                    errors,
+                })
+            }
             b'\'' => {
                 let (data, quotes, len) = match *scan.rest() {
                     [b'\\', b, b'\'', ..] => (CharData::Byte(b), QuoteStyle::Single, 3),
@@ -160,7 +176,20 @@ impl<'s, 'd> Lexer<'s, 'd> {
                     quotes,
                 })
             }
-            b';' => self.todo(),
+            b';' => {
+                scan.bump_while(|b| b != b'\n');
+                let errors = if scan.bump_if(|b| b == b'\n') {
+                    EnumSet::empty()
+                } else {
+                    LineCommentError::MissingLf.into()
+                };
+                let text = scan.text();
+                scan.wrap(TokenKind::LineComment {
+                    prefix: &text[..1],
+                    text: &text[1..],
+                    errors,
+                })
+            }
             b',' => scan.wrap(TokenKind::ArgSep),
             // Handle repetitions in the parser.
             b'/' | b'\n' => scan.wrap(TokenKind::InstSep),

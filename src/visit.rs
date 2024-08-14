@@ -102,6 +102,7 @@ impl<'s> Visitor<'s> for IndentVisitor<'s> {
 
 #[cfg(test)]
 mod tests {
+    use enumset::EnumSet;
     use rug::Integer;
 
     use crate::{
@@ -126,6 +127,7 @@ mod tests {
                             TokenKind::LineComment {
                                 prefix: b";",
                                 text: b" start",
+                                errors: EnumSet::empty(),
                             },
                         )),
                         line_term: Token::new(b"\n", TokenKind::LineTerm),
@@ -140,6 +142,7 @@ mod tests {
                                 TokenKind::Label {
                                     sigil: b"",
                                     label: b"start".into(),
+                                    errors: EnumSet::empty(),
                                 },
                             ),
                         )],
@@ -193,6 +196,7 @@ mod tests {
                             TokenKind::LineComment {
                                 prefix: b";",
                                 text: b" 2",
+                                errors: EnumSet::empty(),
                             },
                         )),
                         line_term: Token::new(b"\n", TokenKind::LineTerm),
