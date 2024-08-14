@@ -156,17 +156,14 @@ pub enum IntegerError {
     InvalidDigit,
     /// No digits, excluding a possible base prefix.
     NoDigits,
-    /// Has an explicit positive sign, which is forbidden (Burghard via Haskell
-    /// `Integer`).
-    InvalidPos,
+    /// Has a sign that is invalid or not supported.
+    InvalidSign,
     /// Has a base that is not supported.
     InvalidBase,
     /// Uses digit separators, which are not supported.
     InvalidDigitSep,
     /// An unpaired parenthesis (Burghard via Haskell `Integer`).
     UnpairedParen,
-    /// Negated parentheses (Burghard via Haskell `Integer`).
-    NegParens,
 }
 
 /// The unescaped data of a char literal.

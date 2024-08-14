@@ -82,41 +82,50 @@ use crate::token::{IntegerBase, IntegerError, IntegerSign, IntegerToken};
 pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken {
     let mut errors = EnumSet::new();
 
+    // Rather than add another sign variant for multiple negations, just use
+    // `Pos`, since that is only exercised for errors as a best effort.
     let mut sign = IntegerSign::None;
+    let mut has_sign = false;
+    s = s.trim_matches(is_whitespace);
     loop {
-        s = s.trim_matches(is_whitespace);
         if s.is_empty() {
             break;
         }
         let (first, last) = (s.as_bytes()[0], s.as_bytes()[s.len() - 1]);
-        if first == b'(' && last == b')' {
-            s = &s[1..s.len() - 1];
-        } else if first == b'(' {
-            errors |= IntegerError::UnpairedParen;
-            s = &s[1..];
-        } else if last == b')' {
-            if first == b'-' {
-                sign = invert_sign(sign);
-                errors |= IntegerError::NegParens;
-                s = &s[1..];
-            } else {
-                errors |= IntegerError::UnpairedParen;
-                s = &s[..s.len() - 1];
+        if first == b'-' {
+            sign = match sign {
+                IntegerSign::None | IntegerSign::Pos => IntegerSign::Neg,
+                IntegerSign::Neg => IntegerSign::Pos,
+            };
+            if has_sign {
+                errors |= IntegerError::InvalidSign;
             }
+            has_sign = true;
+            s = s[1..].trim_start_matches(is_whitespace);
+        } else if first == b'+' {
+            if sign == IntegerSign::None {
+                sign = IntegerSign::Pos;
+            }
+            has_sign = true;
+            errors |= IntegerError::InvalidSign;
+            s = s[1..].trim_start_matches(is_whitespace);
+        } else if first == b'(' && last == b')' {
+            if has_sign {
+                errors |= IntegerError::InvalidSign;
+            }
+            s = s[1..s.len() - 1].trim_matches(is_whitespace);
+        } else if first == b'(' {
+            if has_sign {
+                errors |= IntegerError::InvalidSign;
+            }
+            errors |= IntegerError::UnpairedParen;
+            s = s[1..].trim_start_matches(is_whitespace);
+        } else if last == b')' {
+            errors |= IntegerError::UnpairedParen;
+            s = s[..s.len() - 1].trim_end_matches(is_whitespace);
         } else {
             break;
         }
-    }
-
-    if let Some(s1) = s.strip_prefix("-") {
-        sign = invert_sign(sign);
-        s = s1.trim_start_matches(is_whitespace);
-    } else if let Some(s1) = s.strip_prefix("+") {
-        if sign == IntegerSign::None {
-            sign = IntegerSign::Pos;
-        }
-        errors |= IntegerError::InvalidPos;
-        s = s1.trim_start_matches(is_whitespace);
     }
 
     let (base, s) = match s.as_bytes() {
@@ -231,19 +240,8 @@ pub fn parse_integer_digits(
 
 /// Returns whether the char is considered whitespace for the purposes of
 /// parsing a Haskell `Integer`.
-#[inline]
 fn is_whitespace(ch: char) -> bool {
     ch.is_whitespace() && ch != '\u{0085}' && ch != '\u{2028}' && ch != '\u{2029}'
-}
-
-/// Inverts a sign. Rather than add another sign variant for multiple negations,
-/// just use `Pos`, since this is only exercised for errors as a best effort.
-#[inline]
-fn invert_sign(sign: IntegerSign) -> IntegerSign {
-    match sign {
-        IntegerSign::None | IntegerSign::Pos => IntegerSign::Neg,
-        IntegerSign::Neg => IntegerSign::Pos,
-    }
 }
 
 #[cfg(test)]
@@ -323,20 +321,22 @@ mod tests {
             test!("&hff" => "0", No, Dec, 0; InvalidDigit),
             // Signs
             test!("-42" => "-42", Neg, Dec, 0),
-            test!("+42" => "42", Pos, Dec, 0; InvalidPos),
+            test!("+42" => "42", Pos, Dec, 0; InvalidSign),
             // Parentheses
             test!("(42)" => "42", No, Dec, 0),
             test!("((42))" => "42", No, Dec, 0),
             test!("(((42)))" => "42", No, Dec, 0),
             test!(" ( ( ( 42 ) ) ) " => "42", No, Dec, 0),
             test!("(-42)" => "-42", Neg, Dec, 0),
-            test!("-(42)" => "-42", Neg, Dec, 0; NegParens),
-            test!("-(-42)" => "42", Pos, Dec, 0; NegParens),
-            test!("(--42)" => "0", Neg, Dec, 0; InvalidDigit),
-            test!("(- -42)" => "0", Neg, Dec, 0; InvalidDigit),
-            test!("(-(-42))" => "42", Pos, Dec, 0; NegParens),
+            test!("-(42)" => "-42", Neg, Dec, 0; InvalidSign),
+            test!("-(-42)" => "42", Pos, Dec, 0; InvalidSign),
+            test!("(--42)" => "42", Pos, Dec, 0; InvalidSign),
+            test!("(- -42)" => "42", Pos, Dec, 0; InvalidSign),
+            test!("(-(-42))" => "42", Pos, Dec, 0; InvalidSign),
             test!("(42" => "42", No, Dec, 0; UnpairedParen),
             test!("42)" => "42", No, Dec, 0; UnpairedParen),
+            test!("-(42" => "-42", Neg, Dec, 0; UnpairedParen | InvalidSign),
+            test!("-42)" => "-42", Neg, Dec, 0; UnpairedParen),
             test!("((42)" => "42", No, Dec, 0; UnpairedParen),
             test!("(42))" => "42", No, Dec, 0; UnpairedParen),
             // Exponent
@@ -353,8 +353,7 @@ mod tests {
             test!("0O42_" => "34", No, Oct, 0; InvalidDigitSep),
             // Larger than 128 bits
             test!(
-                "31415926535897932384626433832795028841971693993751",
-                =>
+                "31415926535897932384626433832795028841971693993751" =>
                 "31415926535897932384626433832795028841971693993751",
                 No,
                 Dec,
