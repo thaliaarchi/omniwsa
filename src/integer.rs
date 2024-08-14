@@ -120,27 +120,30 @@ pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken 
         s = s1.trim_start_matches(is_whitespace);
     }
 
-    let b = s.as_bytes();
-    let (base, b) = match b {
-        [b'0', b'o' | b'O', b @ ..] => (IntegerBase::Octal, b),
-        [b'0', b'x' | b'X', b @ ..] => (IntegerBase::Hexadecimal, b),
-        [b'0', b'b' | b'B', b @ ..] => {
+    let (base, s) = match s.as_bytes() {
+        [b'0', b'o' | b'O', s @ ..] => (IntegerBase::Octal, s),
+        [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
+        [b'0', b'b' | b'B', s @ ..] => {
             errors |= IntegerError::InvalidBase;
-            (IntegerBase::Binary, b)
+            (IntegerBase::Binary, s)
         }
-        _ => (IntegerBase::Decimal, b),
+        s => (IntegerBase::Decimal, s),
     };
-    let leading_zeros = b.iter().take_while(|&&ch| ch == b'0').count();
-    let b = &b[leading_zeros..];
+    let leading_zeros = s.iter().take_while(|&&ch| ch == b'0').count();
+    let s = &s[leading_zeros..];
 
     let mut value = Integer::new();
-    if !b.is_empty() {
-        digits.reserve(b.len());
+    if !s.is_empty() {
+        digits.reserve(s.len());
         match base {
             IntegerBase::Decimal => {
-                for &ch in b {
-                    let digit = ch.wrapping_sub(b'0');
+                for &b in s {
+                    let digit = b.wrapping_sub(b'0');
                     if digit >= 10 {
+                        if digit == b'_' - b'0' {
+                            errors |= IntegerError::InvalidDigitSep;
+                            continue;
+                        }
                         errors |= IntegerError::InvalidDigit;
                         break;
                     }
@@ -148,12 +151,16 @@ pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken 
                 }
             }
             IntegerBase::Hexadecimal => {
-                for &ch in b {
-                    let digit = match ch {
-                        b'0'..=b'9' => ch - b'0',
-                        b'a'..=b'f' => ch - b'a' + 10,
-                        b'A'..=b'F' => ch - b'A' + 10,
+                for &b in s {
+                    let digit = match b {
+                        b'0'..=b'9' => b - b'0',
+                        b'a'..=b'f' => b - b'a' + 10,
+                        b'A'..=b'F' => b - b'A' + 10,
                         _ => {
+                            if b == b'_' {
+                                errors |= IntegerError::InvalidDigitSep;
+                                continue;
+                            }
                             errors |= IntegerError::InvalidDigit;
                             break;
                         }
@@ -162,9 +169,13 @@ pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken 
                 }
             }
             IntegerBase::Octal => {
-                for &ch in b {
-                    let digit = ch.wrapping_sub(b'0');
+                for &b in s {
+                    let digit = b.wrapping_sub(b'0');
                     if digit >= 8 {
+                        if digit == b'_' - b'0' {
+                            errors |= IntegerError::InvalidDigitSep;
+                            continue;
+                        }
                         errors |= IntegerError::InvalidDigit;
                         break;
                     }
@@ -174,9 +185,13 @@ pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken 
             IntegerBase::Binary => {
                 // Binary is not supported, but parse it anyways with it marked
                 // as an error.
-                for &ch in b {
-                    let digit = ch.wrapping_sub(b'0');
+                for &b in s {
+                    let digit = b.wrapping_sub(b'0');
                     if digit >= 2 {
+                        if digit == b'_' - b'0' {
+                            errors |= IntegerError::InvalidDigitSep;
+                            continue;
+                        }
                         errors |= IntegerError::InvalidDigit;
                         break;
                     }
@@ -316,13 +331,13 @@ mod tests {
             // Decimal point
             test!("3.14" => "3", No, Dec, 0; InvalidDigit),
             // Digit separators
-            test!("1_000" => "1", No, Dec, 0; InvalidDigit),
+            test!("1_000" => "1000", No, Dec, 0; InvalidDigitSep),
             test!("1 000" => "1", No, Dec, 0; InvalidDigit),
             test!("1,000" => "1", No, Dec, 0; InvalidDigit),
             test!("1'000" => "1", No, Dec, 0; InvalidDigit),
-            test!("0o_42" => "0", No, Oct, 0; InvalidDigit),
-            test!("0Xf_f" => "15", No, Hex, 0; InvalidDigit),
-            test!("0O42_" => "34", No, Oct, 0; InvalidDigit),
+            test!("0o_42" => "34", No, Oct, 0; InvalidDigitSep),
+            test!("0Xf_f" => "255", No, Hex, 0; InvalidDigitSep),
+            test!("0O42_" => "34", No, Oct, 0; InvalidDigitSep),
             // Larger than 128 bits
             test!(
                 "31415926535897932384626433832795028841971693993751",
