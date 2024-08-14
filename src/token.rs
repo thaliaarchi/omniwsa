@@ -105,6 +105,8 @@ pub enum TokenKind<'s> {
     },
     /// Tokens spliced by block comments (Burghard).
     Spliced {
+        /// A list of words interspersed with block comments. Only contains
+        /// `Word` and `BlockComment`.
         tokens: Vec<Token<'s>>,
         /// The effective token.
         spliced: Box<Token<'s>>,

@@ -99,7 +99,7 @@ pub trait HasError {
     fn has_error(&self) -> bool;
 }
 
-impl Inst<'_> {
+impl<'s> Inst<'s> {
     /// Returns the opcode for this instruction. Panics if `self.opcode` is not
     /// an opcode token.
     pub fn opcode(&self) -> Opcode {
@@ -107,6 +107,26 @@ impl Inst<'_> {
             TokenKind::Opcode(opcode) => opcode,
             _ => panic!("not an opcode"),
         }
+    }
+
+    /// Returns a mutable reference to the opcode and the space space after it.
+    pub fn opcode_space_after_mut(&mut self) -> (&mut Token<'s>, &mut Space<'s>) {
+        let space_after = match self.args.first_mut() {
+            Some((sep, _)) => sep.space_before_mut(),
+            None => self.inst_sep.space_before_mut(),
+        };
+        (&mut self.opcode, space_after)
+    }
+
+    /// Returns a mutable reference to the numbered argument and the space after
+    /// it.
+    pub fn arg_space_after_mut(&mut self, arg: usize) -> (&mut Token<'s>, &mut Space<'s>) {
+        let (l, r) = self.args.split_at_mut(arg + 1);
+        let space_after = match r {
+            [next, ..] => next.0.space_before_mut(),
+            [] => self.inst_sep.space_before_mut(),
+        };
+        (&mut l[arg].1, space_after)
     }
 }
 
@@ -163,6 +183,35 @@ impl<'s> From<Token<'s>> for Space<'s> {
         Self::assert_space(&token);
         Space {
             tokens: vec![token],
+        }
+    }
+}
+
+impl<'s> ArgSep<'s> {
+    /// Returns a mutable reference to the space before the argument separator.
+    pub fn space_before_mut(&mut self) -> &mut Space<'s> {
+        match self {
+            ArgSep::Space(space) => space,
+            ArgSep::Sep(sep) => &mut sep.space_before,
+        }
+    }
+
+    /// Returns a mutable reference to the space after the argument separator.
+    pub fn space_after_mut(&mut self) -> &mut Space<'s> {
+        match self {
+            ArgSep::Space(space) => space,
+            ArgSep::Sep(sep) => &mut sep.space_after,
+        }
+    }
+}
+
+impl<'s> InstSep<'s> {
+    /// Returns a mutable reference to the space before the instruction
+    /// separator.
+    pub fn space_before_mut(&mut self) -> &mut Space<'s> {
+        match self {
+            InstSep::LineTerm { space_before, .. } => space_before,
+            InstSep::Sep(sep) => &mut sep.space_before,
         }
     }
 }

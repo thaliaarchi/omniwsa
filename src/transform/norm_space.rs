@@ -19,15 +19,15 @@ impl<'s> Cst<'s> {
     /// labels, which are unindented. Trailing whitespace is stripped.
     pub fn normalize_whitespace(&mut self, indent: Cow<'s, [u8]>) {
         assert!(indent.iter().all(|&b| b == b' ' || b == b'\t'));
-        self.visit(&mut IndentVisitor { indent });
+        self.visit(&mut SpaceVisitor { indent });
     }
 }
 
-struct IndentVisitor<'s> {
+struct SpaceVisitor<'s> {
     indent: Cow<'s, [u8]>,
 }
 
-impl<'s> Visitor<'s> for IndentVisitor<'s> {
+impl<'s> Visitor<'s> for SpaceVisitor<'s> {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
         inst.space_before.trim_leading();
         if inst.opcode() != Opcode::Label {
