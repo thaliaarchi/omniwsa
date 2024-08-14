@@ -80,7 +80,6 @@ use crate::token::{IntegerBase, IntegerError, IntegerSign, IntegerToken};
 ///   - [`GHC.Err.errorWithoutStackTrace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Err.hs#L42-47)
 ///     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
 pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken {
-    digits.clear();
     let mut errors = EnumSet::new();
 
     let mut sign = IntegerSign::None;
@@ -124,11 +123,27 @@ pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken 
         [b'0', b'o' | b'O', s @ ..] => (IntegerBase::Octal, s),
         [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
         [b'0', b'b' | b'B', s @ ..] => {
+            // Extend the syntax to handle binary, just for errors.
             errors |= IntegerError::InvalidBase;
             (IntegerBase::Binary, s)
         }
         s => (IntegerBase::Decimal, s),
     };
+
+    parse_integer_digits(s, sign, base, errors, digits)
+}
+
+/// Parses the byte string as digits in the given base. No digit separators like
+/// `_` are supported.
+pub fn parse_integer_digits(
+    s: &[u8],
+    sign: IntegerSign,
+    base: IntegerBase,
+    mut errors: EnumSet<IntegerError>,
+    digits: &mut Vec<u8>,
+) -> IntegerToken {
+    digits.clear();
+
     let leading_zeros = s.iter().take_while(|&&ch| ch == b'0').count();
     let s = &s[leading_zeros..];
 
@@ -183,8 +198,6 @@ pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken 
                 }
             }
             IntegerBase::Binary => {
-                // Binary is not supported, but parse it anyways with it marked
-                // as an error.
                 for &b in s {
                     let digit = b.wrapping_sub(b'0');
                     if digit >= 2 {

@@ -6,11 +6,12 @@ use bstr::ByteSlice;
 use enumset::EnumSet;
 
 use crate::{
+    integer::parse_integer_digits,
     mnemonics::AsciiLower,
     scan::ByteScanner,
     token::{
-        CharData, LabelError, LineCommentError, Opcode, QuoteStyle, StringData, Token, TokenError,
-        TokenKind,
+        CharData, IntegerBase, IntegerError, IntegerSign, IntegerToken, LabelError,
+        LineCommentError, Opcode, QuoteStyle, StringData, Token, TokenError, TokenKind,
     },
 };
 
@@ -30,6 +31,7 @@ pub struct Palaiologos {
 struct Lexer<'s, 'd> {
     dialect: &'d Palaiologos,
     scan: ByteScanner<'s>,
+    digit_buf: Vec<u8>,
 }
 
 macro_rules! mnemonics[($($mnemonic:literal => $opcode:ident,)*) => {
@@ -108,6 +110,7 @@ impl<'s, 'd> Lexer<'s, 'd> {
         Lexer {
             dialect,
             scan: ByteScanner::new(src),
+            digit_buf: Vec::new(),
         }
     }
 
@@ -137,10 +140,20 @@ impl<'s, 'd> Lexer<'s, 'd> {
                         }
                         scan.next_byte();
                     }
-                    scan.wrap(TokenKind::Opcode(Opcode::Invalid))
+                    scan.wrap(TokenKind::from(Opcode::Invalid))
                 }
             }
-            b'0'..=b'9' | b'-' => self.todo(),
+            b @ (b'0'..=b'9' | b'-') => {
+                if b == b'-' && !scan.bump_if(|b| matches!(b, b'0'..=b'9')) {
+                    scan.wrap(TokenKind::Error(TokenError::UnrecognizedChar))
+                } else {
+                    scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
+                    // Extend the syntax to handle octal, just for errors.
+                    scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
+                    let int = parse_integer(scan.text(), &mut self.digit_buf);
+                    scan.wrap(TokenKind::from(int))
+                }
+            }
             b'@' | b'%' => {
                 scan.bump_while(|b| matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_'));
                 let text = scan.text();
@@ -223,10 +236,6 @@ impl<'s, 'd> Lexer<'s, 'd> {
             }
         }
     }
-
-    fn todo(&self) -> Token<'s> {
-        self.scan.wrap(TokenKind::Word)
-    }
 }
 
 /// Tries to scan a mnemonic at the start of the bytes.
@@ -279,4 +288,25 @@ fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, QuoteStyle, usize) {
         j = j2;
     }
     (unquoted.into(), QuoteStyle::UnclosedDouble, s.len())
+}
+
+/// Parses an integer with Palaiologos syntax, given a buffer of digits to reuse
+/// allocations.
+fn parse_integer<'s>(s: &'s [u8], digits: &mut Vec<u8>) -> IntegerToken {
+    let mut errors = EnumSet::new();
+    let (sign, s) = match s.split_first() {
+        Some((b'-', s)) => (IntegerSign::Neg, s),
+        _ => (IntegerSign::None, s),
+    };
+    let (base, s) = match s.split_last() {
+        Some((b'h' | b'H', s)) => (IntegerBase::Hexadecimal, s),
+        Some((b'b' | b'B', s)) => (IntegerBase::Binary, s),
+        Some((b'o' | b'O', s)) => {
+            // Extend the syntax to handle octal, just for errors.
+            errors |= IntegerError::InvalidBase;
+            (IntegerBase::Octal, s)
+        }
+        _ => (IntegerBase::Decimal, s),
+    };
+    parse_integer_digits(s, sign, base, errors, digits)
 }

@@ -91,6 +91,8 @@ comment ::= ";" .+? "\n"
 space ::= [ \t\r\f]
 ```
 
+TODO: Does `.` in the Flex pattern `";"(.*)\n` include LF?
+
 ## Mnemonics
 
 The first mnemonic in the grammar listed for each instruction is the name of the
