@@ -86,22 +86,27 @@ pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken 
     let mut sign = IntegerSign::None;
     loop {
         s = s.trim_matches(is_whitespace);
-        if !s.is_empty() {
-            let (first, last) = (s.as_bytes()[0], s.as_bytes()[s.len() - 1]);
-            if first == b'(' && last == b')' {
-                s = &s[1..s.len() - 1];
-                continue;
-            } else if first == b'(' || last == b')' {
-                if first == b'-' {
-                    sign = invert_sign(sign);
-                    errors |= IntegerError::NegParens;
-                    s = &s[1..];
-                    continue;
-                }
-                errors |= IntegerError::UnpairedParen;
-            }
+        if s.is_empty() {
+            break;
         }
-        break;
+        let (first, last) = (s.as_bytes()[0], s.as_bytes()[s.len() - 1]);
+        if first == b'(' && last == b')' {
+            s = &s[1..s.len() - 1];
+        } else if first == b'(' {
+            errors |= IntegerError::UnpairedParen;
+            s = &s[1..];
+        } else if last == b')' {
+            if first == b'-' {
+                sign = invert_sign(sign);
+                errors |= IntegerError::NegParens;
+                s = &s[1..];
+            } else {
+                errors |= IntegerError::UnpairedParen;
+                s = &s[..s.len() - 1];
+            }
+        } else {
+            break;
+        }
     }
 
     if let Some(s1) = s.strip_prefix("-") {
@@ -210,5 +215,203 @@ fn invert_sign(sign: IntegerSign) -> IntegerSign {
     match sign {
         IntegerSign::None | IntegerSign::Pos => IntegerSign::Neg,
         IntegerSign::Neg => IntegerSign::Pos,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use enumset::EnumSet;
+    use rug::Integer;
+
+    use crate::{
+        integer::parse_haskell_integer,
+        token::{IntegerBase, IntegerError, IntegerSign, IntegerToken},
+    };
+
+    use IntegerBase::{Binary as Bin, Decimal as Dec, Hexadecimal as Hex, Octal as Oct};
+    use IntegerError::*;
+    use IntegerSign::{Neg, None as No, Pos};
+
+    struct Test {
+        input: String,
+        output: IntegerToken,
+    }
+
+    impl Test {
+        fn new<S: Into<String>>(
+            input: S,
+            output: &'static str,
+            sign: IntegerSign,
+            base: IntegerBase,
+            leading_zeros: usize,
+            errors: EnumSet<IntegerError>,
+        ) -> Self {
+            Test {
+                input: input.into(),
+                output: IntegerToken {
+                    value: Integer::parse(output).unwrap().into(),
+                    sign,
+                    base,
+                    leading_zeros,
+                    errors,
+                },
+            }
+        }
+    }
+
+    macro_rules! test(
+        ($input:expr $(,)? => $output:expr, $sign:expr, $base:expr, $leading_zeros:expr $(,)?) => {
+            Test::new($input, $output, $sign, $base, $leading_zeros, EnumSet::new())
+        };
+        ($input:expr $(,)? => $output:expr, $sign:expr, $base:expr, $leading_zeros:expr; $err:expr $(,)?) => {
+            Test::new($input, $output, $sign, $base, $leading_zeros, EnumSet::from($err))
+        };
+    );
+
+    #[test]
+    fn haskell_integer() {
+        let mut tests = vec![
+            test!("42" => "42", No, Dec, 0),
+            // C-style bases
+            test!("0o42" => "34", No, Oct, 0),
+            test!("0O42" => "34", No, Oct, 0),
+            test!("0xff" => "255", No, Hex, 0),
+            test!("0Xff" => "255", No, Hex, 0),
+            test!("0Xff" => "255", No, Hex, 0),
+            test!("0b101" => "5", No, Bin, 0; InvalidBase),
+            test!("0B101" => "5", No, Bin, 0; InvalidBase),
+            // Leading zeros
+            test!("000" => "0", No, Dec, 3),
+            test!("042" => "42", No, Dec, 1),
+            test!("00042" => "42", No, Dec, 3),
+            test!("0o00042" => "34", No, Oct, 3),
+            test!("0x000ff" => "255", No, Hex, 3),
+            // Other styles
+            test!("0d42" => "0", No, Dec, 1; InvalidDigit),
+            test!("2#101" => "2", No, Dec, 0; InvalidDigit),
+            test!("2#101#" => "2", No, Dec, 0; InvalidDigit),
+            test!("&b101" => "0", No, Dec, 0; InvalidDigit),
+            test!("&o42" => "0", No, Dec, 0; InvalidDigit),
+            test!("&hff" => "0", No, Dec, 0; InvalidDigit),
+            // Signs
+            test!("-42" => "-42", Neg, Dec, 0),
+            test!("+42" => "42", Pos, Dec, 0; InvalidPos),
+            // Parentheses
+            test!("(42)" => "42", No, Dec, 0),
+            test!("((42))" => "42", No, Dec, 0),
+            test!("(((42)))" => "42", No, Dec, 0),
+            test!(" ( ( ( 42 ) ) ) " => "42", No, Dec, 0),
+            test!("(-42)" => "-42", Neg, Dec, 0),
+            test!("-(42)" => "-42", Neg, Dec, 0; NegParens),
+            test!("-(-42)" => "42", Pos, Dec, 0; NegParens),
+            test!("(--42)" => "0", Neg, Dec, 0; InvalidDigit),
+            test!("(- -42)" => "0", Neg, Dec, 0; InvalidDigit),
+            test!("(-(-42))" => "42", Pos, Dec, 0; NegParens),
+            test!("(42" => "42", No, Dec, 0; UnpairedParen),
+            test!("42)" => "42", No, Dec, 0; UnpairedParen),
+            test!("((42)" => "42", No, Dec, 0; UnpairedParen),
+            test!("(42))" => "42", No, Dec, 0; UnpairedParen),
+            // Exponent
+            test!("1e3" => "1", No, Dec, 0; InvalidDigit),
+            // Decimal point
+            test!("3.14" => "3", No, Dec, 0; InvalidDigit),
+            // Digit separators
+            test!("1_000" => "1", No, Dec, 0; InvalidDigit),
+            test!("1 000" => "1", No, Dec, 0; InvalidDigit),
+            test!("1,000" => "1", No, Dec, 0; InvalidDigit),
+            test!("1'000" => "1", No, Dec, 0; InvalidDigit),
+            test!("0o_42" => "0", No, Oct, 0; InvalidDigit),
+            test!("0Xf_f" => "15", No, Hex, 0; InvalidDigit),
+            test!("0O42_" => "34", No, Oct, 0; InvalidDigit),
+            // Larger than 128 bits
+            test!(
+                "31415926535897932384626433832795028841971693993751",
+                =>
+                "31415926535897932384626433832795028841971693993751",
+                No,
+                Dec,
+                0,
+            ),
+            // Empty
+            test!("" => "0", No, Dec, 0; NoDigits),
+            test!("-" => "0", Neg, Dec, 0; NoDigits),
+            // Operations
+            test!("1+2" => "1", No, Dec, 0; InvalidDigit),
+            test!("1-2" => "1", No, Dec, 0; InvalidDigit),
+            test!("1*2" => "1", No, Dec, 0; InvalidDigit),
+            test!("1/2" => "1", No, Dec, 0; InvalidDigit),
+            test!("1%2" => "1", No, Dec, 0; InvalidDigit),
+            // Non-digits
+            test!("9000over" => "9000", No, Dec, 0; InvalidDigit),
+            test!("invalid" => "0", No, Dec, 0; InvalidDigit),
+        ];
+
+        // All characters with the Unicode property White_Space, excluding non-ASCII
+        // line-breaks, are allowed before or after the digits, or between the `-`
+        // sign and the digits.
+        let ok_spaces = [
+            // Unicode White_Space
+            '\t',       // Tab
+            '\n',       // Line feed
+            '\x0b',     // Vertical tab
+            '\x0c',     // Form feed
+            '\r',       // Carriage return
+            ' ',        // Space
+            '\u{00A0}', // No-break space
+            '\u{1680}', // Ogham space mark
+            '\u{2000}', // En quad
+            '\u{2001}', // Em quad
+            '\u{2002}', // En space
+            '\u{2003}', // Em space
+            '\u{2004}', // Three-per-em space
+            '\u{2005}', // Four-per-em space
+            '\u{2006}', // Six-per-em space
+            '\u{2007}', // Figure space
+            '\u{2008}', // Punctuation space
+            '\u{2009}', // Thin space
+            '\u{200A}', // Hair space
+            '\u{202F}', // Narrow no-break space
+            '\u{205F}', // Medium mathematical space
+            '\u{3000}', // Ideographic space
+        ];
+        let err_spaces = [
+            // Unicode White_Space
+            '\u{0085}', // Next line
+            '\u{2028}', // Line separator
+            '\u{2029}', // Paragraph separator
+            // Related Unicode characters
+            '\u{180E}', // Mongolian vowel separator
+            '\u{200B}', // Zero width space
+            '\u{200C}', // Zero width non-joiner
+            '\u{200D}', // Zero width joiner
+            '\u{200E}', // Left-to-right mark
+            '\u{200F}', // Right-to-left mark
+            '\u{2060}', // Word joiner
+            '\u{FEFF}', // Zero width non-breaking space
+        ];
+        for space in ok_spaces {
+            tests.push(test!(format!("{space}") => "0", No, Dec, 0; NoDigits));
+            tests.push(test!(format!("{space}-42") => "-42", Neg, Dec, 0));
+            tests.push(test!(format!("-{space}42") => "-42", Neg, Dec, 0));
+            tests.push(test!(format!("-4{space}2") => "-4", Neg, Dec, 0; InvalidDigit));
+            tests.push(test!(format!("-42{space}") => "-42", Neg, Dec, 0));
+        }
+        for space in err_spaces {
+            tests.push(test!(format!("{space}") => "0", No, Dec, 0; InvalidDigit));
+            tests.push(test!(format!("{space}-42") => "0", No, Dec, 0; InvalidDigit));
+            tests.push(test!(format!("-{space}42") => "0", Neg, Dec, 0; InvalidDigit));
+            tests.push(test!(format!("-4{space}2") => "-4", Neg, Dec, 0; InvalidDigit));
+            tests.push(test!(format!("-42{space}") => "-42", Neg, Dec, 0; InvalidDigit));
+        }
+
+        let mut digits = Vec::new();
+        for test in tests {
+            assert_eq!(
+                parse_haskell_integer(&test.input, &mut digits),
+                test.output,
+                "parse_haskell_integer({:?})",
+                test.input,
+            );
+        }
     }
 }
