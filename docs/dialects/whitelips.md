@@ -1,4 +1,4 @@
-# Whitelips assembly
+# Whitelips Whitespace assembly
 
 - Source: [code](https://github.com/vii5ard/whitespace/blob/master/ws_asm.js),
   [docs](https://vii5ard.github.io/whitespace/help.html#assembly)

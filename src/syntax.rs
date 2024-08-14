@@ -19,12 +19,17 @@ pub enum Cst<'s> {
     /// A line with no instructions.
     Empty(InstSep<'s>),
     /// Sequence of nodes.
-    Block { nodes: Vec<Cst<'s>> },
+    Block {
+        /// The nodes in this block.
+        nodes: Vec<Cst<'s>>,
+    },
     /// Conditionally compiled block.
     OptionBlock(OptionBlock<'s>),
     /// Marker for the dialect of the contained CST.
     Dialect {
+        /// The dialect of the contained CST.
         dialect: Dialect,
+        /// The contained CST.
         inner: Box<Cst<'s>>,
     },
 }
@@ -32,68 +37,101 @@ pub enum Cst<'s> {
 /// An instruction.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inst<'s> {
+    /// Any whitespace preceding the mnemonic.
     pub space_before: Space<'s>,
+    /// The mnemonic denoting the opcode of this instruction. It is always
+    /// `Opcode`, possibly wrapped in `Quoted` or `Spliced`, if from the
+    /// Burghard dialect.
     pub opcode: Token<'s>,
+    /// The arguments and preceding separators in this instruction. Each
+    /// argument token may possibly be wrapped in `Quoted` or `Spliced`, if from
+    /// the Burghard dialect.
     pub args: Vec<(ArgSep<'s>, Token<'s>)>,
+    /// The separator following the last argument.
     pub inst_sep: InstSep<'s>,
+    /// Whether it has the correct number of arguments for the opcode.
     pub valid_arity: bool,
+    /// Whether the arguments have valid types for the opcode.
     pub valid_types: bool,
 }
 
 /// A sequence of whitespace and block comments.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Space<'s> {
+    /// The contained tokens. All are always `Space` or `BlockComment`.
     pub tokens: Vec<Token<'s>>,
 }
 
 /// A token surrounded by optional whitespace.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Spaced<'s, T> {
+    /// The whitespace tokens preceding this token.
     pub space_before: Space<'s>,
+    /// The contained non-whitespace token.
     pub inner: T,
+    /// The whitespace tokens following this token.
     pub space_after: Space<'s>,
 }
 
 /// Argument separator.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ArgSep<'s> {
+    /// Whitespace only.
     Space(Space<'s>),
+    /// A non-whitespace token that separates arguments. Always `ArgSep`.
     Sep(Spaced<'s, Token<'s>>),
 }
 
 /// Instruction separator.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InstSep<'s> {
+    /// A line terminator.
     LineTerm {
+        /// The whitespace tokens preceding the line comment.
         space_before: Space<'s>,
+        /// An optional line comment. Always `LineComment`.
         line_comment: Option<Token<'s>>,
+        /// The line terminator or EOF. Always `LineTerm` or `Eof`.
         line_term: Token<'s>,
     },
+    /// A non-whitespace token that separates instructions. Always `InstSep`.
     Sep(Spaced<'s, Token<'s>>),
 }
 
-/// A conditionally compiled block
-/// (Burghard `ifoption`/`elseifoption`/`elseoption`/`endoption` and
-/// Respace `@ifdef`/`@else`/`@endif`).
+/// A conditionally compiled block (Burghard `ifoption` and Respace `@ifdef`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OptionBlock<'s> {
+    /// The branches of this option block
+    /// (Burghard `ifoption`/`elseifoption`/`elseoption`
+    /// and Respace `@ifdef`/`@else`/`@endif`).
     pub options: Vec<(Inst<'s>, Vec<Cst<'s>>)>,
+    /// The instruction closing this option block (Burghard `endoption` and
+    /// Respace `@endif`). When not present, it is an error.
     pub end: Option<Inst<'s>>,
 }
 
 /// A Whitespace assembly dialect.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Dialect {
+    /// Burghard Whitespace assembly.
     Burghard,
+    /// Lime Whitespace assembly.
     Lime,
+    /// littleBugHunter Whitespace assembly.
     LittleBugHunter,
+    /// Palaiologos Whitespace assembly.
     Palaiologos,
+    /// rdebath Whitespace assembly.
     Rdebath,
+    /// Respace Whitespace assembly.
     Respace,
+    /// voliva Whitespace assembly.
     Voliva,
+    /// Whitelips Whitespace assembly.
     Whitelips,
 }
 
+/// A type that can report whether it contains any syntax errors.
 pub trait HasError {
     /// Returns whether this contains any syntax errors.
     fn has_error(&self) -> bool;

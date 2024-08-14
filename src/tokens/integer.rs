@@ -6,10 +6,17 @@ pub use rug::Integer;
 /// An integer token.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IntegerToken {
+    /// The parsed value represented by the integer literal.
     pub value: Integer,
+    /// The sign of the integer literal.
     pub sign: IntegerSign,
+    /// The base of the integer literal.
     pub base: IntegerBase,
+    /// The number of leading zeros, excluding a base prefix, written in the
+    /// integer literal.
     pub leading_zeros: usize,
+    /// All errors from parsing this integer literal. When any errors are
+    /// present, the other fields are best-effort.
     pub errors: EnumSet<IntegerError>,
 }
 

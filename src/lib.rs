@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 pub mod dialects;
 mod mnemonics;
 mod pretty;
@@ -5,5 +7,5 @@ mod pretty;
 mod scan;
 pub mod syntax;
 pub mod tokens;
-pub mod transform;
+mod transform;
 pub mod visit;

@@ -1,4 +1,4 @@
-# Palaiologos assembly
+# Palaiologos Whitespace assembly
 
 - Source: [code](https://github.com/kspalaiologos/asm2ws)
   (last updated [2022-01-24](https://github.com/kspalaiologos/asm2ws/tree/92e33991c5465ec108206db1f028816d3d1e64d6))

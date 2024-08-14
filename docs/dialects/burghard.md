@@ -1,4 +1,4 @@
-# Burghard assembly
+# Burghard Whitespace assembly
 
 - Source: [code](https://github.com/wspace/burghard-wsa/blob/main/trans.hs),
   [docs](https://github.com/wspace/burghard-wsa/blob/main/intro.md)

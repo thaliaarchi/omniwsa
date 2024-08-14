@@ -12,3 +12,6 @@ categories = ["compilers"]
 bstr = "1.10.0"
 enumset = "1.1.5"
 rug = { version = "1.25.0", features = ["integer", "std"], default-features = false }
+
+[lints.rust]
+missing_docs = "warn"

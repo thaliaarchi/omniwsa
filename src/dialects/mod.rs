@@ -1,3 +1,5 @@
+//! Parsing for Whitespace assembly dialects.
+
 mod burghard;
 mod palaiologos;
 

@@ -32,7 +32,9 @@ use crate::{syntax::HasError, tokens::integer::IntegerToken};
 /// assembly.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Token<'s> {
+    /// The raw text of this token.
     pub text: Cow<'s, [u8]>,
+    /// The data of this token, including its kind.
     pub kind: TokenKind<'s>,
 }
 
@@ -44,10 +46,17 @@ pub enum TokenKind<'s> {
     /// Integer.
     Integer(IntegerToken),
     /// Character.
-    Char { data: CharData, quotes: QuoteStyle },
+    Char {
+        /// The unescaped data of this char literal.
+        data: CharData,
+        /// The style of the quotes enclosing this char literal.
+        quotes: QuoteStyle,
+    },
     /// String.
     String {
+        /// The unescaped data of this string literal.
         data: StringData<'s>,
+        /// The style of the quotes enclosing this string literal.
         quotes: QuoteStyle,
     },
     /// Identifier.
@@ -78,28 +87,39 @@ pub enum TokenKind<'s> {
     LineTerm,
     /// End of file.
     Eof,
-    /// Line comment (e.g., `//`).
+    /// Line comment (e.g., `#` or `//`).
     LineComment {
+        /// The prefix marker (e.g., `#` or `//`).
         prefix: &'s [u8],
+        /// The comment text after the marker, including any leading spaces.
         text: &'s [u8],
         /// Errors for this line comment.
         errors: EnumSet<LineCommentError>,
     },
-    /// Block comment (e.g., `/* */`).
+    /// Block comment (e.g., `{- -}` or `/* */`).
     /// Sequences ignored due to a bug in the reference parser also count as
     /// block comments (e.g., voliva ignored arguments).
     BlockComment {
+        /// The opening marker (e.g., `{-` or `/*`).
         open: &'s [u8],
+        /// The text contained within the comment markers, including any nested
+        /// block comments.
         text: &'s [u8],
+        /// The closing marker, or nothing if it is not terminated (e.g., `-}`
+        /// or `*/`).
         close: &'s [u8],
+        /// Whether the kind of block comment allows nesting.
         nested: bool,
+        /// Whether this block comment is correctly closed.
         terminated: bool,
     },
     /// A word of uninterpreted meaning.
     Word,
     /// A token enclosed in non-semantic quotes (Burghard).
     Quoted {
+        /// The effective token.
         inner: Box<Token<'s>>,
+        /// The style of the quotes enclosing this token.
         quotes: QuoteStyle,
     },
     /// Tokens spliced by block comments (Burghard).

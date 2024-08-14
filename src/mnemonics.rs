@@ -10,29 +10,53 @@ use bstr::ByteSlice;
 /// Instruction or predefined macro opcode.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Opcode {
+    /// Whitespace `push`.
     Push,
+    /// Whitespace `dup`.
     Dup,
+    /// Whitespace `copy`.
     Copy,
+    /// Whitespace `swap`.
     Swap,
+    /// Whitespace `drop`.
     Drop,
+    /// Whitespace `slide`.
     Slide,
+    /// Whitespace `add`.
     Add,
+    /// Whitespace `sub`.
     Sub,
+    /// Whitespace `mul`.
     Mul,
+    /// Whitespace `div`.
     Div,
+    /// Whitespace `mod`.
     Mod,
+    /// Whitespace `store`.
     Store,
+    /// Whitespace `retrieve`.
     Retrieve,
+    /// Whitespace `label`.
     Label,
+    /// Whitespace `call`.
     Call,
+    /// Whitespace `jmp`.
     Jmp,
+    /// Whitespace `jz`.
     Jz,
+    /// Whitespace `jn`.
     Jn,
+    /// Whitespace `ret`.
     Ret,
+    /// Whitespace `end`.
     End,
+    /// Whitespace `printc`.
     Printc,
+    /// Whitespace `printi`.
     Printi,
+    /// Whitespace `readc`.
     Readc,
+    /// Whitespace `readi`.
     Readi,
 
     /// Burghard `pushs`.

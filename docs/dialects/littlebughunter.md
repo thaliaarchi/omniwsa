@@ -1,4 +1,4 @@
-# littleBugHunter assembly
+# littleBugHunter Whitespace assembly
 
 - Source: [code](https://github.com/littleBugHunter/WhitespaceAssembler),
   [docs](https://github.com/littleBugHunter/WhitespaceAssembler/blob/master/README.md)

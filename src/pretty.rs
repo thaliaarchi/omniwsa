@@ -7,6 +7,8 @@ use crate::{
 
 /// Pretty-prints this node as Whitespace assembly syntax.
 pub trait Pretty {
+    /// Pretty-prints this node as Whitespace assembly syntax, written to the
+    /// given buffer.
     fn pretty(&self, buf: &mut Vec<u8>);
 }
 

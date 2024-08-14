@@ -1,4 +1,4 @@
-# voliva assembly
+# voliva Whitespace assembly
 
 - Source: [code](https://github.com/voliva/wsa)
   (last updated [2024-07-25](https://github.com/voliva/wsa/commit/3a99669b57f266e7328143e49579f6d33da7c6f5))
