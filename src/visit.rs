@@ -108,7 +108,7 @@ mod tests {
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
-        token::{IntegerBase, IntegerSign, Opcode, Token, TokenKind},
+        token::{IntegerBase, IntegerSign, IntegerToken, Opcode, Token, TokenKind},
     };
 
     #[test]
@@ -134,7 +134,7 @@ mod tests {
                     }),
                     Cst::Inst(Inst {
                         space_before: Space::new(),
-                        opcode: Token::new(b"label", TokenKind::Opcode(Opcode::Label)),
+                        opcode: Token::new(b"label", TokenKind::from(Opcode::Label)),
                         args: vec![(
                             ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
                             Token::new(
@@ -169,16 +169,17 @@ mod tests {
                             ),
                             Token::new(b"  ", TokenKind::Space),
                         ]),
-                        opcode: Token::new(b"push", TokenKind::Opcode(Opcode::Push)),
+                        opcode: Token::new(b"push", TokenKind::from(Opcode::Push)),
                         args: vec![(
                             ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
                             Token::new(
                                 b"1",
-                                TokenKind::Integer {
+                                TokenKind::from(IntegerToken {
                                     value: Integer::from(1),
                                     sign: IntegerSign::None,
                                     base: IntegerBase::Decimal,
-                                },
+                                    leading_zeros: 0,
+                                }),
                             ),
                         )],
                         inst_sep: InstSep::LineTerm {
@@ -203,16 +204,17 @@ mod tests {
                     }),
                     Cst::Inst(Inst {
                         space_before: Space::from(vec![Token::new(b"    ", TokenKind::Space)]),
-                        opcode: Token::new(b"push", TokenKind::Opcode(Opcode::Push)),
+                        opcode: Token::new(b"push", TokenKind::from(Opcode::Push)),
                         args: vec![(
                             ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
                             Token::new(
                                 b"2",
-                                TokenKind::Integer {
+                                TokenKind::from(IntegerToken {
                                     value: Integer::from(2),
                                     sign: IntegerSign::None,
                                     base: IntegerBase::Decimal,
-                                },
+                                    leading_zeros: 0,
+                                }),
                             ),
                         )],
                         inst_sep: InstSep::LineTerm {

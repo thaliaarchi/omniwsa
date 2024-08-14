@@ -1,16 +1,23 @@
 //! Parsing for Haskell `Integer`.
 
-use std::{
-    fmt::{self, Display, Formatter},
-    str::FromStr,
-};
-
 use rug::Integer;
 
-use crate::token::{IntegerBase, IntegerSign, TokenKind};
+use crate::token::{IntegerBase, IntegerSign, IntegerToken};
 
-/// An integer with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
-/// in Haskell.
+// TODO:
+// - Make parser not fallible.
+
+/// An error from parsing a Haskell-syntax integer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum HaskellIntegerError {
+    InvalidDigit,
+    NoDigits,
+    UnpairedParen,
+    IllegalNeg,
+}
+
+/// Parses an integer with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
+/// in Haskell, given a buffer of digits to reuse allocations.
 ///
 /// # Syntax
 ///
@@ -83,181 +90,99 @@ use crate::token::{IntegerBase, IntegerSign, TokenKind};
 ///         ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadP.html#v:readP_to_S))
 ///   - [`GHC.Err.errorWithoutStackTrace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Err.hs#L42-47)
 ///     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ReadIntegerLit {
-    pub value: Integer,
-    pub is_negative: bool,
-    pub base: ReadIntegerBase,
-    pub leading_zeros: usize,
-}
+pub fn parse_haskell_integer(
+    mut s: &str,
+    digits: &mut Vec<u8>,
+) -> Result<IntegerToken, HaskellIntegerError> {
+    use HaskellIntegerError as Error;
 
-/// Integer base (radix).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum ReadIntegerBase {
-    Decimal = 10,
-    Octal = 8,
-    Hexadecimal = 16,
-}
+    digits.clear();
 
-/// Error from parsing a [`ReadIntegerLit`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum ReadIntegerError {
-    InvalidDigit,
-    NoDigits,
-    UnpairedParen,
-    IllegalNeg,
-}
-
-/// Parses an integer with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
-/// in Haskell.
-impl FromStr for ReadIntegerLit {
-    type Err = ReadIntegerError;
-
-    fn from_str(s: &str) -> Result<Self, ReadIntegerError> {
-        ReadIntegerLit::parse_with_buffer(s, &mut Vec::new())
-    }
-}
-
-impl ReadIntegerLit {
-    /// Parses an integer as in [`ReadIntegerLit::from_str`], but with a buffer
-    /// of digits to reuse allocations.
-    pub fn parse_with_buffer(mut s: &str, digits: &mut Vec<u8>) -> Result<Self, ReadIntegerError> {
-        use ReadIntegerBase as Base;
-        use ReadIntegerError as Error;
-
-        #[inline]
-        fn is_whitespace(ch: char) -> bool {
-            ch.is_whitespace() && ch != '\u{0085}' && ch != '\u{2028}' && ch != '\u{2029}'
-        }
-
-        digits.clear();
-
-        loop {
-            s = s.trim_matches(is_whitespace);
-            if !s.is_empty() {
-                let (first, last) = (s.as_bytes()[0], s.as_bytes()[s.len() - 1]);
-                if first == b'(' && last == b')' {
-                    s = &s[1..s.len() - 1];
-                    continue;
-                } else if first == b'(' || last == b')' {
-                    if first == b'-' {
-                        return Err(Error::IllegalNeg);
-                    }
-                    return Err(Error::UnpairedParen);
+    loop {
+        s = s.trim_matches(is_whitespace);
+        if !s.is_empty() {
+            let (first, last) = (s.as_bytes()[0], s.as_bytes()[s.len() - 1]);
+            if first == b'(' && last == b')' {
+                s = &s[1..s.len() - 1];
+                continue;
+            } else if first == b'(' || last == b')' {
+                if first == b'-' {
+                    return Err(Error::IllegalNeg);
                 }
-            }
-            break;
-        }
-
-        let is_negative = if !s.is_empty() && s.as_bytes()[0] == b'-' {
-            s = s[1..].trim_start_matches(is_whitespace);
-            true
-        } else {
-            false
-        };
-
-        let b = s.as_bytes();
-        let (base, b) = match b {
-            [b'0', b'o' | b'O', b @ ..] => (Base::Octal, b),
-            [b'0', b'x' | b'X', b @ ..] => (Base::Hexadecimal, b),
-            _ => (Base::Decimal, b),
-        };
-        let leading_zeros = b.iter().take_while(|&&ch| ch == b'0').count();
-        let b = &b[leading_zeros..];
-
-        let mut value = Integer::new();
-        if !b.is_empty() {
-            digits.reserve(b.len());
-            match base {
-                Base::Decimal => {
-                    for &ch in b {
-                        let digit = ch.wrapping_sub(b'0');
-                        if digit >= 10 {
-                            return Err(Error::InvalidDigit);
-                        }
-                        digits.push(digit);
-                    }
-                }
-                Base::Octal => {
-                    for &ch in b {
-                        let digit = ch.wrapping_sub(b'0');
-                        if digit >= 8 {
-                            return Err(Error::InvalidDigit);
-                        }
-                        digits.push(digit);
-                    }
-                }
-                Base::Hexadecimal => {
-                    for &ch in b {
-                        let digit = match ch {
-                            b'0'..=b'9' => ch - b'0',
-                            b'a'..=b'f' => ch - b'a' + 10,
-                            b'A'..=b'F' => ch - b'A' + 10,
-                            _ => return Err(Error::InvalidDigit),
-                        };
-                        digits.push(digit);
-                    }
-                }
-            }
-            // SAFETY: Digits are constructed to be in range for the base.
-            unsafe {
-                value.assign_bytes_radix_unchecked(digits, base as i32, is_negative);
-            }
-        } else if leading_zeros == 0 {
-            return Err(Error::NoDigits);
-        }
-
-        Ok(ReadIntegerLit {
-            value,
-            is_negative,
-            base,
-            leading_zeros,
-        })
-    }
-}
-
-impl Display for ReadIntegerLit {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if self.is_negative {
-            f.write_str("-")?;
-        }
-        match self.base {
-            ReadIntegerBase::Decimal => {}
-            ReadIntegerBase::Octal => f.write_str("0o")?,
-            ReadIntegerBase::Hexadecimal => f.write_str("0x")?,
-        }
-        write!(f, "{:0<width$}", "", width = self.leading_zeros)?;
-        if !self.value.is_zero() {
-            match self.base {
-                ReadIntegerBase::Decimal => write!(f, "{}", self.value.as_abs())?,
-                ReadIntegerBase::Octal => write!(f, "{:o}", self.value.as_abs())?,
-                ReadIntegerBase::Hexadecimal => write!(f, "{:x}", self.value.as_abs())?,
+                return Err(Error::UnpairedParen);
             }
         }
-        Ok(())
+        break;
     }
-}
 
-impl From<ReadIntegerLit> for TokenKind<'_> {
-    fn from(int: ReadIntegerLit) -> Self {
-        TokenKind::Integer {
-            value: int.value,
-            sign: if int.is_negative {
-                IntegerSign::Neg
-            } else {
-                IntegerSign::None
-            },
-            base: int.base.into(),
-        }
-    }
-}
+    let sign = if !s.is_empty() && s.as_bytes()[0] == b'-' {
+        s = s[1..].trim_start_matches(is_whitespace);
+        IntegerSign::Neg
+    } else {
+        IntegerSign::None
+    };
 
-impl From<ReadIntegerBase> for IntegerBase {
-    fn from(base: ReadIntegerBase) -> Self {
+    let b = s.as_bytes();
+    let (base, b) = match b {
+        [b'0', b'o' | b'O', b @ ..] => (IntegerBase::Octal, b),
+        [b'0', b'x' | b'X', b @ ..] => (IntegerBase::Hexadecimal, b),
+        _ => (IntegerBase::Decimal, b),
+    };
+    let leading_zeros = b.iter().take_while(|&&ch| ch == b'0').count();
+    let b = &b[leading_zeros..];
+
+    let mut value = Integer::new();
+    if !b.is_empty() {
+        digits.reserve(b.len());
         match base {
-            ReadIntegerBase::Decimal => IntegerBase::Decimal,
-            ReadIntegerBase::Octal => IntegerBase::Octal,
-            ReadIntegerBase::Hexadecimal => IntegerBase::Hexadecimal,
+            IntegerBase::Decimal => {
+                for &ch in b {
+                    let digit = ch.wrapping_sub(b'0');
+                    if digit >= 10 {
+                        return Err(Error::InvalidDigit);
+                    }
+                    digits.push(digit);
+                }
+            }
+            IntegerBase::Octal => {
+                for &ch in b {
+                    let digit = ch.wrapping_sub(b'0');
+                    if digit >= 8 {
+                        return Err(Error::InvalidDigit);
+                    }
+                    digits.push(digit);
+                }
+            }
+            IntegerBase::Hexadecimal => {
+                for &ch in b {
+                    let digit = match ch {
+                        b'0'..=b'9' => ch - b'0',
+                        b'a'..=b'f' => ch - b'a' + 10,
+                        b'A'..=b'F' => ch - b'A' + 10,
+                        _ => return Err(Error::InvalidDigit),
+                    };
+                    digits.push(digit);
+                }
+            }
+            IntegerBase::Binary => unreachable!(),
         }
+        // SAFETY: Digits are constructed to be in range for the base.
+        unsafe {
+            value.assign_bytes_radix_unchecked(digits, base as i32, sign == IntegerSign::Neg);
+        }
+    } else if leading_zeros == 0 {
+        return Err(Error::NoDigits);
     }
+
+    Ok(IntegerToken {
+        value,
+        sign,
+        base,
+        leading_zeros,
+    })
+}
+
+#[inline]
+fn is_whitespace(ch: char) -> bool {
+    ch.is_whitespace() && ch != '\u{0085}' && ch != '\u{2028}' && ch != '\u{2029}'
 }

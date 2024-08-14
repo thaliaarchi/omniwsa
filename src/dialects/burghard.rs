@@ -5,7 +5,7 @@ use std::{borrow::Cow, collections::HashMap, mem, str};
 use enumset::EnumSet;
 
 use crate::{
-    integer::ReadIntegerLit,
+    integer::parse_haskell_integer,
     mnemonics::Utf8LowerToAscii,
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
@@ -20,6 +20,7 @@ use crate::{
 // - Move Cst macros to syntax.
 // - Clean up UTF-8 decoding in parse_arg, since tokens are already validated as
 //   UTF-8.
+// - Split into lex, integer, parse, etc. files.
 
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -177,7 +178,7 @@ impl<'s> Lexer<'s> {
 
         if scan.eof() {
             if let Some((rest, error_len)) = self.invalid_utf8.take() {
-                return Token::new(rest, TokenKind::Error(TokenError::Utf8 { error_len }));
+                return Token::new(rest, TokenKind::from(TokenError::Utf8 { error_len }));
             }
             return Token::new(b"", TokenKind::Eof);
         }
@@ -343,10 +344,9 @@ impl<'s> Parser<'s, '_> {
         // Try to parse it as an integer.
         if ty == Type::Integer || ty == Type::Variable && !quoted {
             // TODO: Use if-let chains once stabilized.
-            if let Ok(int) = ReadIntegerLit::parse_with_buffer(
-                str::from_utf8(&inner.text).unwrap(),
-                &mut self.digit_buf,
-            ) {
+            if let Ok(int) =
+                parse_haskell_integer(str::from_utf8(&inner.text).unwrap(), &mut self.digit_buf)
+            {
                 inner.kind = TokenKind::from(int);
                 return ty == Type::Integer;
             }
@@ -546,7 +546,10 @@ mod tests {
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
-        token::{IntegerBase, IntegerSign, Opcode, QuoteStyle, StringData, Token, TokenKind},
+        token::{
+            IntegerBase, IntegerSign, IntegerToken, Opcode, QuoteStyle, StringData, Token,
+            TokenKind,
+        },
     };
 
     macro_rules! root[($($node:expr),* $(,)?) => {
@@ -605,10 +608,7 @@ mod tests {
                         block_comment!("splice"),
                         Token::new(b"world", TokenKind::Word),
                     ],
-                    spliced: Box::new(Token::new(
-                        b"helloworld",
-                        TokenKind::Opcode(Opcode::Invalid),
-                    )),
+                    spliced: Box::new(Token::new(b"helloworld", TokenKind::from(Opcode::Invalid))),
                 },
             ),
             args: vec![(
@@ -635,7 +635,7 @@ mod tests {
                 TokenKind::Quoted {
                     inner: Box::new(Token::new(
                         "Debug_PrİntStacK".as_bytes(),
-                        TokenKind::Opcode(Opcode::BurghardPrintStack),
+                        TokenKind::from(Opcode::BurghardPrintStack),
                     )),
                     quotes: QuoteStyle::UnclosedDouble,
                 },
@@ -655,7 +655,7 @@ mod tests {
             space_before: Space::new(),
             opcode: Token::new(
                 b"valueinteger",
-                TokenKind::Opcode(Opcode::BurghardValueInteger),
+                TokenKind::from(Opcode::BurghardValueInteger),
             ),
             args: vec![
                 (
@@ -675,11 +675,12 @@ mod tests {
                         TokenKind::Quoted {
                             inner: Box::new(Token::new(
                                 b"2",
-                                TokenKind::Integer {
+                                TokenKind::from(IntegerToken {
                                     value: Integer::from(2),
                                     sign: IntegerSign::None,
                                     base: IntegerBase::Decimal,
-                                },
+                                    leading_zeros: 0,
+                                }),
                             )),
                             quotes: QuoteStyle::Double,
                         },
@@ -698,7 +699,7 @@ mod tests {
         macro_rules! letter(($letter:literal) => {
             Cst::Inst(Inst {
                 space_before: Space::new(),
-                opcode: Token::new($letter, TokenKind::Opcode(Opcode::Invalid)),
+                opcode: Token::new($letter, TokenKind::from(Opcode::Invalid)),
                 args: vec![],
                 inst_sep: lf!(),
                 valid_arity: true,
@@ -710,7 +711,7 @@ mod tests {
                 space_before: Space::new(),
                 opcode: Token::new(
                     b"ifoption",
-                    TokenKind::Opcode(Opcode::IfOption),
+                    TokenKind::from(Opcode::IfOption),
                 ),
                 args: vec![(
                     ArgSep::Space(space!(b" ")),
@@ -726,7 +727,7 @@ mod tests {
                 space_before: Space::new(),
                 opcode: Token::new(
                     b"elseifoption",
-                    TokenKind::Opcode(Opcode::ElseIfOption),
+                    TokenKind::from(Opcode::ElseIfOption),
                 ),
                 args: vec![(
                     ArgSep::Space(space!(b" ")),
@@ -742,7 +743,7 @@ mod tests {
                 space_before: Space::new(),
                 opcode: Token::new(
                     b"elseoption",
-                    TokenKind::Opcode(Opcode::ElseOption)
+                    TokenKind::from(Opcode::ElseOption)
                 ),
                 args: vec![],
                 inst_sep: lf!(),
@@ -753,7 +754,7 @@ mod tests {
         macro_rules! endoption(() => {
             Inst {
                 space_before: Space::new(),
-                opcode: Token::new(b"endoption", TokenKind::Opcode(Opcode::EndOption)),
+                opcode: Token::new(b"endoption", TokenKind::from(Opcode::EndOption)),
                 args: vec![],
                 inst_sep: lf!(),
                 valid_arity: true,

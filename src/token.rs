@@ -27,6 +27,7 @@ use crate::syntax::HasError;
 // - How to represent char literals with buggy delimiters, like those allowed
 //   with littleBugHunter's `'..` pattern? Maybe QuoteStyle::Custom with open
 //   and close.
+// - Make UTF-8 error a first-class token.
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
@@ -42,11 +43,7 @@ pub enum TokenKind<'s> {
     /// Instruction or predefined macro opcode.
     Opcode(Opcode),
     /// Integer.
-    Integer {
-        value: Integer,
-        sign: IntegerSign,
-        base: IntegerBase,
-    },
+    Integer(IntegerToken),
     /// Character.
     Char { data: CharData, quotes: QuoteStyle },
     /// String.
@@ -116,6 +113,15 @@ pub enum TokenKind<'s> {
     Error(TokenError),
 }
 
+/// An integer token.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IntegerToken {
+    pub value: Integer,
+    pub sign: IntegerSign,
+    pub base: IntegerBase,
+    pub leading_zeros: usize,
+}
+
 /// The sign of an integer literal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntegerSign {
@@ -127,17 +133,17 @@ pub enum IntegerSign {
     Neg,
 }
 
-/// The base of an integer literal.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// The base (radix) of an integer literal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IntegerBase {
-    /// Base 10.
-    Decimal,
     /// Base 2.
-    Binary,
+    Binary = 2,
     /// Base 8.
-    Octal,
+    Octal = 8,
+    /// Base 10.
+    Decimal = 10,
     /// Base 16.
-    Hexadecimal,
+    Hexadecimal = 16,
 }
 
 /// The unescaped data of a char literal.
@@ -336,6 +342,22 @@ impl HasError for QuoteStyle {
     }
 }
 
+impl From<Opcode> for TokenKind<'static> {
+    fn from(opcode: Opcode) -> Self {
+        TokenKind::Opcode(opcode)
+    }
+}
+impl From<IntegerToken> for TokenKind<'static> {
+    fn from(int: IntegerToken) -> Self {
+        TokenKind::Integer(int)
+    }
+}
+impl From<TokenError> for TokenKind<'static> {
+    fn from(err: TokenError) -> Self {
+        TokenKind::Error(err)
+    }
+}
+
 impl Debug for Token<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Token")
@@ -349,11 +371,17 @@ impl Debug for TokenKind<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             TokenKind::Opcode(opcode) => f.debug_tuple("Opcode").field(opcode).finish(),
-            TokenKind::Integer { value, sign, base } => f
+            TokenKind::Integer(IntegerToken {
+                value,
+                sign,
+                base,
+                leading_zeros,
+            }) => f
                 .debug_struct("Integer")
                 .field("value", value)
                 .field("sign", sign)
                 .field("base", base)
+                .field("leading_zeros", leading_zeros)
                 .finish(),
             TokenKind::Char { data, quotes } => f
                 .debug_struct("Char")
