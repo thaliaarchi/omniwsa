@@ -8,7 +8,7 @@ use crate::{
     integer::parse_haskell_integer,
     mnemonics::Utf8LowerToAscii,
     scan::Utf8Scanner,
-    syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
+    syntax::{ArgSep, Cst, Dialect, HasError, Inst, InstSep, OptionBlock, Space},
     token::{Opcode, QuoteStyle, StringData, Token, TokenError, TokenKind},
 };
 
@@ -344,9 +344,9 @@ impl<'s> Parser<'s, '_> {
         // Try to parse it as an integer.
         if ty == Type::Integer || ty == Type::Variable && !quoted {
             // TODO: Use if-let chains once stabilized.
-            if let Ok(int) =
-                parse_haskell_integer(str::from_utf8(&inner.text).unwrap(), &mut self.digit_buf)
-            {
+            let int =
+                parse_haskell_integer(str::from_utf8(&inner.text).unwrap(), &mut self.digit_buf);
+            if !int.has_error() {
                 inner.kind = TokenKind::from(int);
                 return ty == Type::Integer;
             }
@@ -541,6 +541,7 @@ impl<'s> OptionNester<'s> {
 
 #[cfg(test)]
 mod tests {
+    use enumset::EnumSet;
     use rug::Integer;
 
     use crate::{
@@ -680,6 +681,7 @@ mod tests {
                                     sign: IntegerSign::None,
                                     base: IntegerBase::Decimal,
                                     leading_zeros: 0,
+                                    errors: EnumSet::empty(),
                                 }),
                             )),
                             quotes: QuoteStyle::Double,

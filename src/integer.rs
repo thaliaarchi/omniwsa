@@ -1,20 +1,9 @@
 //! Parsing for Haskell `Integer`.
 
+use enumset::EnumSet;
 use rug::Integer;
 
-use crate::token::{IntegerBase, IntegerSign, IntegerToken};
-
-// TODO:
-// - Make parser not fallible.
-
-/// An error from parsing a Haskell-syntax integer.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum HaskellIntegerError {
-    InvalidDigit,
-    NoDigits,
-    UnpairedParen,
-    IllegalNeg,
-}
+use crate::token::{IntegerBase, IntegerError, IntegerSign, IntegerToken};
 
 /// Parses an integer with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
 /// in Haskell, given a buffer of digits to reuse allocations.
@@ -90,14 +79,11 @@ pub enum HaskellIntegerError {
 ///         ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadP.html#v:readP_to_S))
 ///   - [`GHC.Err.errorWithoutStackTrace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Err.hs#L42-47)
 ///     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
-pub fn parse_haskell_integer(
-    mut s: &str,
-    digits: &mut Vec<u8>,
-) -> Result<IntegerToken, HaskellIntegerError> {
-    use HaskellIntegerError as Error;
-
+pub fn parse_haskell_integer(mut s: &str, digits: &mut Vec<u8>) -> IntegerToken {
     digits.clear();
+    let mut errors = EnumSet::new();
 
+    let mut sign = IntegerSign::None;
     loop {
         s = s.trim_matches(is_whitespace);
         if !s.is_empty() {
@@ -107,25 +93,36 @@ pub fn parse_haskell_integer(
                 continue;
             } else if first == b'(' || last == b')' {
                 if first == b'-' {
-                    return Err(Error::IllegalNeg);
+                    sign = invert_sign(sign);
+                    errors |= IntegerError::NegParens;
+                    s = &s[1..];
+                    continue;
                 }
-                return Err(Error::UnpairedParen);
+                errors |= IntegerError::UnpairedParen;
             }
         }
         break;
     }
 
-    let sign = if !s.is_empty() && s.as_bytes()[0] == b'-' {
-        s = s[1..].trim_start_matches(is_whitespace);
-        IntegerSign::Neg
-    } else {
-        IntegerSign::None
-    };
+    if let Some(s1) = s.strip_prefix("-") {
+        sign = invert_sign(sign);
+        s = s1.trim_start_matches(is_whitespace);
+    } else if let Some(s1) = s.strip_prefix("+") {
+        if sign == IntegerSign::None {
+            sign = IntegerSign::Pos;
+        }
+        errors |= IntegerError::InvalidPos;
+        s = s1.trim_start_matches(is_whitespace);
+    }
 
     let b = s.as_bytes();
     let (base, b) = match b {
         [b'0', b'o' | b'O', b @ ..] => (IntegerBase::Octal, b),
         [b'0', b'x' | b'X', b @ ..] => (IntegerBase::Hexadecimal, b),
+        [b'0', b'b' | b'B', b @ ..] => {
+            errors |= IntegerError::InvalidBase;
+            (IntegerBase::Binary, b)
+        }
         _ => (IntegerBase::Decimal, b),
     };
     let leading_zeros = b.iter().take_while(|&&ch| ch == b'0').count();
@@ -139,16 +136,8 @@ pub fn parse_haskell_integer(
                 for &ch in b {
                     let digit = ch.wrapping_sub(b'0');
                     if digit >= 10 {
-                        return Err(Error::InvalidDigit);
-                    }
-                    digits.push(digit);
-                }
-            }
-            IntegerBase::Octal => {
-                for &ch in b {
-                    let digit = ch.wrapping_sub(b'0');
-                    if digit >= 8 {
-                        return Err(Error::InvalidDigit);
+                        errors |= IntegerError::InvalidDigit;
+                        break;
                     }
                     digits.push(digit);
                 }
@@ -159,30 +148,67 @@ pub fn parse_haskell_integer(
                         b'0'..=b'9' => ch - b'0',
                         b'a'..=b'f' => ch - b'a' + 10,
                         b'A'..=b'F' => ch - b'A' + 10,
-                        _ => return Err(Error::InvalidDigit),
+                        _ => {
+                            errors |= IntegerError::InvalidDigit;
+                            break;
+                        }
                     };
                     digits.push(digit);
                 }
             }
-            IntegerBase::Binary => unreachable!(),
+            IntegerBase::Octal => {
+                for &ch in b {
+                    let digit = ch.wrapping_sub(b'0');
+                    if digit >= 8 {
+                        errors |= IntegerError::InvalidDigit;
+                        break;
+                    }
+                    digits.push(digit);
+                }
+            }
+            IntegerBase::Binary => {
+                // Binary is not supported, but parse it anyways with it marked
+                // as an error.
+                for &ch in b {
+                    let digit = ch.wrapping_sub(b'0');
+                    if digit >= 2 {
+                        errors |= IntegerError::InvalidDigit;
+                        break;
+                    }
+                    digits.push(digit);
+                }
+            }
         }
         // SAFETY: Digits are constructed to be in range for the base.
         unsafe {
             value.assign_bytes_radix_unchecked(digits, base as i32, sign == IntegerSign::Neg);
         }
     } else if leading_zeros == 0 {
-        return Err(Error::NoDigits);
+        errors |= IntegerError::NoDigits;
     }
 
-    Ok(IntegerToken {
+    IntegerToken {
         value,
         sign,
         base,
         leading_zeros,
-    })
+        errors,
+    }
 }
 
+/// Returns whether the char is considered whitespace for the purposes of
+/// parsing a Haskell `Integer`.
 #[inline]
 fn is_whitespace(ch: char) -> bool {
     ch.is_whitespace() && ch != '\u{0085}' && ch != '\u{2028}' && ch != '\u{2029}'
+}
+
+/// Inverts a sign. Rather than add another sign variant for multiple negations,
+/// just use `Pos`, since this is only exercised for errors as a best effort.
+#[inline]
+fn invert_sign(sign: IntegerSign) -> IntegerSign {
+    match sign {
+        IntegerSign::None | IntegerSign::Pos => IntegerSign::Neg,
+        IntegerSign::Neg => IntegerSign::Pos,
+    }
 }

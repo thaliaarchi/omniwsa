@@ -120,6 +120,7 @@ pub struct IntegerToken {
     pub sign: IntegerSign,
     pub base: IntegerBase,
     pub leading_zeros: usize,
+    pub errors: EnumSet<IntegerError>,
 }
 
 /// The sign of an integer literal.
@@ -144,6 +145,24 @@ pub enum IntegerBase {
     Decimal = 10,
     /// Base 16.
     Hexadecimal = 16,
+}
+
+/// A parse error for an integer literal.
+#[derive(EnumSetType, Debug)]
+pub enum IntegerError {
+    /// An invalid digit.
+    InvalidDigit,
+    /// No digits, excluding a possible base prefix.
+    NoDigits,
+    /// Has a base that is not supported.
+    InvalidBase,
+    /// Has an explicit positive sign, which is forbidden (Burghard via Haskell
+    /// `Integer`).
+    InvalidPos,
+    /// An unpaired parenthesis (Burghard via Haskell `Integer`).
+    UnpairedParen,
+    /// Negated parentheses (Burghard via Haskell `Integer`).
+    NegParens,
 }
 
 /// The unescaped data of a char literal.
@@ -182,7 +201,7 @@ pub enum QuoteStyle {
     Bare,
 }
 
-/// An error for a label.
+/// A parse error for a label.
 #[derive(EnumSetType, Debug)]
 pub enum LabelError {
     /// The label has no characters (Palaiologos).
@@ -191,7 +210,7 @@ pub enum LabelError {
     StartsWithDigit,
 }
 
-/// An error for a line comment.
+/// A parse error for a line comment.
 #[derive(EnumSetType, Debug)]
 pub enum LineCommentError {
     /// The line comment is not terminated by a LF (Palaiologos).
@@ -324,6 +343,18 @@ impl HasError for Token<'_> {
     }
 }
 
+impl HasError for Opcode {
+    fn has_error(&self) -> bool {
+        matches!(self, Opcode::Invalid)
+    }
+}
+
+impl HasError for IntegerToken {
+    fn has_error(&self) -> bool {
+        !self.errors.is_empty()
+    }
+}
+
 impl HasError for CharData {
     fn has_error(&self) -> bool {
         match self {
@@ -376,12 +407,14 @@ impl Debug for TokenKind<'_> {
                 sign,
                 base,
                 leading_zeros,
+                errors,
             }) => f
                 .debug_struct("Integer")
                 .field("value", value)
                 .field("sign", sign)
                 .field("base", base)
                 .field("leading_zeros", leading_zeros)
+                .field("errors", errors)
                 .finish(),
             TokenKind::Char { data, quotes } => f
                 .debug_struct("Char")
