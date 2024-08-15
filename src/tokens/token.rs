@@ -3,19 +3,23 @@
 use std::{
     borrow::Cow,
     fmt::{self, Debug, Formatter},
-    str::{self, Utf8Error},
 };
 
 use bstr::ByteSlice;
 use enumset::{EnumSet, EnumSetType};
 
 pub use crate::mnemonics::Opcode;
-use crate::{syntax::HasError, tokens::integer::IntegerToken};
+use crate::{
+    syntax::HasError,
+    tokens::{
+        integer::IntegerToken,
+        string::{CharToken, QuotedToken, StringToken},
+    },
+};
 
 // TODO:
 // - Whitelips, Lime, and Respace macro definitions.
 // - Respace `@define`.
-// - How to represent escapes in strings and chars?
 // - How to represent equivalent integers?
 // - Store byte string uniformly, instead of a mix of &[u8] and Cow.
 //   - Create utilities for slicing and manipulating easier than Cow.
@@ -23,9 +27,6 @@ use crate::{syntax::HasError, tokens::integer::IntegerToken};
 //   and rename `TokenKind` -> `Token`. For example, the line comment prefix
 //   needs to be manipulated in both `Token::text` and `LineComment::prefix`.
 // - Extract each token as a struct to manage manipulation routines.
-// - How to represent char literals with buggy delimiters, like those allowed
-//   with littleBugHunter's `'..` pattern? Maybe QuoteStyle::Custom with open
-//   and close.
 // - Make UTF-8 error a first-class token.
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
@@ -43,22 +44,12 @@ pub struct Token<'s> {
 pub enum TokenKind<'s> {
     /// Instruction or predefined macro opcode.
     Opcode(Opcode),
-    /// Integer.
+    /// Integer literal.
     Integer(IntegerToken),
-    /// Character.
-    Char {
-        /// The unescaped data of this char literal.
-        data: CharData,
-        /// The style of the quotes enclosing this char literal.
-        quotes: QuoteStyle,
-    },
-    /// String.
-    String {
-        /// The unescaped data of this string literal.
-        data: StringData<'s>,
-        /// The style of the quotes enclosing this string literal.
-        quotes: QuoteStyle,
-    },
+    /// String literal.
+    String(StringToken<'s>),
+    /// Character literal.
+    Char(CharToken),
     /// Identifier.
     Ident {
         /// A prefix sigil to mark identifiers (e.g., Burghard `_`).
@@ -116,12 +107,7 @@ pub enum TokenKind<'s> {
     /// A word of uninterpreted meaning.
     Word,
     /// A token enclosed in non-semantic quotes (Burghard).
-    Quoted {
-        /// The effective token.
-        inner: Box<Token<'s>>,
-        /// The style of the quotes enclosing this token.
-        quotes: QuoteStyle,
-    },
+    Quoted(QuotedToken<'s>),
     /// Tokens spliced by block comments (Burghard).
     Spliced {
         /// A list of words interspersed with block comments. Only contains
@@ -132,42 +118,6 @@ pub enum TokenKind<'s> {
     },
     /// An erroneous sequence.
     Error(TokenError),
-}
-
-/// The unescaped data of a char literal.
-#[derive(Clone, PartialEq, Eq)]
-pub enum CharData {
-    /// A char encoded as a Unicode code point.
-    Unicode(char),
-    /// A char encoded as a byte.
-    Byte(u8),
-    /// A char literal with no or more than one char.
-    Error,
-}
-
-/// The unescaped data of a string literal.
-#[derive(Clone, PartialEq, Eq)]
-pub enum StringData<'s> {
-    /// A string encoded as UTF-8 chars.
-    Utf8(Cow<'s, str>),
-    /// A string encoded as raw bytes.
-    Bytes(Cow<'s, [u8]>),
-}
-
-/// The quote style of a string or char literal or a quoted word.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum QuoteStyle {
-    /// A string enclosed in `"`-quotes.
-    Double,
-    /// A string enclosed in `'`-quotes (e.g., Whitelips non-NUL-terminated
-    /// strings).
-    Single,
-    /// A `"`-quoted string missing a closing quote, i.e., an error.
-    UnclosedDouble,
-    /// A `'`-quoted string missing a closing quote, i.e., an error.
-    UnclosedSingle,
-    /// A string not enclosed in quotes (Burghard).
-    Bare,
 }
 
 /// A parse error for a label.
@@ -213,7 +163,8 @@ impl<'s> Token<'s> {
         let mut tok = self;
         loop {
             match &tok.kind {
-                TokenKind::Quoted { inner, .. } | TokenKind::Spliced { spliced: inner, .. } => {
+                TokenKind::Quoted(QuotedToken { inner, .. })
+                | TokenKind::Spliced { spliced: inner, .. } => {
                     tok = inner;
                 }
                 _ => return tok,
@@ -226,7 +177,7 @@ impl<'s> Token<'s> {
         let mut tok = self;
         loop {
             match tok.kind {
-                TokenKind::Quoted { ref mut inner, .. }
+                TokenKind::Quoted(QuotedToken { ref mut inner, .. })
                 | TokenKind::Spliced {
                     spliced: ref mut inner,
                     ..
@@ -258,54 +209,15 @@ impl<'s> Token<'s> {
     }
 }
 
-impl<'s> StringData<'s> {
-    /// Constructs a `StringData` from bytes, validating that it is UTF-8.
-    pub fn from_utf8(b: Cow<'s, [u8]>) -> Result<Self, Utf8Error> {
-        let s = match b {
-            Cow::Borrowed(b) => Cow::Borrowed(str::from_utf8(b)?),
-            Cow::Owned(b) => Cow::Owned(String::from_utf8(b).map_err(|err| err.utf8_error())?),
-        };
-        Ok(StringData::Utf8(s))
-    }
-
-    /// Constructs a `StringData` from bytes, assuming that it is valid UTF-8.
-    ///
-    /// # Safety
-    ///
-    /// The bytes must be valid UTF-8.
-    pub unsafe fn from_utf8_unchecked(b: Cow<'s, [u8]>) -> Self {
-        // SAFETY: Guaranteed by caller.
-        let s = unsafe {
-            match b {
-                Cow::Borrowed(b) => Cow::Borrowed(str::from_utf8_unchecked(b)),
-                Cow::Owned(b) => Cow::Owned(String::from_utf8_unchecked(b)),
-            }
-        };
-        StringData::Utf8(s)
-    }
-}
-
-impl<'s> From<Cow<'s, str>> for StringData<'s> {
-    fn from(s: Cow<'s, str>) -> Self {
-        StringData::Utf8(s)
-    }
-}
-
-impl<'s> From<Cow<'s, [u8]>> for StringData<'s> {
-    fn from(b: Cow<'s, [u8]>) -> Self {
-        StringData::Bytes(b)
-    }
-}
-
 impl HasError for Token<'_> {
     fn has_error(&self) -> bool {
         match &self.kind {
             TokenKind::Opcode(Opcode::Invalid) | TokenKind::Error(_) => true,
-            TokenKind::Char { data, quotes } => data.has_error() || quotes.has_error(),
-            TokenKind::String { quotes, .. } => quotes.has_error(),
+            TokenKind::Char(c) => c.data.has_error() || c.quotes.has_error(),
+            TokenKind::String(s) => s.quotes.has_error(),
             TokenKind::LineComment { errors, .. } => !errors.is_empty(),
             TokenKind::BlockComment { terminated, .. } => !terminated,
-            TokenKind::Quoted { inner, quotes, .. } => inner.has_error() || quotes.has_error(),
+            TokenKind::Quoted(q) => q.inner.has_error() || q.quotes.has_error(),
             TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::has_error),
             _ => false,
         }
@@ -318,30 +230,6 @@ impl HasError for Opcode {
     }
 }
 
-impl HasError for IntegerToken {
-    fn has_error(&self) -> bool {
-        !self.errors.is_empty()
-    }
-}
-
-impl HasError for CharData {
-    fn has_error(&self) -> bool {
-        match self {
-            CharData::Unicode(_) | CharData::Byte(_) => false,
-            CharData::Error => true,
-        }
-    }
-}
-
-impl HasError for QuoteStyle {
-    fn has_error(&self) -> bool {
-        match self {
-            QuoteStyle::Double | QuoteStyle::Single | QuoteStyle::Bare => false,
-            QuoteStyle::UnclosedDouble | QuoteStyle::UnclosedSingle => true,
-        }
-    }
-}
-
 impl From<Opcode> for TokenKind<'static> {
     fn from(opcode: Opcode) -> Self {
         TokenKind::Opcode(opcode)
@@ -350,6 +238,21 @@ impl From<Opcode> for TokenKind<'static> {
 impl From<IntegerToken> for TokenKind<'static> {
     fn from(int: IntegerToken) -> Self {
         TokenKind::Integer(int)
+    }
+}
+impl<'s> From<StringToken<'s>> for TokenKind<'s> {
+    fn from(s: StringToken<'s>) -> Self {
+        TokenKind::String(s)
+    }
+}
+impl From<CharToken> for TokenKind<'static> {
+    fn from(c: CharToken) -> Self {
+        TokenKind::Char(c)
+    }
+}
+impl<'s> From<QuotedToken<'s>> for TokenKind<'s> {
+    fn from(quoted: QuotedToken<'s>) -> Self {
+        TokenKind::Quoted(quoted)
     }
 }
 impl From<TokenError> for TokenKind<'static> {
@@ -371,30 +274,9 @@ impl Debug for TokenKind<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             TokenKind::Opcode(opcode) => f.debug_tuple("Opcode").field(opcode).finish(),
-            TokenKind::Integer(IntegerToken {
-                value,
-                sign,
-                base,
-                leading_zeros,
-                errors,
-            }) => f
-                .debug_struct("Integer")
-                .field("value", value)
-                .field("sign", sign)
-                .field("base", base)
-                .field("leading_zeros", leading_zeros)
-                .field("errors", errors)
-                .finish(),
-            TokenKind::Char { data, quotes } => f
-                .debug_struct("Char")
-                .field("data", data)
-                .field("quotes", quotes)
-                .finish(),
-            TokenKind::String { data, quotes } => f
-                .debug_struct("String")
-                .field("data", data)
-                .field("quotes", quotes)
-                .finish(),
+            TokenKind::Integer(i) => Debug::fmt(i, f),
+            TokenKind::Char(c) => Debug::fmt(c, f),
+            TokenKind::String(s) => Debug::fmt(s, f),
             TokenKind::Ident { sigil, ident } => f
                 .debug_struct("Ident")
                 .field("sigil", &sigil.as_bstr())
@@ -441,36 +323,13 @@ impl Debug for TokenKind<'_> {
                 .field("terminated", terminated)
                 .finish(),
             TokenKind::Word => write!(f, "Word"),
-            TokenKind::Quoted { inner, quotes } => f
-                .debug_struct("Quoted")
-                .field("inner", inner)
-                .field("quotes", quotes)
-                .finish(),
+            TokenKind::Quoted(q) => Debug::fmt(q, f),
             TokenKind::Spliced { tokens, spliced } => f
                 .debug_struct("Spliced")
                 .field("tokens", tokens)
                 .field("spliced", spliced)
                 .finish(),
             TokenKind::Error(err) => f.debug_tuple("Error").field(err).finish(),
-        }
-    }
-}
-
-impl Debug for CharData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            CharData::Unicode(c) => f.debug_tuple("Unicode").field(c).finish(),
-            CharData::Byte(b) => f.debug_tuple("Byte").field(&[*b].as_bstr()).finish(),
-            CharData::Error => write!(f, "Error"),
-        }
-    }
-}
-
-impl Debug for StringData<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            StringData::Utf8(s) => f.debug_tuple("Utf8").field(s).finish(),
-            StringData::Bytes(b) => f.debug_tuple("Bytes").field(&b.as_bstr()).finish(),
         }
     }
 }

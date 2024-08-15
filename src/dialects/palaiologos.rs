@@ -10,8 +10,8 @@ use crate::{
     scan::ByteScanner,
     tokens::{
         integer::{parse_integer_digits, IntegerBase, IntegerError, IntegerSign, IntegerToken},
-        CharData, LabelError, LineCommentError, Opcode, QuoteStyle, StringData, Token, TokenError,
-        TokenKind,
+        string::{CharData, CharToken, QuoteStyle, StringData, StringToken},
+        LabelError, LineCommentError, Opcode, Token, TokenError, TokenKind,
     },
 };
 
@@ -179,15 +179,15 @@ impl<'s, 'd> Lexer<'s, 'd> {
                     _ => (CharData::Error, QuoteStyle::UnclosedSingle, 0),
                 };
                 scan.bump_bytes(len);
-                scan.wrap(TokenKind::Char { data, quotes })
+                scan.wrap(CharToken { data, quotes }.into())
             }
             b'"' => {
                 let (unquoted, quotes, len) = scan_string(scan.rest());
                 scan.bump_bytes(len);
-                scan.wrap(TokenKind::String {
+                scan.wrap(TokenKind::from(StringToken {
                     data: StringData::Bytes(unquoted),
                     quotes,
-                })
+                }))
             }
             b';' => {
                 scan.bump_while(|b| b != b'\n');

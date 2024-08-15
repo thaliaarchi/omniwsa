@@ -23,13 +23,13 @@ struct StrangeVisitor;
 impl<'s> Visitor<'s> for StrangeVisitor {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
         match inst.opcode.kind {
-            TokenKind::Quoted { .. } => unquote(&mut inst.opcode),
+            TokenKind::Quoted(_) => unquote(&mut inst.opcode),
             TokenKind::Spliced { .. } => unsplice(inst.opcode_space_after_mut()),
             _ => {}
         }
         for arg in 0..inst.args.len() {
             match inst.args[arg].1.kind {
-                TokenKind::Quoted { .. } => unquote(&mut inst.args[arg].1),
+                TokenKind::Quoted(_) => unquote(&mut inst.args[arg].1),
                 TokenKind::Spliced { .. } => unsplice(inst.arg_space_after_mut(arg)),
                 _ => {}
             }
@@ -42,10 +42,10 @@ impl<'s> Visitor<'s> for StrangeVisitor {
 /// Removes non-semantic quotes.
 #[inline]
 fn unquote<'s>(word: &mut Token<'s>) {
-    let TokenKind::Quoted { inner, .. } = mem::replace(&mut word.kind, TokenKind::Word) else {
+    let TokenKind::Quoted(q) = mem::replace(&mut word.kind, TokenKind::Word) else {
         panic!("not quoted");
     };
-    *word = *inner;
+    *word = *q.inner;
 }
 
 /// Moves block comments out of a token splice to after it.

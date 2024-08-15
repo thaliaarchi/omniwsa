@@ -1,9 +1,11 @@
-//! Parsing for Haskell `Integer`.
+//! Integer literal parsing and token.
 
 use enumset::{EnumSet, EnumSetType};
 pub use rug::Integer;
 
-/// An integer token.
+use crate::syntax::HasError;
+
+/// An integer literal token.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IntegerToken {
     /// The parsed value represented by the integer literal.
@@ -298,6 +300,12 @@ pub fn parse_integer_digits(
 /// parsing a Haskell `Integer`.
 fn is_whitespace(ch: char) -> bool {
     ch.is_whitespace() && ch != '\u{0085}' && ch != '\u{2028}' && ch != '\u{2029}'
+}
+
+impl HasError for IntegerToken {
+    fn has_error(&self) -> bool {
+        !self.errors.is_empty()
+    }
 }
 
 #[cfg(test)]

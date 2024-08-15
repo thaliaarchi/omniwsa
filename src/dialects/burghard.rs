@@ -9,8 +9,9 @@ use crate::{
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, HasError, Inst, InstSep, OptionBlock, Space},
     tokens::{
-        integer::parse_haskell_integer, Opcode, QuoteStyle, StringData, Token, TokenError,
-        TokenKind,
+        integer::parse_haskell_integer,
+        string::{QuoteStyle, QuotedToken, StringData, StringToken},
+        Opcode, Token, TokenError, TokenKind,
     },
 };
 
@@ -203,10 +204,10 @@ impl<'s> Lexer<'s> {
                 } else {
                     QuoteStyle::UnclosedDouble
                 };
-                scan.wrap(TokenKind::Quoted {
+                scan.wrap(TokenKind::from(QuotedToken {
                     inner: Box::new(Token::new(word, TokenKind::Word)),
                     quotes,
-                })
+                }))
             }
             _ => {
                 while !scan.eof() {
@@ -249,7 +250,7 @@ impl<'s> Iterator for Parser<'s, '_> {
 
         let space_before = self.space();
         let mut opcode = match self.curr() {
-            TokenKind::Word | TokenKind::Quoted { .. } => self.advance(),
+            TokenKind::Word | TokenKind::Quoted(_) => self.advance(),
             _ => return Some(Cst::Empty(self.line_term_sep(space_before))),
         };
 
@@ -258,7 +259,7 @@ impl<'s> Iterator for Parser<'s, '_> {
         let space_after = loop {
             let space = self.space();
             let arg = match self.curr() {
-                TokenKind::Word | TokenKind::Quoted { .. } => self.advance(),
+                TokenKind::Word | TokenKind::Quoted(_) => self.advance(),
                 _ => break space,
             };
             if should_splice_tokens(prev_word, &space, &arg) {
@@ -319,7 +320,7 @@ impl<'s> Parser<'s, '_> {
     /// Parses an argument according to its type and returns whether it is
     /// valid.
     fn parse_arg(&mut self, tok: &mut Token<'_>, ty: Type) -> bool {
-        let quoted = matches!(tok.kind, TokenKind::Quoted { .. });
+        let quoted = matches!(tok.kind, TokenKind::Quoted(_));
         let inner = tok.unwrap_mut();
         debug_assert_eq!(inner.kind, TokenKind::Word);
 
@@ -360,16 +361,16 @@ impl<'s> Parser<'s, '_> {
             _ => tok,
         };
         tok.kind = match mem::replace(&mut tok.kind, TokenKind::Word) {
-            TokenKind::Word => TokenKind::String {
+            TokenKind::Word => TokenKind::from(StringToken {
                 data: StringData::from_utf8(tok.text.clone()).unwrap(),
                 quotes: QuoteStyle::Bare,
-            },
-            TokenKind::Quoted { inner, quotes } => {
-                debug_assert_eq!(inner.kind, TokenKind::Word);
-                TokenKind::String {
-                    data: StringData::from_utf8(inner.text).unwrap(),
-                    quotes,
-                }
+            }),
+            TokenKind::Quoted(q) => {
+                debug_assert_eq!(q.inner.kind, TokenKind::Word);
+                TokenKind::from(StringToken {
+                    data: StringData::from_utf8(q.inner.text).unwrap(),
+                    quotes: q.quotes,
+                })
             }
             _ => panic!("unhandled token"),
         };
@@ -550,7 +551,8 @@ mod tests {
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
         tokens::{
             integer::{Integer, IntegerBase, IntegerSign, IntegerToken},
-            Opcode, QuoteStyle, StringData, Token, TokenKind,
+            string::{QuoteStyle, QuotedToken, StringData, StringToken},
+            Opcode, Token, TokenKind,
         },
     };
 
@@ -634,13 +636,13 @@ mod tests {
             space_before: Space::new(),
             opcode: Token::new(
                 "\"Debug_PrİntStacK".as_bytes(),
-                TokenKind::Quoted {
+                TokenKind::from(QuotedToken {
                     inner: Box::new(Token::new(
                         "Debug_PrİntStacK".as_bytes(),
                         TokenKind::from(Opcode::BurghardPrintStack),
                     )),
                     quotes: QuoteStyle::UnclosedDouble,
-                },
+                }),
             ),
             args: vec![],
             inst_sep: eof!(),
@@ -664,17 +666,17 @@ mod tests {
                     ArgSep::Space(space!(b" ")),
                     Token::new(
                         b"\"1\"",
-                        TokenKind::String {
+                        TokenKind::from(StringToken {
                             data: StringData::Utf8("1".into()),
                             quotes: QuoteStyle::Double,
-                        },
+                        }),
                     ),
                 ),
                 (
                     ArgSep::Space(space!(b" ")),
                     Token::new(
                         b"\"2\"",
-                        TokenKind::Quoted {
+                        TokenKind::from(QuotedToken {
                             inner: Box::new(Token::new(
                                 b"2",
                                 TokenKind::from(IntegerToken {
@@ -686,7 +688,7 @@ mod tests {
                                 }),
                             )),
                             quotes: QuoteStyle::Double,
-                        },
+                        }),
                     ),
                 ),
             ],
