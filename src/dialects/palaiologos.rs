@@ -9,7 +9,7 @@ use crate::{
     mnemonics::AsciiLower,
     scan::ByteScanner,
     tokens::{
-        integer::{parse_integer_digits, IntegerBase, IntegerError, IntegerSign, IntegerToken},
+        integer::IntegerToken,
         string::{CharData, CharToken, QuoteStyle, StringData, StringToken},
         LabelError, LineCommentError, Opcode, Token, TokenError, TokenKind,
     },
@@ -19,6 +19,7 @@ use crate::{
 // - Create another table mapping opcode to argument types and the canonical
 //   mnemonic.
 // - How to represent empty and overlong char literals?
+// - Represent 32-bit precision of integers.
 
 /// State for parsing the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -150,7 +151,7 @@ impl<'s, 'd> Lexer<'s, 'd> {
                     scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
                     // Extend the syntax to handle octal, just for errors.
                     scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
-                    let int = parse_integer(scan.text(), &mut self.digit_buf);
+                    let int = IntegerToken::parse_palaiologos(scan.text(), &mut self.digit_buf);
                     scan.wrap(TokenKind::from(int))
                 }
             }
@@ -288,25 +289,4 @@ fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, QuoteStyle, usize) {
         j = j2;
     }
     (unquoted.into(), QuoteStyle::UnclosedDouble, s.len())
-}
-
-/// Parses an integer with Palaiologos syntax, given a buffer of digits to reuse
-/// allocations.
-fn parse_integer<'s>(s: &'s [u8], digits: &mut Vec<u8>) -> IntegerToken {
-    let mut errors = EnumSet::new();
-    let (sign, s) = match s.split_first() {
-        Some((b'-', s)) => (IntegerSign::Neg, s),
-        _ => (IntegerSign::None, s),
-    };
-    let (base, s) = match s.split_last() {
-        Some((b'h' | b'H', s)) => (IntegerBase::Hexadecimal, s),
-        Some((b'b' | b'B', s)) => (IntegerBase::Binary, s),
-        Some((b'o' | b'O', s)) => {
-            // Extend the syntax to handle octal, just for errors.
-            errors |= IntegerError::InvalidBase;
-            (IntegerBase::Octal, s)
-        }
-        _ => (IntegerBase::Decimal, s),
-    };
-    parse_integer_digits(s, sign, base, errors, digits)
 }

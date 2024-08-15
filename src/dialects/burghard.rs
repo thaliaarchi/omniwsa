@@ -9,7 +9,7 @@ use crate::{
     scan::Utf8Scanner,
     syntax::{ArgSep, Cst, Dialect, HasError, Inst, InstSep, OptionBlock, Space},
     tokens::{
-        integer::parse_haskell_integer,
+        integer::IntegerToken,
         string::{QuoteStyle, QuotedToken, StringData, StringToken},
         Opcode, Token, TokenError, TokenKind,
     },
@@ -346,9 +346,8 @@ impl<'s> Parser<'s, '_> {
 
         // Try to parse it as an integer.
         if ty == Type::Integer || ty == Type::Variable && !quoted {
-            // TODO: Use if-let chains once stabilized.
-            let int =
-                parse_haskell_integer(str::from_utf8(&inner.text).unwrap(), &mut self.digit_buf);
+            let text = str::from_utf8(&inner.text).unwrap();
+            let int = IntegerToken::parse_haskell(text, &mut self.digit_buf);
             if !int.has_error() {
                 inner.kind = TokenKind::from(int);
                 return ty == Type::Integer;
@@ -544,13 +543,11 @@ impl<'s> OptionNester<'s> {
 
 #[cfg(test)]
 mod tests {
-    use enumset::EnumSet;
-
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
         tokens::{
-            integer::{Integer, IntegerBase, IntegerSign, IntegerToken},
+            integer::{Integer, IntegerToken},
             string::{QuoteStyle, QuotedToken, StringData, StringToken},
             Opcode, Token, TokenKind,
         },
@@ -681,10 +678,7 @@ mod tests {
                                 b"2",
                                 TokenKind::from(IntegerToken {
                                     value: Integer::from(2),
-                                    sign: IntegerSign::None,
-                                    base: IntegerBase::Decimal,
-                                    leading_zeros: 0,
-                                    errors: EnumSet::empty(),
+                                    ..Default::default()
                                 }),
                             )),
                             quotes: QuoteStyle::Double,

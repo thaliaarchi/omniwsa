@@ -80,7 +80,7 @@ mod tests {
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
         tokens::{
-            integer::{Integer, IntegerBase, IntegerSign, IntegerToken},
+            integer::{Integer, IntegerToken},
             Opcode, Token, TokenKind,
         },
     };
@@ -150,10 +150,7 @@ mod tests {
                                 b"1",
                                 TokenKind::from(IntegerToken {
                                     value: Integer::from(1),
-                                    sign: IntegerSign::None,
-                                    base: IntegerBase::Decimal,
-                                    leading_zeros: 0,
-                                    errors: EnumSet::empty(),
+                                    ..Default::default()
                                 }),
                             ),
                         )],
@@ -186,10 +183,7 @@ mod tests {
                                 b"2",
                                 TokenKind::from(IntegerToken {
                                     value: Integer::from(2),
-                                    sign: IntegerSign::None,
-                                    base: IntegerBase::Decimal,
-                                    leading_zeros: 0,
-                                    errors: EnumSet::empty(),
+                                    ..Default::default()
                                 }),
                             ),
                         )],

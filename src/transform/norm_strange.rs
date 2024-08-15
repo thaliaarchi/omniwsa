@@ -65,13 +65,11 @@ fn unsplice<'s>((word, space_after): (&mut Token<'s>, &mut Space<'s>)) {
 
 #[cfg(test)]
 mod tests {
-    use enumset::EnumSet;
-
     use crate::{
         dialects::Burghard,
         syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
         tokens::{
-            integer::{Integer, IntegerBase, IntegerSign, IntegerToken},
+            integer::{Integer, IntegerToken},
             Opcode, Token, TokenKind,
         },
     };
@@ -117,10 +115,7 @@ mod tests {
                             b"42",
                             TokenKind::Integer(IntegerToken {
                                 value: Integer::from(42),
-                                sign: IntegerSign::None,
-                                base: IntegerBase::Decimal,
-                                leading_zeros: 0,
-                                errors: EnumSet::empty(),
+                                ..Default::default()
                             }),
                         ),
                     )],
