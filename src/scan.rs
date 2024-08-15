@@ -174,10 +174,10 @@ impl<'s> Utf8Scanner<'s> {
 
     /// Wraps a `TokenKind` with the text of the current token.
     #[inline]
-    pub fn wrap(&self, kind: TokenKind<'s>) -> Token<'s> {
+    pub fn wrap<T: Into<TokenKind<'s>>>(&self, kind: T) -> Token<'s> {
         Token {
             text: self.text().into(),
-            kind,
+            kind: kind.into(),
         }
     }
 
@@ -393,10 +393,10 @@ impl<'s> ByteScanner<'s> {
 
     /// Wraps a `TokenKind` with the text of the current token.
     #[inline]
-    pub fn wrap(&self, kind: TokenKind<'s>) -> Token<'s> {
+    pub fn wrap<T: Into<TokenKind<'s>>>(&self, kind: T) -> Token<'s> {
         Token {
             text: self.text().into(),
-            kind,
+            kind: kind.into(),
         }
     }
 

@@ -108,7 +108,7 @@ mod tests {
                     }),
                     Cst::Inst(Inst {
                         space_before: Space::new(),
-                        opcode: Token::new(b"label", TokenKind::from(Opcode::Label)),
+                        opcode: Token::new(b"label", Opcode::Label),
                         args: vec![(
                             ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
                             Token::new(
@@ -143,15 +143,15 @@ mod tests {
                             ),
                             Token::new(b"  ", TokenKind::Space),
                         ]),
-                        opcode: Token::new(b"push", TokenKind::from(Opcode::Push)),
+                        opcode: Token::new(b"push", Opcode::Push),
                         args: vec![(
                             ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
                             Token::new(
                                 b"1",
-                                TokenKind::from(IntegerToken {
+                                IntegerToken {
                                     value: Integer::from(1),
                                     ..Default::default()
-                                }),
+                                },
                             ),
                         )],
                         inst_sep: InstSep::LineTerm {
@@ -176,15 +176,15 @@ mod tests {
                     }),
                     Cst::Inst(Inst {
                         space_before: Space::from(vec![Token::new(b"    ", TokenKind::Space)]),
-                        opcode: Token::new(b"push", TokenKind::from(Opcode::Push)),
+                        opcode: Token::new(b"push", Opcode::Push),
                         args: vec![(
                             ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
                             Token::new(
                                 b"2",
-                                TokenKind::from(IntegerToken {
+                                IntegerToken {
                                     value: Integer::from(2),
                                     ..Default::default()
-                                }),
+                                },
                             ),
                         )],
                         inst_sep: InstSep::LineTerm {

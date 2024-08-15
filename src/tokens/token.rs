@@ -150,10 +150,10 @@ pub enum TokenError {
 impl<'s> Token<'s> {
     /// Constructs a new token.
     #[inline]
-    pub fn new<T: Into<Cow<'s, [u8]>>>(text: T, kind: TokenKind<'s>) -> Self {
+    pub fn new<S: Into<Cow<'s, [u8]>>, T: Into<TokenKind<'s>>>(text: S, kind: T) -> Self {
         Token {
             text: text.into(),
-            kind,
+            kind: kind.into(),
         }
     }
 
@@ -229,12 +229,12 @@ impl HasError for Opcode {
     }
 }
 
-impl From<Opcode> for TokenKind<'static> {
+impl From<Opcode> for TokenKind<'_> {
     fn from(opcode: Opcode) -> Self {
         TokenKind::Opcode(opcode)
     }
 }
-impl From<IntegerToken> for TokenKind<'static> {
+impl From<IntegerToken> for TokenKind<'_> {
     fn from(int: IntegerToken) -> Self {
         TokenKind::Integer(int)
     }
@@ -244,7 +244,7 @@ impl<'s> From<StringToken<'s>> for TokenKind<'s> {
         TokenKind::String(s)
     }
 }
-impl From<CharToken> for TokenKind<'static> {
+impl From<CharToken> for TokenKind<'_> {
     fn from(c: CharToken) -> Self {
         TokenKind::Char(c)
     }
@@ -254,7 +254,7 @@ impl<'s> From<QuotedToken<'s>> for TokenKind<'s> {
         TokenKind::Quoted(quoted)
     }
 }
-impl From<TokenError> for TokenKind<'static> {
+impl From<TokenError> for TokenKind<'_> {
     fn from(err: TokenError) -> Self {
         TokenKind::Error(err)
     }

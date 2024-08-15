@@ -65,18 +65,18 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                         }
                         scan.next_byte();
                     }
-                    scan.wrap(TokenKind::from(Opcode::Invalid))
+                    scan.wrap(Opcode::Invalid)
                 }
             }
             b @ (b'0'..=b'9' | b'-') => {
                 if b == b'-' && !scan.bump_if(|b| matches!(b, b'0'..=b'9')) {
-                    scan.wrap(TokenKind::Error(TokenError::UnrecognizedChar))
+                    scan.wrap(TokenError::UnrecognizedChar)
                 } else {
                     scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
                     // Extend the syntax to handle octal, just for errors.
                     scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
                     let int = IntegerToken::parse_palaiologos(scan.text(), &mut self.digit_buf);
-                    scan.wrap(TokenKind::from(int))
+                    scan.wrap(int)
                 }
             }
             b'@' | b'%' => {
@@ -104,15 +104,15 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     _ => (CharData::Error, QuoteStyle::UnclosedSingle, 0),
                 };
                 scan.bump_bytes(len);
-                scan.wrap(CharToken { data, quotes }.into())
+                scan.wrap(CharToken { data, quotes })
             }
             b'"' => {
                 let (unquoted, quotes, len) = scan_string(scan.rest());
                 scan.bump_bytes(len);
-                scan.wrap(TokenKind::from(StringToken {
+                scan.wrap(StringToken {
                     data: StringData::Bytes(unquoted),
                     quotes,
-                }))
+                })
             }
             b';' => {
                 scan.bump_while(|b| b != b'\n');
