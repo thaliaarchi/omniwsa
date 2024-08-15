@@ -131,7 +131,7 @@ pub enum LabelError {
 /// A parse error for a line comment.
 #[derive(EnumSetType, Debug)]
 pub enum LineCommentError {
-    /// The line comment is not terminated by a LF (Palaiologos).
+    /// The line comment is not terminated by a line feed (Palaiologos).
     MissingLf,
 }
 

@@ -129,8 +129,9 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 })
             }
             b',' => scan.wrap(TokenKind::ArgSep),
-            // Handle repetitions in the parser.
-            b'/' | b'\n' => scan.wrap(TokenKind::InstSep),
+            // Handle instruction separator and LF repetitions in the parser.
+            b'/' => scan.wrap(TokenKind::InstSep),
+            b'\n' => scan.wrap(TokenKind::LineTerm),
             b' ' | b'\t' | b'\r' | b'\x0c' => {
                 scan.bump_while(|b| matches!(b, b' ' | b'\t' | b'\r' | b'\x0c'));
                 scan.wrap(TokenKind::Space)

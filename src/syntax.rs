@@ -10,6 +10,11 @@ use crate::tokens::{Opcode, Token, TokenKind};
 // - Use bit flags for errors.
 // - Rename `Cst` -> `Node` and combine `Node::Block` and `Node::Dialect` as
 //   `struct Cst`.
+// - Make a `SourceSet` to store program sources from several files, manage
+//   positions, and be referenced by the CST.
+// - Make a Cst variant for Palaiologos mnemonic-less `push` and `label`.
+// - How to represent nonsensical sequences of tokens, that can't be structured
+//   into an instruction? A Cst variant for a token list with an error?
 
 /// A node in a concrete syntax tree for interoperable Whitespace assembly.
 #[derive(Clone, Debug, PartialEq, Eq)]

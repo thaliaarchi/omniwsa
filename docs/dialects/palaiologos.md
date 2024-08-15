@@ -126,7 +126,14 @@ TODO: Labels
 - Mnemonics do not need to be followed by spaces, so, e.g., `repdrop5` is valid.
 - A comment may not be terminated with EOF.
 - Comments consume `\n`, rather than emit an `lf` token.
-- `lf` pattern should be `[\n/]+` to allow consecutive `\n` and `/`.
+- LF and `/` instruction separators cannot be mixed. The parser should repeat
+  the LF token as LF* and LF+, instead of LF? and LF.
+  - Consecutive LFs are allowed only without tokens between, including spaces or
+    line comments. Thus, blank lines with spaces or line comments produce
+    errors.
+  - Except for the first line, `/` may not start a line, and except for the last
+    line if there is no final LF, `/` may not end a line. Consecutive `/` are
+    allowed only without tokens between, including spaces.
 - Char token `'\'` is parsed as `'\''`.
 - String tokens are unused in the parser.
 - Out-of-range integer parse errors are not reported.
