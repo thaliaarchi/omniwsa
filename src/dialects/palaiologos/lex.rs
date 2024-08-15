@@ -8,6 +8,7 @@ use enumset::EnumSet;
 use crate::{
     dialects::Palaiologos,
     scan::ByteScanner,
+    token_stream::Lex,
     tokens::{
         integer::IntegerToken,
         string::{CharData, CharToken, QuoteStyle, StringData, StringToken},
@@ -35,9 +36,11 @@ impl<'s, 'd> Lexer<'s, 'd> {
             digit_buf: Vec::new(),
         }
     }
+}
 
+impl<'s> Lex<'s> for Lexer<'s, '_> {
     /// Scans the next token from the source.
-    pub fn next_token(&mut self) -> Token<'s> {
+    fn next_token(&mut self) -> Token<'s> {
         let scan = &mut self.scan;
         scan.reset();
 

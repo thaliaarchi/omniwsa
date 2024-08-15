@@ -7,7 +7,8 @@ use enumset::EnumSet;
 use crate::{
     mnemonics::Utf8LowerToAscii,
     scan::Utf8Scanner,
-    syntax::{ArgSep, Cst, Dialect, HasError, Inst, InstSep, OptionBlock, Space},
+    syntax::{ArgSep, Cst, Dialect, HasError, Inst, OptionBlock, Space},
+    token_stream::{Lex, TokenStream},
     tokens::{
         integer::IntegerToken,
         string::{QuoteStyle, QuotedToken, StringData, StringToken},
@@ -44,8 +45,7 @@ struct Lexer<'s> {
 #[derive(Clone, Debug)]
 struct Parser<'s, 'd> {
     dialect: &'d Burghard,
-    lex: Lexer<'s>,
-    tok: Token<'s>,
+    toks: TokenStream<'s, Lexer<'s>>,
     digit_buf: Vec<u8>,
 }
 
@@ -173,7 +173,9 @@ impl<'s> Lexer<'s> {
             invalid_utf8,
         }
     }
+}
 
+impl<'s> Lex<'s> for Lexer<'s> {
     /// Scans the next token from the source.
     fn next_token(&mut self) -> Token<'s> {
         let scan = &mut self.scan;
@@ -228,12 +230,9 @@ impl<'s> Lexer<'s> {
 impl<'s, 'd> Parser<'s, 'd> {
     /// Constructs a new parser for Burghard-dialect source text.
     fn new(src: &'s [u8], dialect: &'d Burghard) -> Self {
-        let mut lex = Lexer::new(src);
-        let tok = lex.next_token();
         Parser {
             dialect,
-            lex,
-            tok,
+            toks: TokenStream::new(Lexer::new(src)),
             digit_buf: Vec::new(),
         }
     }
@@ -244,22 +243,22 @@ impl<'s> Iterator for Parser<'s, '_> {
 
     /// Parses the next line.
     fn next(&mut self) -> Option<Self::Item> {
-        if self.eof() {
+        if self.toks.eof() {
             return None;
         }
 
-        let space_before = self.space();
-        let mut opcode = match self.curr() {
-            TokenKind::Word | TokenKind::Quoted(_) => self.advance(),
-            _ => return Some(Cst::Empty(self.line_term_sep(space_before))),
+        let space_before = self.toks.space();
+        let mut opcode = match self.toks.curr() {
+            TokenKind::Word | TokenKind::Quoted(_) => self.toks.advance(),
+            _ => return Some(Cst::Empty(self.toks.line_term_sep(space_before))),
         };
 
         let mut prev_word = &mut opcode;
         let mut args = Vec::new();
         let space_after = loop {
-            let space = self.space();
-            let arg = match self.curr() {
-                TokenKind::Word | TokenKind::Quoted(_) => self.advance(),
+            let space = self.toks.space();
+            let arg = match self.toks.curr() {
+                TokenKind::Word | TokenKind::Quoted(_) => self.toks.advance(),
                 _ => break space,
             };
             if should_splice_tokens(prev_word, &space, &arg) {
@@ -269,7 +268,7 @@ impl<'s> Iterator for Parser<'s, '_> {
                 prev_word = &mut args.last_mut().unwrap().1;
             }
         };
-        let inst_sep = self.line_term_sep(space_after);
+        let inst_sep = self.toks.line_term_sep(space_after);
 
         let mut inst = Inst {
             space_before,
@@ -374,61 +373,6 @@ impl<'s> Parser<'s, '_> {
             _ => panic!("unhandled token"),
         };
         ty == Type::String
-    }
-
-    /// Returns the kind of the current token.
-    fn curr(&self) -> &TokenKind<'s> {
-        &self.tok.kind
-    }
-
-    /// Returns the current token and advances to the next token.
-    fn advance(&mut self) -> Token<'s> {
-        mem::replace(&mut self.tok, self.lex.next_token())
-    }
-
-    /// Returns whether the parser is at EOF.
-    fn eof(&self) -> bool {
-        matches!(self.curr(), TokenKind::Eof)
-    }
-
-    /// Consumes space and block comment tokens.
-    fn space(&mut self) -> Space<'s> {
-        let mut space = Space::new();
-        while matches!(
-            self.curr(),
-            TokenKind::Space | TokenKind::BlockComment { .. }
-        ) {
-            space.push(self.advance());
-        }
-        space
-    }
-
-    /// Consumes a line comment token.
-    fn line_comment(&mut self) -> Option<Token<'s>> {
-        match self.curr() {
-            TokenKind::LineComment { .. } => Some(self.advance()),
-            _ => None,
-        }
-    }
-
-    /// Consumes a line terminator, EOF, or invalid UTF-8 error token.
-    fn line_term(&mut self) -> Option<Token<'s>> {
-        match self.curr() {
-            TokenKind::LineTerm | TokenKind::Eof | TokenKind::Error(TokenError::Utf8 { .. }) => {
-                Some(self.advance())
-            }
-            _ => None,
-        }
-    }
-
-    /// Consumes an optional line comment, followed by a line terminator (or EOF
-    /// or invalid UTF-8 error). Panics if not at such a token.
-    fn line_term_sep(&mut self, space_before: Space<'s>) -> InstSep<'s> {
-        InstSep::LineTerm {
-            space_before,
-            line_comment: self.line_comment(),
-            line_term: self.line_term().expect("line terminator"),
-        }
     }
 }
 

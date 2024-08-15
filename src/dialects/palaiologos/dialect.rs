@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use crate::{
     dialects::palaiologos::lex::Lexer,
     mnemonics::AsciiLower,
+    token_stream::Lex,
     tokens::{Opcode, Token, TokenKind},
 };
 
