@@ -5,6 +5,10 @@ pub use rug::Integer;
 
 use crate::syntax::HasError;
 
+// TODO:
+// - Create a integer syntax description struct for dialects to construct, to
+//   make parsing and conversions modular.
+
 /// An integer literal token.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct IntegerToken {
@@ -57,6 +61,8 @@ pub enum IntegerError {
     InvalidDigit,
     /// No digits, excluding a possible base prefix.
     NoDigits,
+    /// Value out of range.
+    Range,
     /// Has a sign that is invalid or not supported.
     InvalidSign,
     /// Has a base that is not supported.
@@ -269,6 +275,9 @@ impl IntegerToken {
         }
         if int.has_digit_sep {
             int.errors |= IntegerError::InvalidDigitSep;
+        }
+        if !int.value.to_i32().is_some_and(|v| v != -2147483648) {
+            int.errors |= IntegerError::Range;
         }
         int
     }

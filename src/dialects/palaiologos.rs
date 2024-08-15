@@ -19,7 +19,6 @@ use crate::{
 // - Create another table mapping opcode to argument types and the canonical
 //   mnemonic.
 // - How to represent empty and overlong char literals?
-// - Represent 32-bit precision of integers.
 
 /// State for parsing the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]

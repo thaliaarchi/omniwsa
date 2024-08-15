@@ -20,7 +20,6 @@ use crate::{
 // TODO:
 // - Whitelips, Lime, and Respace macro definitions.
 // - Respace `@define`.
-// - How to represent equivalent integers?
 // - Store byte string uniformly, instead of a mix of &[u8] and Cow.
 //   - Create utilities for slicing and manipulating easier than Cow.
 // - Move `Token::text` into token variants, so text is not stored redundantly,

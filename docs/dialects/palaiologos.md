@@ -117,6 +117,9 @@ TODO: Labels
 - Byte–oriented.
 - NUL does not truncate the file and is just an invalid char.
 - A binary number takes precedence over a decimal number juxtaposed with `b`.
+- Integers have a precision of `int32_t`. They are parsed without the sign, then
+  negated. Integers between -2147483647 and 2147483647 (2^31-1), inclusive, work
+  correctly; outside that, they wrap with twos complement.
 
 ## Bugs in the assembler
 
@@ -126,3 +129,8 @@ TODO: Labels
 - `lf` pattern should be `[\n/]+` to allow consecutive `\n` and `/`.
 - Char token `'\'` is parsed as `'\''`.
 - String tokens are unused in the parser.
+- Out-of-range integer parse errors are not reported.
+- `push 2147483648` (2^31) and `push -2147483648` (-2^31) both parse as
+  -2147483648, which is its own negation. This causes the first loop in
+  `asm_gen.c:numeral` to loop infinitely, because the sign is extended on right
+  shift.
