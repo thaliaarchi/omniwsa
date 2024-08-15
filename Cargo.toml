@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Thalia Archibald <thalia@archibald.dev>"]
 edition = "2021"
 description = "An assembler for all dialects of Whitespace assembly"
+repository = "https://github.com/thaliaarchi/omniwsa"
 license = "MPL-2.0"
 keywords = ["whitespace", "assembler"]
 categories = ["compilers"]

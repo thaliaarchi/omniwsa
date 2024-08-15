@@ -1,6 +1,6 @@
 # DRAFT: omniwsa assembly
 
-- Source: here
+- Source: [code](https://github.com/thaliaarchi/omniwsa)
 - Corpus: TBD
 
 ## Grammar
