@@ -1,4 +1,4 @@
-# Whitespace assembly mnemonics
+# List of Whitespace assembly mnemonics
 
 - `push`:
   - `push`, `psh`, `pus`
