@@ -1,12 +1,12 @@
-//! Parsing for the Palaiologos Whitespace assembly dialect.
+//! Lexer for the Palaiologos Whitespace assembly dialect.
 
-use std::{borrow::Cow, collections::HashMap};
+use std::borrow::Cow;
 
 use bstr::ByteSlice;
 use enumset::EnumSet;
 
 use crate::{
-    mnemonics::AsciiLower,
+    dialects::Palaiologos,
     scan::ByteScanner,
     tokens::{
         integer::IntegerToken,
@@ -16,97 +16,19 @@ use crate::{
 };
 
 // TODO:
-// - Create another table mapping opcode to argument types and the canonical
-//   mnemonic.
 // - How to represent empty and overlong char literals?
-
-/// State for parsing the Palaiologos Whitespace assembly dialect.
-#[derive(Clone, Debug)]
-pub struct Palaiologos {
-    mnemonics: HashMap<AsciiLower<'static>, Opcode>,
-}
 
 /// A lexer for tokens in the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]
-struct Lexer<'s, 'd> {
+pub struct Lexer<'s, 'd> {
     dialect: &'d Palaiologos,
     scan: ByteScanner<'s>,
     digit_buf: Vec<u8>,
 }
 
-macro_rules! mnemonics[($($mnemonic:literal => $opcode:ident,)*) => {
-    &[$(($mnemonic, Opcode::$opcode),)+]
-}];
-static MNEMONICS: &[(&'static str, Opcode)] = mnemonics![
-    "psh" => Push,
-    "push" => Push,
-    "dup" => Dup,
-    "copy" => Copy,
-    "take" => Copy,
-    "pull" => Copy,
-    "xchg" => Swap,
-    "swp" => Swap,
-    "swap" => Swap,
-    "drop" => Drop,
-    "dsc" => Drop,
-    "slide" => Slide,
-    "add" => Add,
-    "sub" => Sub,
-    "mul" => Mul,
-    "div" => Div,
-    "mod" => Mod,
-    "sto" => Store,
-    "rcl" => Retrieve,
-    "call" => Call,
-    "gosub" => Call,
-    "jsr" => Call,
-    "jmp" => Jmp,
-    "j" => Jmp,
-    "b" => Jmp,
-    "jz" => Jz,
-    "bz" => Jz,
-    "jltz" => Jn,
-    "bltz" => Jn,
-    "ret" => Ret,
-    "end" => End,
-    "putc" => Printc,
-    "putn" => Printi,
-    "getc" => Readc,
-    "getn" => Readi,
-    "rep" => PalaiologosRep,
-];
-const MAX_MNEMONIC_LEN: usize = 5;
-
-impl Palaiologos {
-    /// Constructs state for the Palaiologos dialect. Only one needs to be
-    /// constructed for parsing any number of programs.
-    pub fn new() -> Self {
-        Palaiologos {
-            mnemonics: MNEMONICS
-                .iter()
-                .map(|&(mnemonic, opcode)| (AsciiLower(mnemonic.as_bytes()), opcode))
-                .collect(),
-        }
-    }
-
-    /// Parses a Whitespace assembly program in the Palaiologos dialect.
-    pub fn parse<'s>(&self, src: &'s [u8]) -> Vec<Token<'s>> {
-        let dialect = Palaiologos::new();
-        let mut lex = Lexer::new(src, &dialect);
-        let mut tokens = Vec::new();
-        loop {
-            let tok = lex.next_token();
-            if tok.kind == TokenKind::Eof {
-                return tokens;
-            }
-            tokens.push(tok);
-        }
-    }
-}
-
 impl<'s, 'd> Lexer<'s, 'd> {
     /// Constructs a new lexer for Palaiologos-dialect source text.
-    fn new(src: &'s [u8], dialect: &'d Palaiologos) -> Self {
+    pub fn new(src: &'s [u8], dialect: &'d Palaiologos) -> Self {
         Lexer {
             dialect,
             scan: ByteScanner::new(src),
@@ -115,7 +37,7 @@ impl<'s, 'd> Lexer<'s, 'd> {
     }
 
     /// Scans the next token from the source.
-    fn next_token(&mut self) -> Token<'s> {
+    pub fn next_token(&mut self) -> Token<'s> {
         let scan = &mut self.scan;
         scan.reset();
 
@@ -240,14 +162,14 @@ impl<'s, 'd> Lexer<'s, 'd> {
 
 /// Tries to scan a mnemonic at the start of the bytes.
 fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], Opcode)> {
-    let chunk = &s[..MAX_MNEMONIC_LEN.min(s.len())];
-    let mut chunk_lower = [0; MAX_MNEMONIC_LEN];
+    let chunk = &s[..Palaiologos::MAX_MNEMONIC_LEN.min(s.len())];
+    let mut chunk_lower = [0; Palaiologos::MAX_MNEMONIC_LEN];
     chunk_lower[..chunk.len()].copy_from_slice(chunk);
     chunk_lower.iter_mut().for_each(|b| *b |= 0x20);
 
     for len in (1..chunk.len()).rev() {
         let mnemonic = &chunk[..len];
-        if let Some(&opcode) = dialect.mnemonics.get(&AsciiLower(mnemonic)) {
+        if let Some(opcode) = dialect.get_opcode(mnemonic) {
             return Some((mnemonic, opcode));
         }
     }
