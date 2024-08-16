@@ -8,9 +8,8 @@ use std::{
 use bstr::ByteSlice;
 use enumset::{EnumSet, EnumSetType};
 
-pub use crate::mnemonics::Opcode;
 use crate::{
-    syntax::HasError,
+    syntax::{HasError, Opcode},
     tokens::{
         integer::IntegerToken,
         string::{CharToken, QuotedToken, StringToken},

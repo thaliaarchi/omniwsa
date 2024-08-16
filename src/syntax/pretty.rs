@@ -1,4 +1,4 @@
-// Pretty-printing for CST nodes.
+//! Pretty-printing for CST nodes.
 
 use crate::{
     syntax::{ArgSep, Cst, Inst, InstSep, OptionBlock, Space, Spaced},

@@ -3,8 +3,7 @@
 use std::str;
 
 use crate::{
-    scan::Utf8Scanner,
-    token_stream::Lex,
+    lex::{Lex, Utf8Scanner},
     tokens::{
         string::{QuoteStyle, QuotedToken},
         Token, TokenError, TokenKind,

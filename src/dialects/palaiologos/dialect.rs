@@ -8,9 +8,9 @@ use std::collections::HashMap;
 
 use crate::{
     dialects::palaiologos::lex::Lexer,
-    mnemonics::AsciiLower,
-    token_stream::Lex,
-    tokens::{Opcode, Token, TokenKind},
+    lex::Lex,
+    syntax::Opcode,
+    tokens::{mnemonics::AsciiLower, Token, TokenKind},
 };
 
 /// State for parsing the Palaiologos Whitespace assembly dialect.

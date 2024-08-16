@@ -4,8 +4,7 @@ use std::mem;
 
 use crate::{
     dialects::burghard::parse::Parser,
-    syntax::{Cst, Dialect, OptionBlock},
-    tokens::Opcode,
+    syntax::{Cst, Dialect, Opcode, OptionBlock},
 };
 
 /// A builder, which structures options into blocks.

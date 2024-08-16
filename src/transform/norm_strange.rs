@@ -5,7 +5,7 @@ use std::mem;
 use crate::{
     syntax::{Cst, Inst, InstSep, Space},
     tokens::{Token, TokenKind},
-    visit::Visitor,
+    transform::Visitor,
 };
 
 impl<'s> Cst<'s> {
@@ -67,10 +67,10 @@ fn unsplice<'s>((word, space_after): (&mut Token<'s>, &mut Space<'s>)) {
 mod tests {
     use crate::{
         dialects::Burghard,
-        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
+        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Opcode, Space},
         tokens::{
             integer::{Integer, IntegerToken},
-            Opcode, Token, TokenKind,
+            Token, TokenKind,
         },
     };
 

@@ -4,9 +4,8 @@ use std::{collections::HashMap, str};
 
 use crate::{
     dialects::burghard::{option::OptionNester, parse::Parser},
-    mnemonics::Utf8LowerToAscii,
-    syntax::Cst,
-    tokens::Opcode,
+    syntax::{Cst, Opcode},
+    tokens::mnemonics::Utf8LowerToAscii,
 };
 
 // TODO:
@@ -128,11 +127,11 @@ impl Burghard {
 mod tests {
     use crate::{
         dialects::Burghard,
-        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, OptionBlock, Space},
+        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Opcode, OptionBlock, Space},
         tokens::{
             integer::{Integer, IntegerToken},
             string::{QuoteStyle, QuotedToken, StringData, StringToken},
-            Opcode, Token, TokenKind,
+            Token, TokenKind,
         },
     };
 

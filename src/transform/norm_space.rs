@@ -3,9 +3,9 @@
 use std::borrow::Cow;
 
 use crate::{
-    syntax::{Cst, Inst, InstSep},
-    tokens::{Opcode, Token, TokenKind},
-    visit::Visitor,
+    syntax::{Cst, Inst, InstSep, Opcode},
+    tokens::{Token, TokenKind},
+    transform::Visitor,
 };
 
 // TODO:
@@ -78,10 +78,10 @@ mod tests {
 
     use crate::{
         dialects::Burghard,
-        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Space},
+        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Opcode, Space},
         tokens::{
             integer::{Integer, IntegerToken},
-            Opcode, Token, TokenKind,
+            Token, TokenKind,
         },
     };
 

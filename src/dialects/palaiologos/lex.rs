@@ -7,12 +7,12 @@ use enumset::EnumSet;
 
 use crate::{
     dialects::Palaiologos,
-    scan::ByteScanner,
-    token_stream::Lex,
+    lex::{ByteScanner, Lex},
+    syntax::Opcode,
     tokens::{
         integer::IntegerToken,
         string::{CharData, CharToken, QuoteStyle, StringData, StringToken},
-        LabelError, LineCommentError, Opcode, Token, TokenError, TokenKind,
+        LabelError, LineCommentError, Token, TokenError, TokenKind,
     },
 };
 

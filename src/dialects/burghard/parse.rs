@@ -12,12 +12,12 @@ use crate::{
         },
         Burghard,
     },
-    syntax::{ArgSep, Cst, HasError, Inst, Space},
-    token_stream::TokenStream,
+    lex::TokenStream,
+    syntax::{ArgSep, Cst, HasError, Inst, Opcode, Space},
     tokens::{
         integer::IntegerToken,
         string::{QuoteStyle, StringData, StringToken},
-        Opcode, Token, TokenKind,
+        Token, TokenKind,
     },
 };
 
