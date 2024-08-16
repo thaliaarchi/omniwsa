@@ -192,9 +192,12 @@ possibility for malicious programs, that would be parsed differently with
 - Semicolon:
   - Comment
   - Instruction delimiter
+- Hash:
+  - Comment
+  - littleBugHunter hexadecimal literal
 - Push:
-  - Postfix: `push n`
-  - Literal: `n`
+  - Mnemonic: `push n`
+  - Bare: `n`
 - Operands:
   - None
   - Space:

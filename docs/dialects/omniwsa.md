@@ -29,9 +29,9 @@ string ::=
 colon ::= ":"
 comma ::= ","
 semi ::= ";"
+hash ::= "#"
 slash ::= "/"
 line_comment ::=
-    | "#" [^\n]*
     | "--" [^\n]*
     | "//" [^\n]*
 block_comment ::=
@@ -58,8 +58,9 @@ integer ::=
     | [-+]? [0-9] "_"? ([0-9a-fA-F] "_"?)* [hH]
 ```
 
-- A semicolon can be either a line comment or an instruction separator.
-- A slash can either be an instruction separator or `div`.
+- A `;` can be either a line comment or an instruction separator.
+- A `#` can either be a line comment or a littleBugHunter hexadecimal literal.
+- A `/` can either be an instruction separator or `div`.
 - C-style octal is configurable. Otherwise, if any contain '8' or '9', decimal
   will be used, possibly with a warning. TODO: Should the default be octal or
   decimal?
