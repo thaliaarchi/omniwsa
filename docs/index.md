@@ -15,6 +15,7 @@
 
 ## Design drafts
 
+- [Revamp of CST for Palaiologos](drafts/cst_revamp.md)
 - [An interoperable CST for Whitespace assembly](drafts/interop_cst.md)
 - [Whitespace assembly Macros](drafts/macros.md)
 - [Parsing any Whitespace assembly dialect](drafts/parsing.md)
