@@ -7,41 +7,41 @@
 ## Grammar
 
 ```bnf
-program ::= lf? (inst lf | lbl lf?)*
+program ::= lf* (inst lf | lbl lf*)*
 inst ::=
-    | psh numeric_const?
-    | numeric_const
+    | psh arg?
+    | arg
     | dup
-    | copy numeric_const
+    | copy arg
     | xchg
     | drop
-    | slide numeric_const
-    | add numeric_const?
-    | sub numeric_const?
-    | mul numeric_const?
-    | div numeric_const?
-    | mod numeric_const?
-    | sto (numeric_const (comma numeric_const)?)?
-    | rcl numeric_const?
-    | call numeric_const
-    | jmp numeric_const
-    | jz numeric_const
-    | jltz numeric_const
+    | slide arg
+    | add arg?
+    | sub arg?
+    | mul arg?
+    | div arg?
+    | mod arg?
+    | sto (arg (comma arg)?)?
+    | rcl arg?
+    | call arg
+    | jmp arg
+    | jz arg
+    | jltz arg
     | ret
     | end
-    | putc numeric_const?
-    | putn numeric_const?
-    | getc numeric_const?
-    | getn numeric_const?
-    | rep dup numeric_const
-    | rep drop numeric_const
-    | rep add numeric_const
-    | rep sub numeric_const
-    | rep mul numeric_const
-    | rep div numeric_const
-    | rep mod numeric_const
-    | rep putn numeric_const
-numeric_const ::= number | char | ref
+    | putc arg?
+    | putn arg?
+    | getc arg?
+    | getn arg?
+    | rep dup arg
+    | rep drop arg
+    | rep add arg
+    | rep sub arg
+    | rep mul arg
+    | rep div arg
+    | rep mod arg
+    | rep putn arg
+arg ::= number | char | ref
 ```
 
 Tokens:
@@ -90,8 +90,6 @@ Ignored:
 comment ::= ";" .+? "\n"
 space ::= [ \t\r\f]
 ```
-
-TODO: Does `.` in the Flex pattern `";"(.*)\n` include LF?
 
 ## Mnemonics
 
@@ -142,8 +140,9 @@ emitted with a sign and negative integers cause an infinite loop.
 ## Bugs in the assembler
 
 - Mnemonics do not need to be followed by spaces, so, e.g., `repdrop5` is valid.
-- Line comments require a terminating line feed, so may not be terminated with
-  EOF. They consume the line feed, but should emit an `lf` token.
+- Line comments consume a line feed, so an `lf` token is not emitted after.
+  Thus, line comments can appear, e.g., between arguments, and cannot be on the
+  last line if it is not terminated with LF.
 - LF and `/` instruction separators cannot be mixed. The parser should repeat
   the LF token as LF* and LF+, instead of LF? and LF.
   - Consecutive LFs are allowed only without tokens between, including spaces or
