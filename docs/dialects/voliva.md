@@ -14,12 +14,7 @@ line ::=
 comment ::= ";" .*
 
 # BUG: Arities are not enforced.
-# BUG: Mnemonics are compared using String.prototype.toLocaleLowerCase, which
-# has locale-aware case folding. Thus, in Turkish (tr) and Azeri (az) locales,
-# İ (U+0130, LATIN CAPITAL LETTER I WITH DOT ABOVE) compares equal to i (U+0069,
-# LATIN SMALL LETTER I). In all locales, K (U+212A, KELVIN SIGN) compares equal
-# to k (U+006B, LATIN SMALL LETTER K), but no mnemonics use k. The characters
-# used are [a-eg-jl-pr-z].
+# BUG: Mnemonics are compared with locale-aware Unicode case folding.
 instruction ::=
     | (?i)"push" required_int
     | (?i)"dup" ignored
@@ -49,8 +44,7 @@ instruction ::=
     | (?i)"jumpp" required_label
     | (?i)"jumpnz" required_label
     | (?i)"jumppz" required_label
-    | (?i)"jumppn" required_label
-    | (?i)"jumpnp" required_label
+    | ((?i)"jumppn" | (?i)"jumpnp") required_label
     | (?i)"ret" ignored
     | (?i)"exit" ignored
     | (?i)"outn" ignored
@@ -89,7 +83,7 @@ ignored ::= (SPACE arg)?
 bigint ::=
     | WHITESPACE? bigint_integer WHITESPACE?
     | WHITESPACE? # Empty is 0
-# Note: A 0-prefixed number is decimal not octal and _ digit separators and
+# Note: A 0-prefixed number is decimal not octal, and _ digit separators and
 # non-decimal signs are not supported.
 bigint_integer ::=
     | ("-" | "+") [0-9]+
@@ -107,8 +101,45 @@ SPACE ::= " "
 NON_SPACE ::= [^ ]
 ```
 
+## Generation
+
+- `add 0` => nothing
+- `sub 0` => nothing
+- `mul 1` => nothing
+- `div 1` => nothing
+- `add n` => `push n / add`
+- `sub n` => `push n / sub`
+- `mul n` => `push n / mul`
+- `div n` => `push n / div`
+- `mod n` => `push n / mod`
+- `storestr s` => `dup / push c / store / push 1 / add` for each character in
+  `s` and 0
+- `jumpp l` => `push 0 / swap / sub / jn l`
+- `jumpnz l` => `push 1 / sub / jn l`
+- `jumppz l` => `jn __internal_label_{id} / jmp l / __internal_label_{id}:`
+- `jumppn l` => `jz __internal_label_{id} / jmp l / __internal_label_{id}:`
+
+Where `{id}` is substituted for an integer, globally counting from 0 for every
+internal label constructed, in lexical order. However, these are never
+displayed.
+
+Labels are assigned integers by first use (definitions and references), starting
+at 0. Labels are not encoded with a leading S (positive) sign.
+
+Unlike the Burghard dialect, `valueinteger` and `valuestring` use the same
+symbol table.
+
 ## Bugs in the assembler
 
-- Arities are not enforced.
-- Mnemonics are compared with locale-aware Unicode case folding.
-- `storestr` with a character literal is invalid.
+- Arities are not enforced. Required arguments can be omitted and become 0, and
+  instructions that don't take an argument do not check for an extra argument.
+- Mnemonics are compared using String.prototype.toLocaleLowerCase, which has
+  locale-aware case folding. Thus, in Turkish (tr) and Azeri (az) locales, İ
+  (U+0130, LATIN CAPITAL LETTER I WITH DOT ABOVE) compares equal to i (U+0069,
+  LATIN SMALL LETTER I). In all locales, K (U+212A, KELVIN SIGN) compares equal
+  to k (U+006B, LATIN SMALL LETTER K), but no mnemonics use k. The characters
+  used are `[a-eg-jl-pr-z]`.
+- `storestr` with a character literal is invalid. It is converted to a BigInt,
+  then to a string, then to codepoints.
+- Labels with the pattern `__internal_label_{i}` can collide with generated
+  labels.

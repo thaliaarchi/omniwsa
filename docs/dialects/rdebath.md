@@ -110,13 +110,21 @@ space ::= [ \t]+
 lf ::= "\n"
 ```
 
+## Generation
+
+- `add n` => `push n / add`
+- `sub n` => `push n / sub`
+- `store n` => `push n / swap / store`
+- `retrive n` => `push n / retrieve`
+- `test n` => `dup / push n / sub`
+
 ### Notes
 
-- Assemble a near-Burghard dialect
+- Assembles a near-Burghard dialect.
 
 ### Bugs in assembler
 
-- Only the I/O mnemonics are case-insensitive
+- Only the I/O mnemonics are case-insensitive.
 
 ## Mnemonics
 

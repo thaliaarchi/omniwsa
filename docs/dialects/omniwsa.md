@@ -64,3 +64,7 @@ integer ::=
 - C-style octal is configurable. Otherwise, if any contain '8' or '9', decimal
   will be used, possibly with a warning. TODO: Should the default be octal or
   decimal?
+
+## Semantics
+
+- `store n` can be `push n / swap / store` or `push n / store`.

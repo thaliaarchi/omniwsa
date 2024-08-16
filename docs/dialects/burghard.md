@@ -128,8 +128,8 @@ grammar as `readi` in the reference interpreter.
 ## Generating
 
 Extension control flow instructions generate auxiliary labels of the form
-`__trans__pc__kind__`, where `pc` is the 1-indexed position of the instruction
-in the instruction list and `kind` is unique to the operation.
+`__trans__{pc}__{kind}__`, where `{pc}` is the 1-indexed position of the
+instruction in the instruction list and `{kind}` is unique to the operation.
 
 Extension instructions translate as follows:
 
@@ -137,10 +137,10 @@ Extension instructions translate as follows:
 - `jumpp l` branches on positive and translates to:
 
   ```wsa
-      dup jn __trans__pc__0__
-      dup jz __trans__pc__0__
-      drop jmp l
-  __trans__pc__0__:
+      dup / jn __trans__{pc}__0__
+      dup / jz __trans__{pc}__0__
+      drop / jmp l
+  __trans__{pc}__0__:
       drop
   ```
 
@@ -148,39 +148,39 @@ Extension instructions translate as follows:
   translates to:
 
   ```wsa
-      jz __trans__pc__1__
+      jz __trans__{pc}__1__
       jmp l
-  __trans__pc__1__:
+  __trans__{pc}__1__:
   ```
 
 - `jumpnz l` branches on negative or zero and translates to:
 
   ```wsa
-      dup jn __trans__pc__2__
-      dup jz __trans__pc__2__
-      jmp __trans__pc__3__
-  __trans__pc__2__:
-      drop jmp l
-  __trans__pc__3__:
+      dup / jn __trans__{pc}__2__
+      dup / jz __trans__{pc}__2__
+      jmp __trans__{pc}__3__
+  __trans__{pc}__2__:
+      drop / jmp l
+  __trans__{pc}__3__:
       drop
   ```
 
 - `jumppz l` branches on positive or zero and translates to:
 
   ```wsa
-      jn __trans__pc__4__
+      jn __trans__{pc}__4__
       jmp l
-  __trans__pc__4__:
+  __trans__{pc}__4__:
   ```
 
-- `test n` translates to `dup push n sub`
-- `retrive n` translates to `push n retrieve`
-- `store n` translates to `push n swap store`
-- `add n` translates to `push n add`
-- `sub n` translates to `push n sub`
-- `mul n` translates to `push n mul`
-- `div n` translates to `push n div`
-- `mod n` translates to `push n mod`
+- `test n` translates to `dup / push n / sub`
+- `add n` translates to `push n / add`
+- `sub n` translates to `push n / sub`
+- `mul n` translates to `push n / mul`
+- `div n` translates to `push n / div`
+- `mod n` translates to `push n / mod`
+- `store n` translates to `push n / swap / store`
+- `retrive n` translates to `push n / retrieve`
 
 `0` is encoded with a sign and digit as `SS`.
 

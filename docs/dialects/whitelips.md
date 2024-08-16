@@ -65,6 +65,18 @@ block_comment ::=
 
 The pattern `.` includes `\n` here.
 
+## Generation
+
+- `push s` => `push c` for each character in `s` in reverse order
+- `add n` => `push n / add`
+- `sub n` => `push n / sub`
+- `mul n` => `push n / mul`
+- `div n` => `push n / div`
+- `mod n` => `push n / mod`
+- `retrieve n` => `push n / retrieve`
+- `readc n` => `push n / readc`
+- `readi n` => `push n / readi`
+
 ## Semantics
 
 Strings may contain escape sequences: `\n` as LF; `\t` as tab; `\` followed by
@@ -96,13 +108,13 @@ instruction mnemonics, the names of previously defined macros, or labels. It
 only shadows a mnemonic if the arguments are of the appropriate types. Macros
 shadow previously defined macros of the same name. Macros do not expand in label
 position, so do not conflict with labels. Unless shadowed, `$$`, `$label`,
-`$number`, `$string`, and `$redef` are reserved outside of a macro. The `$n`
+`$number`, `$string`, and `$redef` are reserved outside of a macro. The `${n}`
 label form is not reserved. A macro named as any of these keywords cannot be
 referenced within a macro.
 
-Labels can be generated in a macro using the form `$n`, where `n` is a decimal
-number. These are replaced with a token of the form `.__id__n__`, where `id` is
-the global count of macro expansions, starting from 1.
+Labels can be generated in a macro using the form `${n}`, where `{n}` is a
+decimal number. These are replaced with a token of the form `.__{id}__{n}__`,
+where `{id}` is the global count of macro expansions, starting from 1.
 
 A macro cannot contain `$$`, so it cannot expand to a full macro definition
 without the caller adding `$$`.

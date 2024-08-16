@@ -2,6 +2,12 @@
 
 use crate::syntax::{Cst, Inst, InstSep};
 
+// TODO:
+// - Create pass that transforms instructions equivalent to a macro expansion
+//   into the macro. For example, `push n add` => Burghard `add n` or
+//   `jz l1 jmp l2 l1:` => Burghard `jumpnp` if `l1` is otherwise unused.
+// - Creates pass that normalizes mnemonics.
+
 /// A visitor for traversing nodes in a `Cst`.
 pub trait Visitor<'s> {
     /// Called when an instruction is visited.
