@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     syntax::HasError,
-    tokens::{spaces::Spaces, Token},
+    tokens::{spaces::Spaces, ErrorToken, Token},
 };
 
 /// A sequence of words, separated and surrounded by optional spaces.
@@ -114,9 +114,47 @@ impl<'s> Words<'s> {
             .unwrap_or(&mut self.space_before)
     }
 
-    /// Appends a word to the end of the sequence.
+    /// Appends a word and spaces to the end of the sequence.
     pub fn push(&mut self, word: Token<'s>, space_after: Spaces<'s>) {
         self.words.push((word, space_after));
+    }
+
+    /// Appends a word to the end of the sequence.
+    pub fn push_word(&mut self, word: Token<'s>) {
+        self.words.push((word, Spaces::new()));
+    }
+
+    /// Appends a space token to the end of the sequence.
+    pub fn push_space(&mut self, space: Token<'s>) {
+        self.trailing_spaces_mut().push(space);
+    }
+
+    /// Appends a token to the end of the sequence.
+    pub fn push_token(&mut self, token: Token<'s>) {
+        match token {
+            Token::Mnemonic(_)
+            | Token::Integer(_)
+            | Token::String(_)
+            | Token::Char(_)
+            | Token::Variable(_)
+            | Token::Label(_)
+            | Token::LabelColon(_)
+            | Token::Word(_)
+            | Token::Quoted(_)
+            | Token::Spliced(_)
+            | Token::Error(ErrorToken::InvalidUtf8 { .. }) => {
+                self.push_word(token);
+            }
+            Token::Space(_)
+            | Token::LineTerm(_)
+            | Token::Eof(_)
+            | Token::InstSep(_)
+            | Token::ArgSep(_)
+            | Token::LineComment(_)
+            | Token::BlockComment(_)
+            | Token::Error(ErrorToken::UnrecognizedChar { .. }) => self.push_space(token),
+            Token::Placeholder => panic!("placeholder"),
+        }
     }
 
     /// Returns the number of words in this sequence.

@@ -7,6 +7,7 @@ use std::{
 
 use bstr::ByteSlice;
 use derive_more::Debug as DebugCustom;
+use enumset::{EnumSet, EnumSetType};
 
 use crate::{
     syntax::{HasError, Pretty},
@@ -75,6 +76,8 @@ pub enum InstSepStyle {
 pub struct ArgSepToken {
     /// The style of this argument separator.
     pub style: ArgSepStyle,
+    /// All errors from parsing this argument separator.
+    pub errors: EnumSet<ArgSepError>,
 }
 
 /// The style of an argument separator.
@@ -82,6 +85,13 @@ pub struct ArgSepToken {
 pub enum ArgSepStyle {
     /// `,` argument separator (Palaiologos).
     Comma,
+}
+
+/// A parse error for an argument separator.
+#[derive(EnumSetType, Debug)]
+pub enum ArgSepError {
+    /// This argument separator is not between arguments.
+    NotBetweenArguments,
 }
 
 impl<'s> Spaces<'s> {
@@ -251,7 +261,10 @@ impl From<InstSepStyle> for InstSepToken {
 
 impl From<ArgSepStyle> for ArgSepToken {
     fn from(style: ArgSepStyle) -> Self {
-        ArgSepToken { style }
+        ArgSepToken {
+            style,
+            errors: EnumSet::empty(),
+        }
     }
 }
 
@@ -281,7 +294,7 @@ impl HasError for InstSepToken {
 
 impl HasError for ArgSepToken {
     fn has_error(&self) -> bool {
-        false
+        !self.errors.is_empty()
     }
 }
 

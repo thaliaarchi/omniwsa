@@ -7,10 +7,9 @@
 use std::collections::HashMap;
 
 use crate::{
-    dialects::palaiologos::lex::Lexer,
-    lex::Lex,
-    syntax::Opcode,
-    tokens::{mnemonics::AsciiLower, Token},
+    dialects::palaiologos::parse::Parser,
+    syntax::{Cst, Opcode},
+    tokens::mnemonics::AsciiLower,
 };
 
 /// State for parsing the Palaiologos Whitespace assembly dialect.
@@ -80,17 +79,8 @@ impl Palaiologos {
     }
 
     /// Parses a Whitespace assembly program in the Palaiologos dialect.
-    pub fn parse<'s>(&self, src: &'s [u8]) -> Vec<Token<'s>> {
-        let dialect = Palaiologos::new();
-        let mut lex = Lexer::new(src, &dialect);
-        let mut tokens = Vec::new();
-        loop {
-            let tok = lex.next_token();
-            if matches!(tok, Token::Eof(_)) {
-                return tokens;
-            }
-            tokens.push(tok);
-        }
+    pub fn parse<'s>(&self, src: &'s [u8]) -> Cst<'s> {
+        Parser::new(src, &Palaiologos::new()).parse()
     }
 
     /// Gets the overloaded opcodes for a mnemonic.

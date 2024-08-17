@@ -2,5 +2,6 @@
 
 mod dialect;
 mod lex;
+mod parse;
 
 pub use dialect::Palaiologos;
