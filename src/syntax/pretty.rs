@@ -21,6 +21,7 @@ impl Pretty for Token<'_> {
             TokenKind::Integer(i) => i.pretty(buf),
             TokenKind::String(s) => s.pretty(buf),
             TokenKind::Char(c) => c.pretty(buf),
+            TokenKind::Variable(v) => v.pretty(buf),
             TokenKind::Label(l) => l.pretty(buf),
             TokenKind::LabelColon(l) => l.pretty(buf),
             TokenKind::Space(s) => s.pretty(buf),
@@ -30,8 +31,11 @@ impl Pretty for Token<'_> {
             TokenKind::ArgSep(a) => a.pretty(buf),
             TokenKind::LineComment(l) => l.pretty(buf),
             TokenKind::BlockComment(b) => b.pretty(buf),
+            TokenKind::Word(w) => w.pretty(buf),
             TokenKind::Quoted(q) => q.pretty(buf),
-            _ => self.text.pretty(buf),
+            TokenKind::Spliced(s) => s.pretty(buf),
+            TokenKind::Error(e) => e.pretty(buf),
+            TokenKind::Placeholder => panic!("placeholder"),
         }
     }
 }

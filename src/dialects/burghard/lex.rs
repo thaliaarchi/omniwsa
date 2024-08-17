@@ -51,7 +51,13 @@ impl<'s> Lex<'s> for Lexer<'s> {
 
         if scan.eof() {
             if let Some((rest, error_len)) = self.invalid_utf8.take() {
-                return Token::new(rest, ErrorToken::InvalidUtf8 { error_len });
+                return Token::new(
+                    rest,
+                    ErrorToken::InvalidUtf8 {
+                        text: rest.into(),
+                        error_len,
+                    },
+                );
             }
             return Token::new(b"", EofToken);
         }
@@ -77,7 +83,7 @@ impl<'s> Lex<'s> for Lexer<'s> {
                     QuotedError::Unterminated.into()
                 };
                 scan.wrap(QuotedToken {
-                    inner: Box::new(Token::new(word, WordToken)),
+                    inner: Box::new(Token::new(word, WordToken { word: word.into() })),
                     quotes: QuoteStyle::Double,
                     errors,
                 })
@@ -92,7 +98,9 @@ impl<'s> Lex<'s> for Lexer<'s> {
                     }
                     scan.next_char();
                 }
-                scan.wrap(WordToken)
+                scan.wrap(WordToken {
+                    word: scan.text().into(),
+                })
             }
         }
     }

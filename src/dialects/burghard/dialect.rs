@@ -154,9 +154,19 @@ mod tests {
                             b"hello{-splice-}world",
                             SplicedToken {
                                 tokens: vec![
-                                    Token::new(b"hello", WordToken),
+                                    Token::new(
+                                        b"hello",
+                                        WordToken {
+                                            word: b"hello".into()
+                                        },
+                                    ),
                                     block_comment!("splice"),
-                                    Token::new(b"world", WordToken),
+                                    Token::new(
+                                        b"world",
+                                        WordToken {
+                                            word: b"world".into()
+                                        },
+                                    ),
                                 ],
                                 spliced: Box::new(mnemonic!(b"helloworld", Opcode::Invalid)),
                             },
@@ -280,7 +290,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![
                         (mnemonic!(b"ifoption", Opcode::IfOption), space!(b" ")),
-                        (Token::new($option, WordToken), lf!()),
+                        (Token::new($option, WordToken { word: $option.into() }), lf!()),
                     ],
                 },
                 valid_arity: true,
@@ -293,7 +303,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![
                         (mnemonic!(b"elseifoption", Opcode::ElseIfOption), space!(b" ")),
-                        (Token::new($option, WordToken), lf!()),
+                        (Token::new($option, WordToken { word: $option.into() }), lf!()),
                     ],
                 },
                 valid_arity: true,

@@ -15,7 +15,7 @@ use crate::{
         spaces::Spaces,
         string::{QuoteStyle, StringData, StringToken},
         words::Words,
-        ErrorToken, SplicedToken, Token, TokenKind, VariableToken, WordToken,
+        ErrorToken, SplicedToken, Token, TokenKind, VariableStyle, VariableToken,
     },
 };
 
@@ -169,7 +169,10 @@ impl<'s> Parser<'s, '_> {
                 Cow::Borrowed(text) => text[1..].into(),
                 Cow::Owned(text) => text[1..].to_vec().into(),
             };
-            inner.kind = TokenKind::from(VariableToken { sigil: b"_", ident });
+            inner.kind = TokenKind::from(VariableToken {
+                ident,
+                style: VariableStyle::UnderscoreSigil,
+            });
             return true;
         }
 
@@ -191,7 +194,7 @@ impl<'s> Parser<'s, '_> {
             TokenKind::Spliced(s) => &mut s.spliced,
             _ => tok,
         };
-        tok.kind = match mem::replace(&mut tok.kind, WordToken.into()) {
+        tok.kind = match mem::replace(&mut tok.kind, TokenKind::Placeholder) {
             TokenKind::Word(_) => TokenKind::from(StringToken {
                 literal: tok.text.clone(),
                 unescaped: StringData::from_utf8(tok.text.clone()).unwrap(),

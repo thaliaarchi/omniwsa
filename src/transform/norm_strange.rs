@@ -4,7 +4,7 @@ use std::mem;
 
 use crate::{
     syntax::{Cst, Inst},
-    tokens::{spaces::Spaces, TokenKind, WordToken},
+    tokens::{spaces::Spaces, TokenKind},
     transform::Visitor,
 };
 
@@ -27,7 +27,7 @@ impl<'s> Visitor<'s> for StrangeVisitor {
             match word.kind {
                 TokenKind::Quoted(_) => {
                     // Remove non-semantic quotes.
-                    let TokenKind::Quoted(q) = mem::replace(&mut word.kind, WordToken.into())
+                    let TokenKind::Quoted(q) = mem::replace(&mut word.kind, TokenKind::Placeholder)
                     else {
                         unreachable!();
                     };
@@ -36,7 +36,8 @@ impl<'s> Visitor<'s> for StrangeVisitor {
                 TokenKind::Spliced(_) => {
                     // Move block comments out of a token splice to after it.
                     let (_, word, space_after) = inst.words.get_spaced_mut(i);
-                    let TokenKind::Spliced(mut s) = mem::replace(&mut word.kind, WordToken.into())
+                    let TokenKind::Spliced(mut s) =
+                        mem::replace(&mut word.kind, TokenKind::Placeholder)
                     else {
                         unreachable!();
                     };

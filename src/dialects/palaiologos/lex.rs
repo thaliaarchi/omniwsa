@@ -88,7 +88,9 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             }
             b @ (b'0'..=b'9' | b'-') => {
                 if b == b'-' && !scan.bump_if(|b| matches!(b, b'0'..=b'9')) {
-                    scan.wrap(ErrorToken::UnrecognizedChar)
+                    scan.wrap(ErrorToken::UnrecognizedChar {
+                        text: scan.text().into(),
+                    })
                 } else {
                     scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
                     // Extend the syntax to handle octal, just for errors.
@@ -194,7 +196,9 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                         | b'\x0c'
                     )
                 });
-                scan.wrap(TokenKind::Error(ErrorToken::UnrecognizedChar))
+                scan.wrap(TokenKind::Error(ErrorToken::UnrecognizedChar {
+                    text: scan.text().into(),
+                }))
             }
         }
     }

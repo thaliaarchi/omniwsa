@@ -9,7 +9,7 @@ use bstr::ByteSlice;
 use derive_more::{Debug as DebugCustom, From};
 
 use crate::{
-    syntax::HasError,
+    syntax::{HasError, Pretty},
     tokens::{
         comment::{BlockCommentToken, LineCommentToken},
         integer::IntegerToken,
@@ -76,29 +76,41 @@ pub enum TokenKind<'s> {
     /// Block comment (e.g., `{- -}` or `/* */`).
     BlockComment(BlockCommentToken<'s>),
     /// A word of uninterpreted meaning.
-    Word(WordToken),
+    Word(WordToken<'s>),
     /// A token enclosed in non-semantic quotes (Burghard).
     Quoted(QuotedToken<'s>),
     /// Tokens spliced by block comments (Burghard).
     Spliced(SplicedToken<'s>),
     /// An erroneous sequence.
-    Error(ErrorToken),
+    Error(ErrorToken<'s>),
+    /// A placeholder variant for internal use.
+    Placeholder,
 }
 
 /// Variable identifier token.
 #[derive(Clone, DebugCustom, PartialEq, Eq)]
 pub struct VariableToken<'s> {
-    /// A prefix sigil to mark identifiers (e.g., Burghard `_`).
-    #[debug("{:?}", sigil.as_bstr())]
-    pub sigil: &'s [u8],
     /// The identifier with its sigil removed.
     #[debug("{:?}", ident.as_bstr())]
     pub ident: Cow<'s, [u8]>,
+    /// The style of this variable.
+    pub style: VariableStyle,
+}
+
+/// The style of a variable.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VariableStyle {
+    /// `_` prefix sigil (Burghard).
+    UnderscoreSigil,
 }
 
 /// A word token of uninterpreted meaning.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct WordToken;
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
+pub struct WordToken<'s> {
+    /// The text of the word.
+    #[debug("{:?}", word.as_bstr())]
+    pub word: Cow<'s, [u8]>,
+}
 
 /// Tokens spliced by block comments (Burghard).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -111,15 +123,22 @@ pub struct SplicedToken<'s> {
 }
 
 /// A lexical error.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ErrorToken {
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
+pub enum ErrorToken<'s> {
     /// Invalid UTF-8 sequence (Burghard).
     InvalidUtf8 {
+        /// The remainder of the file, starting with an invalid UTF-8 sequence.
+        #[debug("{:?}", text.as_bstr())]
+        text: Cow<'s, [u8]>,
         /// Length of the invalid sequence.
         error_len: usize,
     },
-    /// Unrecognized characters.
-    UnrecognizedChar,
+    /// A sequence that could not be lexed.
+    UnrecognizedChar {
+        /// The unrecognized sequence.
+        #[debug("{:?}", text.as_bstr())]
+        text: Cow<'s, [u8]>,
+    },
 }
 
 impl<'s> Token<'s> {
@@ -184,6 +203,15 @@ impl<'s> Token<'s> {
     }
 }
 
+impl VariableStyle {
+    /// The prefix sigil.
+    pub fn sigil(&self) -> &'static str {
+        match self {
+            VariableStyle::UnderscoreSigil => "_",
+        }
+    }
+}
+
 impl HasError for Token<'_> {
     fn has_error(&self) -> bool {
         match &self.kind {
@@ -205,6 +233,7 @@ impl HasError for Token<'_> {
             TokenKind::Quoted(q) => q.has_error(),
             TokenKind::Spliced(s) => s.has_error(),
             TokenKind::Error(e) => e.has_error(),
+            TokenKind::Placeholder => panic!("placeholder"),
         }
     }
 }
@@ -214,19 +243,51 @@ impl HasError for VariableToken<'_> {
         false
     }
 }
-impl HasError for WordToken {
+
+impl HasError for WordToken<'_> {
     fn has_error(&self) -> bool {
         false
     }
 }
+
 impl HasError for SplicedToken<'_> {
     fn has_error(&self) -> bool {
         self.tokens.iter().any(Token::has_error)
     }
 }
-impl HasError for ErrorToken {
+
+impl HasError for ErrorToken<'_> {
     fn has_error(&self) -> bool {
         true
+    }
+}
+
+impl Pretty for VariableToken<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.style.sigil().pretty(buf);
+        self.ident.pretty(buf);
+    }
+}
+
+impl Pretty for WordToken<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.word.pretty(buf);
+    }
+}
+
+impl Pretty for SplicedToken<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.tokens.iter().for_each(|tok| tok.pretty(buf));
+    }
+}
+
+impl Pretty for ErrorToken<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        match self {
+            ErrorToken::InvalidUtf8 { text, .. } | ErrorToken::UnrecognizedChar { text } => {
+                text.pretty(buf)
+            }
+        }
     }
 }
 
@@ -251,6 +312,7 @@ impl Debug for TokenKind<'_> {
             TokenKind::Quoted(q) => Debug::fmt(q, f),
             TokenKind::Spliced(s) => Debug::fmt(s, f),
             TokenKind::Error(err) => f.debug_tuple("Error").field(err).finish(),
+            TokenKind::Placeholder => write!(f, "Placeholder"),
         }
     }
 }
