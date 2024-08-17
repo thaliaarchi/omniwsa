@@ -9,93 +9,54 @@ use crate::{
 };
 
 // TODO:
-// - Add shape of arguments to Inst. This should subsume Args, Type,
-//   Inst::valid_arity, and Inst::valid_types.
 // - Move Cst macros to syntax.
 
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Burghard {
-    mnemonics: HashMap<Utf8LowerToAscii<'static>, (Opcode, Args)>,
+    mnemonics: HashMap<Utf8LowerToAscii<'static>, &'static [Opcode]>,
 }
 
-/// The shape of the arguments for an opcode.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Args {
-    /// No arguments.
-    None,
-    /// An integer or variable.
-    Integer,
-    /// An optional integer or variable.
-    IntegerOpt,
-    /// A string or variable.
-    String,
-    /// A variable and an integer or variable.
-    VariableAndInteger,
-    /// A variable and a string or variable.
-    VariableAndString,
-    /// A label.
-    Label,
-    /// A word.
-    Word,
-}
-
-/// The allowed types of an argument.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Type {
-    /// An integer or variable.
-    Integer,
-    /// A string or variable.
-    String,
-    /// A variable.
-    Variable,
-    /// A label.
-    Label,
-}
-
-macro_rules! mnemonics[($($mnemonic:literal => $opcode:ident $args:ident,)*) => {
-    &[$(($mnemonic, Opcode::$opcode, Args::$args),)+]
-}];
-static MNEMONICS: &[(&'static str, Opcode, Args)] = mnemonics![
-    "push" => Push Integer,
-    "pushs" => PushString0 String,
-    "doub" => Dup None,
-    "swap" => Swap None,
-    "pop" => Drop None,
-    "add" => Add IntegerOpt,
-    "sub" => Sub IntegerOpt,
-    "mul" => Mul IntegerOpt,
-    "div" => Div IntegerOpt,
-    "mod" => Mod IntegerOpt,
-    "store" => Store IntegerOpt,
-    "retrive" => Retrieve IntegerOpt,
-    "label" => Label Label,
-    "call" => Call Label,
-    "jump" => Jmp Label,
-    "jumpz" => Jz Label,
-    "jumpn" => Jn Label,
-    "jumpp" => BurghardJmpP Label,
-    "jumpnp" => BurghardJmpNP Label,
-    "jumppn" => BurghardJmpNP Label,
-    "jumpnz" => BurghardJmpNZ Label,
-    "jumppz" => BurghardJmpPZ Label,
-    "ret" => Ret None,
-    "exit" => End None,
-    "outC" => Printc None,
-    "outN" => Printi None,
-    "inC" => Readc None,
-    "inN" => Readi None,
-    "debug_printstack" => BurghardPrintStack None,
-    "debug_printheap" => BurghardPrintHeap None,
-    "test" => BurghardTest Integer,
-    "valueinteger" => BurghardValueInteger VariableAndInteger,
-    "valuestring" => BurghardValueString VariableAndString,
-    "include" => BurghardInclude Word,
-    "option" => DefineOption Word,
-    "ifoption" => IfOption Word,
-    "elseifoption" => ElseIfOption Word,
-    "elseoption" => ElseOption None,
-    "endoption" => EndOption None,
+static MNEMONICS: &[(&str, &[Opcode])] = &[
+    ("push", &[Opcode::Push]),
+    ("pushs", &[Opcode::PushString0]),
+    ("doub", &[Opcode::Dup]),
+    ("swap", &[Opcode::Swap]),
+    ("pop", &[Opcode::Drop]),
+    ("add", &[Opcode::Add, Opcode::AddConstRhs]),
+    ("sub", &[Opcode::Sub, Opcode::SubConstRhs]),
+    ("mul", &[Opcode::Mul, Opcode::MulConstRhs]),
+    ("div", &[Opcode::Div, Opcode::DivConstRhs]),
+    ("mod", &[Opcode::Mod, Opcode::ModConstRhs]),
+    ("store", &[Opcode::Store, Opcode::StoreConstLhs]),
+    ("retrive", &[Opcode::Retrieve, Opcode::RetrieveConst]),
+    ("label", &[Opcode::Label]),
+    ("call", &[Opcode::Call]),
+    ("jump", &[Opcode::Jmp]),
+    ("jumpz", &[Opcode::Jz]),
+    ("jumpn", &[Opcode::Jn]),
+    ("jumpp", &[Opcode::BurghardJmpP]),
+    ("jumpnp", &[Opcode::BurghardJmpNP]),
+    ("jumppn", &[Opcode::BurghardJmpNP]),
+    ("jumpnz", &[Opcode::BurghardJmpNZ]),
+    ("jumppz", &[Opcode::BurghardJmpPZ]),
+    ("ret", &[Opcode::Ret]),
+    ("exit", &[Opcode::End]),
+    ("outC", &[Opcode::Printc]),
+    ("outN", &[Opcode::Printi]),
+    ("inC", &[Opcode::Readc]),
+    ("inN", &[Opcode::Readi]),
+    ("debug_printstack", &[Opcode::BurghardPrintStack]),
+    ("debug_printheap", &[Opcode::BurghardPrintHeap]),
+    ("test", &[Opcode::BurghardTest]),
+    ("valueinteger", &[Opcode::BurghardValueInteger]),
+    ("valuestring", &[Opcode::BurghardValueString]),
+    ("include", &[Opcode::BurghardInclude]),
+    ("option", &[Opcode::DefineOption]),
+    ("ifoption", &[Opcode::IfOption]),
+    ("elseifoption", &[Opcode::ElseIfOption]),
+    ("elseoption", &[Opcode::ElseOption]),
+    ("endoption", &[Opcode::EndOption]),
 ];
 
 impl Burghard {
@@ -105,9 +66,7 @@ impl Burghard {
         Burghard {
             mnemonics: MNEMONICS
                 .iter()
-                .map(|&(mnemonic, opcode, args)| {
-                    (Utf8LowerToAscii(mnemonic.as_bytes()), (opcode, args))
-                })
+                .map(|&(mnemonic, sigs)| (Utf8LowerToAscii(mnemonic.as_bytes()), sigs))
                 .collect(),
         }
     }
@@ -117,8 +76,8 @@ impl Burghard {
         OptionNester::new().nest(&mut Parser::new(src, self))
     }
 
-    /// Gets the opcode and arguments signature for a mnemonic.
-    pub(super) fn get_signature(&self, mnemonic: &[u8]) -> Option<(Opcode, Args)> {
+    /// Gets the overloaded opcode and arguments signatures for a mnemonic.
+    pub(super) fn get_opcodes(&self, mnemonic: &[u8]) -> Option<&'static [Opcode]> {
         self.mnemonics.get(&Utf8LowerToAscii(mnemonic)).copied()
     }
 }
@@ -199,11 +158,17 @@ mod tests {
                     block_comment!("c2"),
                     Token::new(b"\t", TokenKind::Space),
                 ])),
-                Token::new(b"!", TokenKind::Word),
+                Token::new(
+                    b"!",
+                    StringToken {
+                        data: StringData::Utf8("!".into()),
+                        quotes: QuoteStyle::Bare,
+                    },
+                ),
             )],
             inst_sep: eof!(),
-            valid_arity: false,
-            valid_types: false,
+            valid_arity: true,
+            valid_types: true,
         })];
         assert_eq!(cst, expect);
     }

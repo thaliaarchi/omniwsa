@@ -5,15 +5,9 @@ use std::{borrow::Cow, mem, str};
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{
-        burghard::{
-            dialect::{Args, Type},
-            lex::Lexer,
-        },
-        Burghard,
-    },
+    dialects::{burghard::lex::Lexer, Burghard},
     lex::TokenStream,
-    syntax::{ArgSep, Cst, HasError, Inst, Opcode, Space},
+    syntax::{ArgSep, ArgType, Cst, HasError, Inst, Opcode, Space},
     tokens::{
         integer::IntegerToken,
         string::{QuoteStyle, StringData, StringToken},
@@ -23,7 +17,6 @@ use crate::{
 
 // TODO:
 // - Transform strings to lowercase.
-// - Assign stricter tokens to `include` and options.
 // - Clean up UTF-8 decoding in parse_arg, since tokens are already validated as
 //   UTF-8.
 
@@ -94,43 +87,50 @@ impl<'s> Iterator for Parser<'s, '_> {
 impl<'s> Parser<'s, '_> {
     /// Parses the opcode and arguments of an instruction.
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
-        let opcode_word = inst.opcode.unwrap_mut();
-        debug_assert_eq!(opcode_word.kind, TokenKind::Word);
-        let (opcode, args) = self
+        let mnemonic = inst.opcode.unwrap_mut();
+        debug_assert_eq!(mnemonic.kind, TokenKind::Word);
+        let opcodes = self
             .dialect
-            .get_signature(&opcode_word.text)
-            .unwrap_or((Opcode::Invalid, Args::None));
-        opcode_word.kind = TokenKind::Opcode(opcode);
+            .get_opcodes(&mnemonic.text)
+            .unwrap_or(&[Opcode::Invalid]);
+        debug_assert!(opcodes.len() > 0);
 
-        inst.valid_arity = true;
-        inst.valid_types = match (args, &mut inst.args[..]) {
-            (Args::None | Args::IntegerOpt, []) => true,
-            (Args::Integer | Args::IntegerOpt, [(_, x)]) => self.parse_arg(x, Type::Integer),
-            (Args::String, [(_, x)]) => self.parse_arg(x, Type::String),
-            (Args::VariableAndInteger, [(_, x), (_, y)]) => {
-                self.parse_arg(x, Type::Variable) & self.parse_arg(y, Type::Integer)
+        // Iterate signatures by the largest arity first.
+        for (i, &opcode) in opcodes.iter().enumerate().rev() {
+            let types = opcode.arg_types();
+            let mut valid = true;
+            for ((_, arg), &ty) in inst.args.iter_mut().zip(types.iter()) {
+                valid &= self.parse_arg(arg, ty);
             }
-            (Args::VariableAndString, [(_, x), (_, y)]) => {
-                self.parse_arg(x, Type::Variable) & self.parse_arg(y, Type::String)
+            if inst.args.len() >= types.len() || i == 0 {
+                inst.valid_arity = inst.args.len() == types.len() || opcode == Opcode::Invalid;
+                inst.valid_types = valid;
+                mnemonic.kind = TokenKind::Opcode(opcode);
+                // Process the remaining arguments.
+                let rest = inst.args.len().min(types.len());
+                for (_, arg) in &mut inst.args[rest..] {
+                    self.parse_arg(arg, ArgType::Variable);
+                }
+                return;
             }
-            (Args::Label, [(_, x)]) => self.parse_arg(x, Type::Label),
-            (Args::Word, [_]) => true,
-            _ => {
-                inst.valid_arity = false;
-                false
-            }
-        };
+        }
     }
 
     /// Parses an argument according to its type and returns whether it is
     /// valid.
-    fn parse_arg(&mut self, tok: &mut Token<'_>, ty: Type) -> bool {
+    fn parse_arg(&mut self, tok: &mut Token<'_>, ty: ArgType) -> bool {
         let quoted = matches!(tok.kind, TokenKind::Quoted(_));
         let inner = tok.unwrap_mut();
-        debug_assert_eq!(inner.kind, TokenKind::Word);
+        if inner.kind != TokenKind::Word {
+            return true;
+        }
+
+        if ty == ArgType::Include || ty == ArgType::Option {
+            return true;
+        }
 
         // Parse it as a label.
-        if ty == Type::Label {
+        if ty == ArgType::Label {
             inner.kind = TokenKind::Label {
                 sigil: b"",
                 label: inner.text.clone(),
@@ -150,12 +150,12 @@ impl<'s> Parser<'s, '_> {
         }
 
         // Try to parse it as an integer.
-        if ty == Type::Integer || ty == Type::Variable && !quoted {
+        if ty == ArgType::Integer || ty == ArgType::Variable && !quoted {
             let text = str::from_utf8(&inner.text).unwrap();
             let int = IntegerToken::parse_haskell(text, &mut self.digit_buf);
-            if !int.has_error() {
+            if ty == ArgType::Integer || !int.has_error() {
                 inner.kind = TokenKind::from(int);
-                return ty == Type::Integer;
+                return ty == ArgType::Integer;
             }
         }
 
@@ -178,7 +178,7 @@ impl<'s> Parser<'s, '_> {
             }
             _ => panic!("unhandled token"),
         };
-        ty == Type::String
+        ty == ArgType::String
     }
 }
 

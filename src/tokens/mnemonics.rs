@@ -7,6 +7,13 @@ use std::{
 
 use bstr::ByteSlice;
 
+// TODO:
+// - Make cross-dialect mnemonic map type, where the mnemonic key has an enum
+//   with variants for different case folding strategies. They hash with the
+//   most permissive case folding and compare against a string with the exact
+//   case folding.
+// - Make mapping from opcode to mnemonics.
+
 /// A conventionally UTF-8 string which compares by folding to lowercase. Only
 /// characters that fold to ASCII are folded, as those are all that are needed
 /// for mnemonics. In addition to `[A-Z]`, those are 'İ' (U+0130, LATIN CAPITAL

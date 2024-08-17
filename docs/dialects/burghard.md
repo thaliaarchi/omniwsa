@@ -56,9 +56,12 @@ lf ::= "\n" | EOF
 After this point, all grammars are in terms of tokens. Since strings have been
 unquoted to words, it is just `word` and `lf` now.
 
-Then, preprocess all includes on lines matching the pattern
-`"include" word lf`. The extension `.wsa` is appended to included filenames and
-only the first reference to a file is included.
+Then, preprocess all includes. The extension `.wsa` is appended to included
+filenames and only the first reference to a file is included.
+
+```bnf
+include ::= "include" word lf
+```
 
 Then, preprocess options. `option` declares a named boolean option to be true
 for the rest of the program.
