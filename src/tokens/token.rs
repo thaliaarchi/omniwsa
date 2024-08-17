@@ -60,16 +60,16 @@ pub enum TokenKind<'s> {
     Label(LabelToken<'s>),
     /// Label colon marker (i.e., `:`).
     LabelColon(LabelColonToken),
-    /// Instruction separator (e.g., Respace `;` or Palaiologos `/`).
-    InstSep(InstSepToken),
-    /// Argument separator (e.g., Palaiologos `,`).
-    ArgSep(ArgSepToken),
     /// Horizontal whitespace.
-    Space(SpaceToken),
+    Space(SpaceToken<'s>),
     /// Line terminator.
     LineTerm(LineTermToken),
     /// End of file.
     Eof(EofToken),
+    /// Instruction separator (e.g., Respace `;` or Palaiologos `/`).
+    InstSep(InstSepToken),
+    /// Argument separator (e.g., Palaiologos `,`).
+    ArgSep(ArgSepToken),
     /// Line comment (e.g., `#` or `//`).
     LineComment(LineCommentToken<'s>),
     /// Block comment (e.g., `{- -}` or `/* */`).
@@ -244,11 +244,11 @@ impl Debug for TokenKind<'_> {
             TokenKind::Variable(v) => Debug::fmt(v, f),
             TokenKind::Label(l) => Debug::fmt(l, f),
             TokenKind::LabelColon(l) => Debug::fmt(l, f),
-            TokenKind::InstSep(u) => Debug::fmt(u, f),
-            TokenKind::ArgSep(a) => Debug::fmt(a, f),
             TokenKind::Space(s) => Debug::fmt(s, f),
             TokenKind::LineTerm(l) => Debug::fmt(l, f),
             TokenKind::Eof(e) => Debug::fmt(e, f),
+            TokenKind::InstSep(u) => Debug::fmt(u, f),
+            TokenKind::ArgSep(a) => Debug::fmt(a, f),
             TokenKind::LineComment(l) => Debug::fmt(l, f),
             TokenKind::BlockComment(b) => Debug::fmt(b, f),
             TokenKind::Word(w) => Debug::fmt(w, f),

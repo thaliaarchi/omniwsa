@@ -1,9 +1,15 @@
 //! Space tokens and nodes.
 
-use std::fmt::{self, Debug, Formatter};
+use std::{
+    borrow::Cow,
+    fmt::{self, Debug, Formatter},
+};
+
+use bstr::ByteSlice;
+use derive_more::Debug as DebugCustom;
 
 use crate::{
-    syntax::HasError,
+    syntax::{HasError, Pretty},
     tokens::{ErrorToken, Token, TokenKind},
 };
 
@@ -18,25 +24,65 @@ pub struct Spaces<'s> {
     pub tokens: Vec<Token<'s>>,
 }
 
-/// Instruction separator token (e.g., Respace `;` or Palaiologos `/`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct InstSepToken;
-
-/// Argument separator token (e.g., Palaiologos `,`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ArgSepToken;
-
 /// Horizontal whitespace token.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SpaceToken;
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
+pub struct SpaceToken<'s> {
+    /// The text of this whitespace.
+    #[debug("{:?}", space.as_bstr())]
+    pub space: Cow<'s, [u8]>,
+}
 
 /// Line terminator token.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LineTermToken {
+    /// The style of this line terminator.
+    pub style: LineTermStyle,
+}
+
+/// The style of a line terminator
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct LineTermToken;
+pub enum LineTermStyle {
+    /// Line feed.
+    Lf,
+    /// Carriage return, line feed.
+    Crlf,
+    /// Carriage return.
+    Cr,
+}
 
 /// End of file token.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EofToken;
+
+/// Instruction separator token (e.g., Respace `;` or Palaiologos `/`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InstSepToken {
+    /// The style of this instruction separator.
+    pub style: InstSepStyle,
+}
+
+/// The style of an argument separator.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InstSepStyle {
+    /// `;` argument separator (Respace).
+    Semi,
+    /// `/` argument separator (Palaiologos).
+    Slash,
+}
+
+/// Argument separator token (e.g., Palaiologos `,`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArgSepToken {
+    /// The style of this argument separator.
+    pub style: ArgSepStyle,
+}
+
+/// The style of an argument separator.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArgSepStyle {
+    /// `,` argument separator (Palaiologos).
+    Comma,
+}
 
 impl<'s> Spaces<'s> {
     /// Constructs a new, empty space sequence.
@@ -155,19 +201,63 @@ impl Debug for Spaces<'_> {
     }
 }
 
-impl HasError for InstSepToken {
-    fn has_error(&self) -> bool {
-        false
+impl LineTermStyle {
+    /// The line terminator.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            LineTermStyle::Lf => "\n",
+            LineTermStyle::Crlf => "\r\n",
+            LineTermStyle::Cr => "\r",
+        }
     }
 }
 
-impl HasError for ArgSepToken {
-    fn has_error(&self) -> bool {
-        false
+impl InstSepStyle {
+    /// The instruction separator.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            InstSepStyle::Semi => ";",
+            InstSepStyle::Slash => "/",
+        }
     }
 }
 
-impl HasError for SpaceToken {
+impl ArgSepStyle {
+    /// The argument separator.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ArgSepStyle::Comma => ",",
+        }
+    }
+}
+
+impl<'s, T: Into<Cow<'s, [u8]>>> From<T> for SpaceToken<'s> {
+    fn from(space: T) -> Self {
+        SpaceToken {
+            space: space.into(),
+        }
+    }
+}
+
+impl From<LineTermStyle> for LineTermToken {
+    fn from(style: LineTermStyle) -> Self {
+        LineTermToken { style }
+    }
+}
+
+impl From<InstSepStyle> for InstSepToken {
+    fn from(style: InstSepStyle) -> Self {
+        InstSepToken { style }
+    }
+}
+
+impl From<ArgSepStyle> for ArgSepToken {
+    fn from(style: ArgSepStyle) -> Self {
+        ArgSepToken { style }
+    }
+}
+
+impl HasError for SpaceToken<'_> {
     fn has_error(&self) -> bool {
         false
     }
@@ -182,5 +272,45 @@ impl HasError for LineTermToken {
 impl HasError for EofToken {
     fn has_error(&self) -> bool {
         false
+    }
+}
+
+impl HasError for InstSepToken {
+    fn has_error(&self) -> bool {
+        false
+    }
+}
+
+impl HasError for ArgSepToken {
+    fn has_error(&self) -> bool {
+        false
+    }
+}
+
+impl Pretty for SpaceToken<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.space.pretty(buf);
+    }
+}
+
+impl Pretty for LineTermToken {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.style.as_str().pretty(buf);
+    }
+}
+
+impl Pretty for EofToken {
+    fn pretty(&self, _buf: &mut Vec<u8>) {}
+}
+
+impl Pretty for InstSepToken {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.style.as_str().pretty(buf);
+    }
+}
+
+impl Pretty for ArgSepToken {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.style.as_str().pretty(buf);
     }
 }

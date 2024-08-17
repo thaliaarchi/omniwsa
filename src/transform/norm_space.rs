@@ -37,7 +37,7 @@ impl<'s> Visitor<'s> for SpaceVisitor<'s> {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
         inst.words.leading_spaces_mut().trim_leading();
         if inst.opcode() != Opcode::Label {
-            let indent = Token::new(self.indent.clone(), SpaceToken);
+            let indent = Token::new(self.indent.clone(), SpaceToken::from(self.indent.clone()));
             inst.words.leading_spaces_mut().push_front(indent);
         }
         let trailing = inst.words.trailing_spaces_mut();
@@ -56,7 +56,8 @@ impl<'s> Visitor<'s> for SpaceVisitor<'s> {
             if matches!(tok.kind, TokenKind::LineComment(_)) {
                 tok.line_comment_trim_trailing();
                 if empty.len() != len_before {
-                    let indent = Token::new(self.indent.clone(), SpaceToken);
+                    let indent =
+                        Token::new(self.indent.clone(), SpaceToken::from(self.indent.clone()));
                     empty.push_front(indent);
                 }
             }
@@ -75,7 +76,7 @@ mod tests {
             comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
             integer::{Integer, IntegerToken},
             label::LabelToken,
-            spaces::{EofToken, LineTermToken, SpaceToken, Spaces},
+            spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
             words::Words,
             Token,
         },
@@ -99,7 +100,7 @@ mod tests {
                                 errors: EnumSet::empty(),
                             },
                         ),
-                        Token::new(b"\n", LineTermToken),
+                        Token::new(b"\n", LineTermToken::from(LineTermStyle::Lf)),
                     ])),
                     Cst::Inst(Inst {
                         words: Words {
@@ -107,7 +108,7 @@ mod tests {
                             words: vec![
                                 (
                                     Token::new(b"label", Opcode::Label),
-                                    Spaces::from(Token::new(b" ", SpaceToken)),
+                                    Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
                                 ),
                                 (
                                     Token::new(
@@ -118,7 +119,10 @@ mod tests {
                                             errors: EnumSet::empty(),
                                         },
                                     ),
-                                    Spaces::from(Token::new(b"\n", LineTermToken)),
+                                    Spaces::from(Token::new(
+                                        b"\n",
+                                        LineTermToken::from(LineTermStyle::Lf),
+                                    )),
                                 ),
                             ],
                         },
@@ -128,7 +132,7 @@ mod tests {
                     Cst::Inst(Inst {
                         words: Words {
                             space_before: Spaces::from(vec![
-                                Token::new(b"    ", SpaceToken),
+                                Token::new(b"    ", SpaceToken::from(b"    ")),
                                 Token::new(
                                     b"{-1-}",
                                     BlockCommentToken {
@@ -137,12 +141,12 @@ mod tests {
                                         errors: EnumSet::empty(),
                                     },
                                 ),
-                                Token::new(b"  ", SpaceToken),
+                                Token::new(b"  ", SpaceToken::from(b"  ")),
                             ]),
                             words: vec![
                                 (
                                     Token::new(b"push", Opcode::Push),
-                                    Spaces::from(Token::new(b" ", SpaceToken)),
+                                    Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
                                 ),
                                 (
                                     Token::new(
@@ -152,7 +156,10 @@ mod tests {
                                             ..Default::default()
                                         },
                                     ),
-                                    Spaces::from(Token::new(b"\n", LineTermToken)),
+                                    Spaces::from(Token::new(
+                                        b"\n",
+                                        LineTermToken::from(LineTermStyle::Lf),
+                                    )),
                                 ),
                             ],
                         },
@@ -160,7 +167,7 @@ mod tests {
                         valid_types: true,
                     }),
                     Cst::Empty(Spaces::from(vec![
-                        Token::new(b"    ", SpaceToken),
+                        Token::new(b"    ", SpaceToken::from(b"    ")),
                         Token::new(
                             b"; 2",
                             LineCommentToken {
@@ -169,15 +176,18 @@ mod tests {
                                 errors: EnumSet::empty(),
                             },
                         ),
-                        Token::new(b"\n", LineTermToken),
+                        Token::new(b"\n", LineTermToken::from(LineTermStyle::Lf)),
                     ])),
                     Cst::Inst(Inst {
                         words: Words {
-                            space_before: Spaces::from(Token::new(b"    ", SpaceToken)),
+                            space_before: Spaces::from(Token::new(
+                                b"    ",
+                                SpaceToken::from(b"    "),
+                            )),
                             words: vec![
                                 (
                                     Token::new(b"push", Opcode::Push),
-                                    Spaces::from(Token::new(b" ", SpaceToken)),
+                                    Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
                                 ),
                                 (
                                     Token::new(

@@ -19,6 +19,11 @@ impl Pretty for Token<'_> {
         match &self.kind {
             TokenKind::String(s) => s.pretty(buf),
             TokenKind::Char(c) => c.pretty(buf),
+            TokenKind::Space(s) => s.pretty(buf),
+            TokenKind::LineTerm(l) => l.pretty(buf),
+            TokenKind::Eof(e) => e.pretty(buf),
+            TokenKind::InstSep(i) => i.pretty(buf),
+            TokenKind::ArgSep(a) => a.pretty(buf),
             TokenKind::LineComment(l) => l.pretty(buf),
             TokenKind::BlockComment(b) => b.pretty(buf),
             TokenKind::Quoted(q) => q.pretty(buf),

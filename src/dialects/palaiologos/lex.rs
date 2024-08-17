@@ -13,7 +13,10 @@ use crate::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
         integer::IntegerToken,
         label::{LabelError, LabelToken},
-        spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken},
+        spaces::{
+            ArgSepStyle, ArgSepToken, EofToken, InstSepStyle, InstSepToken, LineTermStyle,
+            LineTermToken, SpaceToken,
+        },
         string::{
             CharData, CharError, CharToken, QuoteStyle, StringData, StringError, StringToken,
         },
@@ -145,13 +148,13 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     errors,
                 })
             }
-            b',' => scan.wrap(ArgSepToken),
+            b',' => scan.wrap(ArgSepToken::from(ArgSepStyle::Comma)),
             // Handle instruction separator and LF repetitions in the parser.
-            b'/' => scan.wrap(InstSepToken),
-            b'\n' => scan.wrap(LineTermToken),
+            b'/' => scan.wrap(InstSepToken::from(InstSepStyle::Slash)),
+            b'\n' => scan.wrap(LineTermToken::from(LineTermStyle::Lf)),
             b' ' | b'\t' | b'\r' | b'\x0c' => {
                 scan.bump_while(|b| matches!(b, b' ' | b'\t' | b'\r' | b'\x0c'));
-                scan.wrap(SpaceToken)
+                scan.wrap(SpaceToken::from(scan.text()))
             }
             _ => {
                 scan.bump_while(|b| {

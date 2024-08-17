@@ -8,7 +8,7 @@ use crate::{
     lex::{Lex, Utf8Scanner},
     tokens::{
         comment::{BlockCommentStyle, LineCommentStyle},
-        spaces::{EofToken, LineTermToken, SpaceToken},
+        spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken},
         string::{QuoteStyle, QuotedError, QuotedToken},
         ErrorToken, Token, WordToken,
     },
@@ -64,9 +64,9 @@ impl<'s> Lex<'s> for Lexer<'s> {
             }
             ' ' | '\t' => {
                 scan.bump_while(|c| c == ' ' || c == '\t');
-                scan.wrap(SpaceToken)
+                scan.wrap(SpaceToken::from(scan.text()))
             }
-            '\n' => scan.wrap(LineTermToken),
+            '\n' => scan.wrap(LineTermToken::from(LineTermStyle::Lf)),
             '"' => {
                 let word_start = scan.offset();
                 scan.bump_while(|c| c != '"' && c != '\n');

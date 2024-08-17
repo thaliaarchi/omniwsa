@@ -93,7 +93,7 @@ mod tests {
                 nodes: vec![Cst::Inst(Inst {
                     words: Words {
                         space_before: Spaces::from(vec![
-                            Token::new(b" ", SpaceToken),
+                            Token::new(b" ", SpaceToken::from(b" ")),
                             block_comment!("h"),
                         ]),
                         words: vec![
@@ -104,7 +104,7 @@ mod tests {
                                     block_comment!("l"),
                                     block_comment!("l"),
                                     block_comment!("o"),
-                                    Token::new(b" ", SpaceToken),
+                                    Token::new(b" ", SpaceToken::from(b" ")),
                                     block_comment!("!"),
                                 ]),
                             ),

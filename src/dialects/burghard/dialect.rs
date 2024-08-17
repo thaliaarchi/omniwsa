@@ -92,7 +92,7 @@ mod tests {
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{Integer, IntegerToken},
-            spaces::{EofToken, LineTermToken, SpaceToken, Spaces},
+            spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
             string::{QuoteStyle, QuotedError, QuotedToken, StringData, StringToken},
             words::Words,
             SplicedToken, Token, WordToken,
@@ -119,10 +119,10 @@ mod tests {
         )
     });
     macro_rules! space(($space:literal) => {
-        Spaces::from(Token::new($space, SpaceToken))
+        Spaces::from(Token::new($space, SpaceToken::from($space)))
     });
     macro_rules! lf(() => {
-        Spaces::from(Token::new(b"\n", LineTermToken))
+        Spaces::from(Token::new(b"\n", LineTermToken::from(LineTermStyle::Lf)))
     });
     macro_rules! eof(() => {
         Spaces::from(Token::new(b"", EofToken))
@@ -135,7 +135,7 @@ mod tests {
         let expect = root![Cst::Inst(Inst {
             words: Words {
                 space_before: Spaces::from(vec![
-                    Token::new(b" ", SpaceToken),
+                    Token::new(b" ", SpaceToken::from(b" ")),
                     block_comment!("c1"),
                 ]),
                 words: vec![
@@ -151,7 +151,10 @@ mod tests {
                                 spliced: Box::new(Token::new(b"helloworld", Opcode::Invalid)),
                             },
                         ),
-                        Spaces::from(vec![block_comment!("c2"), Token::new(b"\t", SpaceToken)]),
+                        Spaces::from(vec![
+                            block_comment!("c2"),
+                            Token::new(b"\t", SpaceToken::from(b"\t")),
+                        ]),
                     ),
                     (
                         Token::new(
