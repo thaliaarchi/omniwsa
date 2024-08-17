@@ -81,6 +81,19 @@ impl LineCommentStyle {
     }
 }
 
+impl LineCommentToken<'_> {
+    /// Trims trailing whitespace characters in the line comment text.
+    pub fn trim_trailing(&mut self) {
+        let i = self
+            .text
+            .iter()
+            .rposition(|&b| b != b' ' && b != b'\t')
+            .map(|i| i + 1)
+            .unwrap_or(0);
+        self.text = &self.text[..i];
+    }
+}
+
 impl BlockCommentStyle {
     /// Returns whether this style of block comment can contain nested block
     /// comments.

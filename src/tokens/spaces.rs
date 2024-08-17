@@ -10,7 +10,7 @@ use derive_more::Debug as DebugCustom;
 
 use crate::{
     syntax::{HasError, Pretty},
-    tokens::{ErrorToken, Token, TokenKind},
+    tokens::{ErrorToken, Token},
 };
 
 // TODO:
@@ -117,7 +117,7 @@ impl<'s> Spaces<'s> {
         let i = self
             .tokens
             .iter()
-            .position(|tok| !matches!(tok.kind, TokenKind::Space(_)))
+            .position(|tok| !matches!(tok, Token::Space(_)))
             .unwrap_or(self.tokens.len());
         self.tokens.drain(..i);
     }
@@ -127,20 +127,18 @@ impl<'s> Spaces<'s> {
         let mut j = self.tokens.len();
         if j > 0
             && matches!(
-                self.tokens[j - 1].kind,
-                TokenKind::LineTerm(_)
-                    | TokenKind::Eof(_)
-                    | TokenKind::Error(ErrorToken::InvalidUtf8 { .. })
+                self.tokens[j - 1],
+                Token::LineTerm(_) | Token::Eof(_) | Token::Error(ErrorToken::InvalidUtf8 { .. })
             )
         {
             j -= 1;
         }
-        if j > 0 && matches!(self.tokens[j - 1].kind, TokenKind::LineComment(_)) {
+        if j > 0 && matches!(self.tokens[j - 1], Token::LineComment(_)) {
             j -= 1;
         }
         let i = self.tokens[..j]
             .iter()
-            .rposition(|tok| !matches!(tok.kind, TokenKind::Space(_)))
+            .rposition(|tok| !matches!(tok, Token::Space(_)))
             .map(|i| i + 1)
             .unwrap_or(0);
         self.tokens.drain(i..j);
@@ -160,14 +158,14 @@ impl<'s> Spaces<'s> {
 
     fn assert_space(token: &Token<'s>) {
         debug_assert!(matches!(
-            token.kind,
-            TokenKind::Space(_)
-                | TokenKind::LineTerm(_)
-                | TokenKind::Eof(_)
-                | TokenKind::InstSep(_)
-                | TokenKind::ArgSep(_)
-                | TokenKind::LineComment(_)
-                | TokenKind::BlockComment(_)
+            token,
+            Token::Space(_)
+                | Token::LineTerm(_)
+                | Token::Eof(_)
+                | Token::InstSep(_)
+                | Token::ArgSep(_)
+                | Token::LineComment(_)
+                | Token::BlockComment(_)
         ));
     }
 }

@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use crate::{
     syntax::{Cst, Inst, OptionBlock},
-    tokens::{spaces::Spaces, words::Words, Token, TokenKind},
+    tokens::{spaces::Spaces, words::Words, Token},
 };
 
 /// Pretty-prints this node as Whitespace assembly syntax.
@@ -16,26 +16,26 @@ pub trait Pretty {
 
 impl Pretty for Token<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
-        match &self.kind {
-            TokenKind::Mnemonic(m) => m.pretty(buf),
-            TokenKind::Integer(i) => i.pretty(buf),
-            TokenKind::String(s) => s.pretty(buf),
-            TokenKind::Char(c) => c.pretty(buf),
-            TokenKind::Variable(v) => v.pretty(buf),
-            TokenKind::Label(l) => l.pretty(buf),
-            TokenKind::LabelColon(l) => l.pretty(buf),
-            TokenKind::Space(s) => s.pretty(buf),
-            TokenKind::LineTerm(l) => l.pretty(buf),
-            TokenKind::Eof(e) => e.pretty(buf),
-            TokenKind::InstSep(i) => i.pretty(buf),
-            TokenKind::ArgSep(a) => a.pretty(buf),
-            TokenKind::LineComment(l) => l.pretty(buf),
-            TokenKind::BlockComment(b) => b.pretty(buf),
-            TokenKind::Word(w) => w.pretty(buf),
-            TokenKind::Quoted(q) => q.pretty(buf),
-            TokenKind::Spliced(s) => s.pretty(buf),
-            TokenKind::Error(e) => e.pretty(buf),
-            TokenKind::Placeholder => panic!("placeholder"),
+        match self {
+            Token::Mnemonic(m) => m.pretty(buf),
+            Token::Integer(i) => i.pretty(buf),
+            Token::String(s) => s.pretty(buf),
+            Token::Char(c) => c.pretty(buf),
+            Token::Variable(v) => v.pretty(buf),
+            Token::Label(l) => l.pretty(buf),
+            Token::LabelColon(l) => l.pretty(buf),
+            Token::Space(s) => s.pretty(buf),
+            Token::LineTerm(l) => l.pretty(buf),
+            Token::Eof(e) => e.pretty(buf),
+            Token::InstSep(i) => i.pretty(buf),
+            Token::ArgSep(a) => a.pretty(buf),
+            Token::LineComment(l) => l.pretty(buf),
+            Token::BlockComment(b) => b.pretty(buf),
+            Token::Word(w) => w.pretty(buf),
+            Token::Quoted(q) => q.pretty(buf),
+            Token::Spliced(s) => s.pretty(buf),
+            Token::Error(e) => e.pretty(buf),
+            Token::Placeholder => panic!("placeholder"),
         }
     }
 }

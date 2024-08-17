@@ -2,11 +2,8 @@
 
 use enumset::EnumSet;
 
-use crate::tokens::{
-    comment::{
-        BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken,
-    },
-    Token, TokenKind,
+use crate::tokens::comment::{
+    BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken,
 };
 
 // TODO:
@@ -108,20 +105,24 @@ impl<'s> Utf8Scanner<'s> {
     }
 
     /// Consumes a line comment. The cursor must start after the comment prefix.
-    pub fn line_comment(&mut self, style: LineCommentStyle) -> Token<'s> {
+    pub fn line_comment(&mut self, style: LineCommentStyle) -> LineCommentToken<'s> {
         let text_start = self.offset();
         self.bump_while(|c| c != '\n');
         let src = self.src.as_bytes();
-        self.wrap(LineCommentToken {
+        LineCommentToken {
             text: &src[text_start..self.offset()],
             style,
             errors: EnumSet::empty(),
-        })
+        }
     }
 
     /// Consumes a non-nested block comment. The cursor must start after the
     /// opening sequence.
-    pub fn block_comment(&mut self, close: [u8; 2], style: BlockCommentStyle) -> Token<'s> {
+    pub fn block_comment(
+        &mut self,
+        close: [u8; 2],
+        style: BlockCommentStyle,
+    ) -> BlockCommentToken<'s> {
         debug_assert!(!style.can_nest());
         let text_start = self.offset();
         let (text_end, errors) = loop {
@@ -135,11 +136,11 @@ impl<'s> Utf8Scanner<'s> {
             }
             self.next_char();
         };
-        self.wrap(BlockCommentToken {
+        BlockCommentToken {
             text: &self.src.as_bytes()[text_start..text_end],
             style,
             errors,
-        })
+        }
     }
 
     /// Consumes a nested block comment. The cursor must start after the opening
@@ -149,7 +150,7 @@ impl<'s> Utf8Scanner<'s> {
         open: [u8; 2],
         close: [u8; 2],
         style: BlockCommentStyle,
-    ) -> Token<'s> {
+    ) -> BlockCommentToken<'s> {
         debug_assert!(style.can_nest());
         let mut level = 1;
         let text_start = self.offset();
@@ -171,19 +172,10 @@ impl<'s> Utf8Scanner<'s> {
                 self.next_char();
             }
         };
-        self.wrap(BlockCommentToken {
+        BlockCommentToken {
             text: &self.src.as_bytes()[text_start..text_end],
             style,
             errors,
-        })
-    }
-
-    /// Wraps a `TokenKind` with the text of the current token.
-    #[inline]
-    pub fn wrap<T: Into<TokenKind<'s>>>(&self, kind: T) -> Token<'s> {
-        Token {
-            text: self.text().into(),
-            kind: kind.into(),
         }
     }
 
@@ -330,19 +322,23 @@ impl<'s> ByteScanner<'s> {
     }
 
     /// Consumes a line comment. The cursor must start after the comment prefix.
-    pub fn line_comment(&mut self, style: LineCommentStyle) -> Token<'s> {
+    pub fn line_comment(&mut self, style: LineCommentStyle) -> LineCommentToken<'s> {
         let text_start = self.offset();
         self.bump_while(|b| b != b'\n');
-        self.wrap(LineCommentToken {
+        LineCommentToken {
             text: &self.src[text_start..self.offset()],
             style,
             errors: EnumSet::empty(),
-        })
+        }
     }
 
     /// Consumes a non-nested block comment. The cursor must start after the
     /// opening sequence.
-    pub fn block_comment(&mut self, close: [u8; 2], style: BlockCommentStyle) -> Token<'s> {
+    pub fn block_comment(
+        &mut self,
+        close: [u8; 2],
+        style: BlockCommentStyle,
+    ) -> BlockCommentToken<'s> {
         debug_assert!(!style.can_nest());
         let text_start = self.offset();
         let (text_end, errors) = loop {
@@ -356,11 +352,11 @@ impl<'s> ByteScanner<'s> {
             }
             self.next_byte();
         };
-        self.wrap(BlockCommentToken {
+        BlockCommentToken {
             text: &self.src[text_start..text_end],
             style,
             errors,
-        })
+        }
     }
 
     /// Consumes a nested block comment. The cursor must start after the opening
@@ -370,7 +366,7 @@ impl<'s> ByteScanner<'s> {
         open: [u8; 2],
         close: [u8; 2],
         style: BlockCommentStyle,
-    ) -> Token<'s> {
+    ) -> BlockCommentToken<'s> {
         debug_assert!(style.can_nest());
         let mut level = 1;
         let text_start = self.offset();
@@ -392,19 +388,10 @@ impl<'s> ByteScanner<'s> {
                 self.next_byte();
             }
         };
-        self.wrap(BlockCommentToken {
+        BlockCommentToken {
             text: &self.src[text_start..text_end],
             style,
             errors,
-        })
-    }
-
-    /// Wraps a `TokenKind` with the text of the current token.
-    #[inline]
-    pub fn wrap<T: Into<TokenKind<'s>>>(&self, kind: T) -> Token<'s> {
-        Token {
-            text: self.text().into(),
-            kind: kind.into(),
         }
     }
 

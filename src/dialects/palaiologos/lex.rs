@@ -21,7 +21,7 @@ use crate::{
         string::{
             CharData, CharError, CharToken, QuoteStyle, StringData, StringError, StringToken,
         },
-        ErrorToken, Token, TokenKind,
+        ErrorToken, Token,
     },
 };
 
@@ -54,7 +54,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
         scan.reset();
 
         if scan.eof() {
-            return Token::new(b"", EofToken);
+            return Token::from(EofToken);
         }
 
         match scan.next_byte() {
@@ -62,13 +62,10 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 let rest = &scan.src()[scan.start_offset()..];
                 if let Some((mnemonic, opcodes)) = scan_mnemonic(rest, self.dialect) {
                     scan.bump_bytes_no_lf(mnemonic.len() - 1);
-                    Token::new(
-                        mnemonic,
-                        MnemonicToken {
-                            mnemonic: mnemonic.into(),
-                            opcode: opcodes[0],
-                        },
-                    )
+                    Token::from(MnemonicToken {
+                        mnemonic: mnemonic.into(),
+                        opcode: opcodes[0],
+                    })
                 } else {
                     // Consume as much as possible for an error, until a valid
                     // mnemonic.
@@ -80,7 +77,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                         }
                         scan.next_byte();
                     }
-                    scan.wrap(MnemonicToken {
+                    Token::from(MnemonicToken {
                         mnemonic: scan.text().into(),
                         opcode: Opcode::Invalid,
                     })
@@ -88,16 +85,14 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             }
             b @ (b'0'..=b'9' | b'-') => {
                 if b == b'-' && !scan.bump_if(|b| matches!(b, b'0'..=b'9')) {
-                    scan.wrap(ErrorToken::UnrecognizedChar {
+                    Token::from(ErrorToken::UnrecognizedChar {
                         text: scan.text().into(),
                     })
                 } else {
                     scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
                     // Extend the syntax to handle octal, just for errors.
                     scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
-                    let int =
-                        IntegerToken::parse_palaiologos(scan.text().into(), &mut self.digit_buf);
-                    scan.wrap(int)
+                    IntegerToken::parse_palaiologos(scan.text().into(), &mut self.digit_buf).into()
                 }
             }
             sigil @ (b'@' | b'%') => {
@@ -113,7 +108,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     Some(b'0'..=b'9') => LabelError::StartsWithDigit.into(),
                     _ => EnumSet::empty(),
                 };
-                scan.wrap(LabelToken {
+                Token::from(LabelToken {
                     label: text[1..].into(),
                     style,
                     errors,
@@ -133,7 +128,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 let literal =
                     &scan.rest()[..len - !errors.contains(CharError::Unterminated) as usize];
                 scan.bump_bytes(len);
-                scan.wrap(CharToken {
+                Token::from(CharToken {
                     literal: literal.into(),
                     unescaped,
                     quotes: QuoteStyle::Single,
@@ -145,7 +140,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 let literal =
                     &scan.rest()[..len - !errors.contains(StringError::Unterminated) as usize];
                 scan.bump_bytes(len);
-                scan.wrap(StringToken {
+                Token::from(StringToken {
                     literal: literal.into(),
                     unescaped: StringData::Bytes(unescaped),
                     quotes: QuoteStyle::Double,
@@ -159,20 +154,19 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 } else {
                     LineCommentError::MissingLf.into()
                 };
-                let text = scan.text();
-                scan.wrap(LineCommentToken {
-                    text: &text[1..],
+                Token::from(LineCommentToken {
+                    text: &scan.text()[1..],
                     style: LineCommentStyle::Semi,
                     errors,
                 })
             }
-            b',' => scan.wrap(ArgSepToken::from(ArgSepStyle::Comma)),
+            b',' => ArgSepToken::from(ArgSepStyle::Comma).into(),
             // Handle instruction separator and LF repetitions in the parser.
-            b'/' => scan.wrap(InstSepToken::from(InstSepStyle::Slash)),
-            b'\n' => scan.wrap(LineTermToken::from(LineTermStyle::Lf)),
+            b'/' => InstSepToken::from(InstSepStyle::Slash).into(),
+            b'\n' => LineTermToken::from(LineTermStyle::Lf).into(),
             b' ' | b'\t' | b'\r' | b'\x0c' => {
                 scan.bump_while(|b| matches!(b, b' ' | b'\t' | b'\r' | b'\x0c'));
-                scan.wrap(SpaceToken::from(scan.text()))
+                SpaceToken::from(scan.text()).into()
             }
             _ => {
                 scan.bump_while(|b| {
@@ -196,9 +190,9 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                         | b'\x0c'
                     )
                 });
-                scan.wrap(TokenKind::Error(ErrorToken::UnrecognizedChar {
+                Token::from(ErrorToken::UnrecognizedChar {
                     text: scan.text().into(),
-                }))
+                })
             }
         }
     }

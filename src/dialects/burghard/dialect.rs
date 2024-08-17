@@ -109,33 +109,26 @@ mod tests {
         }
     }];
     macro_rules! mnemonic(($mnemonic:expr, $opcode:expr $(,)?) => {
-        Token::new(
-            $mnemonic,
-            MnemonicToken {
-                mnemonic: $mnemonic.into(),
-                opcode: $opcode,
-            },
-        )
+        Token::from(MnemonicToken {
+            mnemonic: $mnemonic.into(),
+            opcode: $opcode,
+        })
     });
     macro_rules! block_comment(($text:literal) => {
-        Token::new(
-            // TODO: Use concat_bytes! once stabilized.
-            concat!("{-", $text, "-}").as_bytes(),
-            BlockCommentToken {
-                text: $text.as_bytes(),
-                style: BlockCommentStyle::Haskell,
-                errors: EnumSet::empty(),
-            },
-        )
+        Token::from(BlockCommentToken {
+            text: $text,
+            style: BlockCommentStyle::Haskell,
+            errors: EnumSet::empty(),
+        })
     });
     macro_rules! space(($space:literal) => {
-        Spaces::from(Token::new($space, SpaceToken::from($space)))
+        Spaces::from(Token::from(SpaceToken::from($space)))
     });
     macro_rules! lf(() => {
-        Spaces::from(Token::new(b"\n", LineTermToken::from(LineTermStyle::Lf)))
+        Spaces::from(Token::from(LineTermToken::from(LineTermStyle::Lf)))
     });
     macro_rules! eof(() => {
-        Spaces::from(Token::new(b"", EofToken))
+        Spaces::from(Token::from(EofToken))
     });
 
     #[test]
@@ -145,47 +138,35 @@ mod tests {
         let expect = root![Cst::Inst(Inst {
             words: Words {
                 space_before: Spaces::from(vec![
-                    Token::new(b" ", SpaceToken::from(b" ")),
-                    block_comment!("c1"),
+                    Token::from(SpaceToken::from(b" ")),
+                    block_comment!(b"c1"),
                 ]),
                 words: vec![
                     (
-                        Token::new(
-                            b"hello{-splice-}world",
-                            SplicedToken {
-                                tokens: vec![
-                                    Token::new(
-                                        b"hello",
-                                        WordToken {
-                                            word: b"hello".into()
-                                        },
-                                    ),
-                                    block_comment!("splice"),
-                                    Token::new(
-                                        b"world",
-                                        WordToken {
-                                            word: b"world".into()
-                                        },
-                                    ),
-                                ],
-                                spliced: Box::new(mnemonic!(b"helloworld", Opcode::Invalid)),
-                            },
-                        ),
+                        Token::from(SplicedToken {
+                            tokens: vec![
+                                Token::from(WordToken {
+                                    word: b"hello".into()
+                                }),
+                                block_comment!(b"splice"),
+                                Token::from(WordToken {
+                                    word: b"world".into()
+                                }),
+                            ],
+                            spliced: Box::new(mnemonic!(b"helloworld", Opcode::Invalid)),
+                        }),
                         Spaces::from(vec![
-                            block_comment!("c2"),
-                            Token::new(b"\t", SpaceToken::from(b"\t")),
+                            block_comment!(b"c2"),
+                            Token::from(SpaceToken::from(b"\t")),
                         ]),
                     ),
                     (
-                        Token::new(
-                            b"!",
-                            StringToken {
-                                literal: b"!".into(),
-                                unescaped: StringData::Utf8("!".into()),
-                                quotes: QuoteStyle::Bare,
-                                errors: EnumSet::empty(),
-                            },
-                        ),
+                        Token::from(StringToken {
+                            literal: b"!".into(),
+                            unescaped: StringData::Utf8("!".into()),
+                            quotes: QuoteStyle::Bare,
+                            errors: EnumSet::empty(),
+                        }),
                         eof!(),
                     ),
                 ],
@@ -203,17 +184,14 @@ mod tests {
             words: Words {
                 space_before: Spaces::new(),
                 words: vec![(
-                    Token::new(
-                        "\"Debug_PrİntStacK".as_bytes(),
-                        QuotedToken {
-                            inner: Box::new(mnemonic!(
-                                "Debug_PrİntStacK".as_bytes(),
-                                Opcode::BurghardPrintStack,
-                            )),
-                            quotes: QuoteStyle::Double,
-                            errors: QuotedError::Unterminated.into(),
-                        },
-                    ),
+                    Token::from(QuotedToken {
+                        inner: Box::new(mnemonic!(
+                            "Debug_PrİntStacK".as_bytes(),
+                            Opcode::BurghardPrintStack,
+                        )),
+                        quotes: QuoteStyle::Double,
+                        errors: QuotedError::Unterminated.into(),
+                    }),
                     eof!(),
                 )],
             },
@@ -235,33 +213,24 @@ mod tests {
                         space!(b" "),
                     ),
                     (
-                        Token::new(
-                            b"\"1\"",
-                            StringToken {
-                                literal: b"1".into(),
-                                unescaped: StringData::Utf8("1".into()),
-                                quotes: QuoteStyle::Double,
-                                errors: EnumSet::empty(),
-                            },
-                        ),
+                        Token::from(StringToken {
+                            literal: b"1".into(),
+                            unescaped: StringData::Utf8("1".into()),
+                            quotes: QuoteStyle::Double,
+                            errors: EnumSet::empty(),
+                        }),
                         space!(b" "),
                     ),
                     (
-                        Token::new(
-                            b"\"2\"",
-                            QuotedToken {
-                                inner: Box::new(Token::new(
-                                    b"2",
-                                    IntegerToken {
-                                        literal: b"2".into(),
-                                        value: Integer::from(2),
-                                        ..Default::default()
-                                    },
-                                )),
-                                quotes: QuoteStyle::Double,
-                                errors: EnumSet::empty(),
-                            },
-                        ),
+                        Token::from(QuotedToken {
+                            inner: Box::new(Token::from(IntegerToken {
+                                literal: b"2".into(),
+                                value: Integer::from(2),
+                                ..Default::default()
+                            })),
+                            quotes: QuoteStyle::Double,
+                            errors: EnumSet::empty(),
+                        }),
                         eof!(),
                     ),
                 ],
@@ -290,7 +259,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![
                         (mnemonic!(b"ifoption", Opcode::IfOption), space!(b" ")),
-                        (Token::new($option, WordToken { word: $option.into() }), lf!()),
+                        (Token::from(WordToken { word: $option.into() }), lf!()),
                     ],
                 },
                 valid_arity: true,
@@ -303,7 +272,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![
                         (mnemonic!(b"elseifoption", Opcode::ElseIfOption), space!(b" ")),
-                        (Token::new($option, WordToken { word: $option.into() }), lf!()),
+                        (Token::from(WordToken { word: $option.into() }), lf!()),
                     ],
                 },
                 valid_arity: true,

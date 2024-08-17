@@ -4,7 +4,7 @@ use std::mem;
 
 use crate::{
     syntax::{Cst, Inst},
-    tokens::{spaces::Spaces, TokenKind},
+    tokens::{spaces::Spaces, Token},
     transform::Visitor,
 };
 
@@ -24,25 +24,21 @@ impl<'s> Visitor<'s> for StrangeVisitor {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
         for i in 0..inst.words.len() {
             let word = &mut inst.words.words[i].0;
-            match word.kind {
-                TokenKind::Quoted(_) => {
+            match word {
+                Token::Quoted(_) => {
                     // Remove non-semantic quotes.
-                    let TokenKind::Quoted(q) = mem::replace(&mut word.kind, TokenKind::Placeholder)
-                    else {
+                    let Token::Quoted(q) = mem::take(word) else {
                         unreachable!();
                     };
                     *word = *q.inner;
                 }
-                TokenKind::Spliced(_) => {
+                Token::Spliced(_) => {
                     // Move block comments out of a token splice to after it.
                     let (_, word, space_after) = inst.words.get_spaced_mut(i);
-                    let TokenKind::Spliced(mut s) =
-                        mem::replace(&mut word.kind, TokenKind::Placeholder)
-                    else {
+                    let Token::Spliced(mut s) = mem::take(word) else {
                         unreachable!();
                     };
-                    s.tokens
-                        .retain(|tok| matches!(tok.kind, TokenKind::BlockComment(_)));
+                    s.tokens.retain(|tok| matches!(tok, Token::BlockComment(_)));
                     s.tokens.append(&mut space_after.tokens);
                     space_after.tokens = s.tokens;
                     *word = *s.spliced;
@@ -68,20 +64,16 @@ mod tests {
             mnemonics::MnemonicToken,
             spaces::{EofToken, SpaceToken, Spaces},
             words::Words,
-            Token, TokenKind,
+            Token,
         },
     };
 
     macro_rules! block_comment(($text:literal) => {
-        Token::new(
-            // TODO: Use concat_bytes! once stabilized.
-            concat!("{-", $text, "-}").as_bytes(),
-            BlockCommentToken {
-                text: $text.as_bytes(),
-                style: BlockCommentStyle::Haskell,
-                errors: EnumSet::empty(),
-            },
-        )
+        Token::from(BlockCommentToken {
+            text: $text,
+            style: BlockCommentStyle::Haskell,
+            errors: EnumSet::empty(),
+        })
     });
 
     #[test]
@@ -95,37 +87,31 @@ mod tests {
                 nodes: vec![Cst::Inst(Inst {
                     words: Words {
                         space_before: Spaces::from(vec![
-                            Token::new(b" ", SpaceToken::from(b" ")),
-                            block_comment!("h"),
+                            Token::from(SpaceToken::from(b" ")),
+                            block_comment!(b"h"),
                         ]),
                         words: vec![
                             (
-                                Token::new(
-                                    b"push",
-                                    MnemonicToken {
-                                        mnemonic: b"push".into(),
-                                        opcode: Opcode::Push,
-                                    },
-                                ),
+                                Token::from(MnemonicToken {
+                                    mnemonic: b"push".into(),
+                                    opcode: Opcode::Push,
+                                }),
                                 Spaces::from(vec![
-                                    block_comment!("e"),
-                                    block_comment!("l"),
-                                    block_comment!("l"),
-                                    block_comment!("o"),
-                                    Token::new(b" ", SpaceToken::from(b" ")),
-                                    block_comment!("!"),
+                                    block_comment!(b"e"),
+                                    block_comment!(b"l"),
+                                    block_comment!(b"l"),
+                                    block_comment!(b"o"),
+                                    Token::from(SpaceToken::from(b" ")),
+                                    block_comment!(b"!"),
                                 ]),
                             ),
                             (
-                                Token::new(
-                                    b"42",
-                                    TokenKind::Integer(IntegerToken {
-                                        literal: b"42".into(),
-                                        value: Integer::from(42),
-                                        ..Default::default()
-                                    }),
-                                ),
-                                Spaces::from(Token::new(b"", EofToken)),
+                                Token::from(Token::Integer(IntegerToken {
+                                    literal: b"42".into(),
+                                    value: Integer::from(42),
+                                    ..Default::default()
+                                })),
+                                Spaces::from(Token::from(EofToken)),
                             ),
                         ],
                     },

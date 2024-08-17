@@ -51,28 +51,27 @@ impl<'s> Lex<'s> for Lexer<'s> {
 
         if scan.eof() {
             if let Some((rest, error_len)) = self.invalid_utf8.take() {
-                return Token::new(
-                    rest,
-                    ErrorToken::InvalidUtf8 {
-                        text: rest.into(),
-                        error_len,
-                    },
-                );
+                return Token::from(ErrorToken::InvalidUtf8 {
+                    text: rest.into(),
+                    error_len,
+                });
             }
-            return Token::new(b"", EofToken);
+            return Token::from(EofToken);
         }
 
         match scan.next_char() {
-            ';' => scan.line_comment(LineCommentStyle::Semi),
-            '-' if scan.bump_if(|c| c == '-') => scan.line_comment(LineCommentStyle::DashDash),
-            '{' if scan.bump_if(|c| c == '-') => {
-                scan.nested_block_comment(*b"{-", *b"-}", BlockCommentStyle::Haskell)
+            ';' => scan.line_comment(LineCommentStyle::Semi).into(),
+            '-' if scan.bump_if(|c| c == '-') => {
+                scan.line_comment(LineCommentStyle::DashDash).into()
             }
+            '{' if scan.bump_if(|c| c == '-') => scan
+                .nested_block_comment(*b"{-", *b"-}", BlockCommentStyle::Haskell)
+                .into(),
             ' ' | '\t' => {
                 scan.bump_while(|c| c == ' ' || c == '\t');
-                scan.wrap(SpaceToken::from(scan.text()))
+                Token::from(SpaceToken::from(scan.text()))
             }
-            '\n' => scan.wrap(LineTermToken::from(LineTermStyle::Lf)),
+            '\n' => Token::from(LineTermToken::from(LineTermStyle::Lf)),
             '"' => {
                 let word_start = scan.offset();
                 scan.bump_while(|c| c != '"' && c != '\n');
@@ -82,8 +81,8 @@ impl<'s> Lex<'s> for Lexer<'s> {
                 } else {
                     QuotedError::Unterminated.into()
                 };
-                scan.wrap(QuotedToken {
-                    inner: Box::new(Token::new(word, WordToken { word: word.into() })),
+                Token::from(QuotedToken {
+                    inner: Box::new(Token::from(WordToken { word: word.into() })),
                     quotes: QuoteStyle::Double,
                     errors,
                 })
@@ -98,7 +97,7 @@ impl<'s> Lex<'s> for Lexer<'s> {
                     }
                     scan.next_char();
                 }
-                scan.wrap(WordToken {
+                Token::from(WordToken {
                     word: scan.text().into(),
                 })
             }

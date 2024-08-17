@@ -6,7 +6,7 @@ use crate::{
     syntax::{Cst, Inst, Opcode},
     tokens::{
         spaces::{SpaceToken, Spaces},
-        Token, TokenKind,
+        Token,
     },
     transform::Visitor,
 };
@@ -37,29 +37,24 @@ impl<'s> Visitor<'s> for SpaceVisitor<'s> {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
         inst.words.leading_spaces_mut().trim_leading();
         if inst.opcode() != Opcode::Label {
-            let indent = Token::new(self.indent.clone(), SpaceToken::from(self.indent.clone()));
+            let indent = Token::from(SpaceToken::from(self.indent.clone()));
             inst.words.leading_spaces_mut().push_front(indent);
         }
         let trailing = inst.words.trailing_spaces_mut();
         trailing.trim_trailing();
-        if let Some(tok) = trailing.tokens_mut().last_mut() {
-            if matches!(tok.kind, TokenKind::LineComment(_)) {
-                tok.line_comment_trim_trailing();
-            }
+        if let Some(Token::LineComment(c)) = trailing.tokens_mut().last_mut() {
+            c.trim_trailing();
         }
     }
 
     fn visit_empty(&mut self, empty: &mut Spaces<'s>) {
         let len_before = empty.len();
         empty.trim_leading();
-        if let Some(tok) = empty.tokens_mut().first_mut() {
-            if matches!(tok.kind, TokenKind::LineComment(_)) {
-                tok.line_comment_trim_trailing();
-                if empty.len() != len_before {
-                    let indent =
-                        Token::new(self.indent.clone(), SpaceToken::from(self.indent.clone()));
-                    empty.push_front(indent);
-                }
+        if let Some(Token::LineComment(c)) = empty.tokens_mut().first_mut() {
+            c.trim_trailing();
+            if empty.len() != len_before {
+                let indent = Token::from(SpaceToken::from(self.indent.clone()));
+                empty.push_front(indent);
             }
         }
     }
@@ -93,43 +88,33 @@ mod tests {
             inner: Box::new(Cst::Block {
                 nodes: vec![
                     Cst::Empty(Spaces::from(vec![
-                        Token::new(
-                            b"; start",
-                            LineCommentToken {
-                                text: b" start",
-                                style: LineCommentStyle::Semi,
-                                errors: EnumSet::empty(),
-                            },
-                        ),
-                        Token::new(b"\n", LineTermToken::from(LineTermStyle::Lf)),
+                        Token::from(LineCommentToken {
+                            text: b" start",
+                            style: LineCommentStyle::Semi,
+                            errors: EnumSet::empty(),
+                        }),
+                        Token::from(LineTermToken::from(LineTermStyle::Lf)),
                     ])),
                     Cst::Inst(Inst {
                         words: Words {
                             space_before: Spaces::new(),
                             words: vec![
                                 (
-                                    Token::new(
-                                        b"label",
-                                        MnemonicToken {
-                                            mnemonic: b"label".into(),
-                                            opcode: Opcode::Label,
-                                        },
-                                    ),
-                                    Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
+                                    Token::from(MnemonicToken {
+                                        mnemonic: b"label".into(),
+                                        opcode: Opcode::Label,
+                                    }),
+                                    Spaces::from(Token::from(SpaceToken::from(b" "))),
                                 ),
                                 (
-                                    Token::new(
-                                        b"start",
-                                        LabelToken {
-                                            label: b"start".into(),
-                                            style: LabelStyle::NoSigil,
-                                            errors: EnumSet::empty(),
-                                        },
-                                    ),
-                                    Spaces::from(Token::new(
-                                        b"\n",
-                                        LineTermToken::from(LineTermStyle::Lf),
-                                    )),
+                                    Token::from(LabelToken {
+                                        label: b"start".into(),
+                                        style: LabelStyle::NoSigil,
+                                        errors: EnumSet::empty(),
+                                    }),
+                                    Spaces::from(Token::from(LineTermToken::from(
+                                        LineTermStyle::Lf,
+                                    ))),
                                 ),
                             ],
                         },
@@ -139,41 +124,31 @@ mod tests {
                     Cst::Inst(Inst {
                         words: Words {
                             space_before: Spaces::from(vec![
-                                Token::new(b"    ", SpaceToken::from(b"    ")),
-                                Token::new(
-                                    b"{-1-}",
-                                    BlockCommentToken {
-                                        text: b"1",
-                                        style: BlockCommentStyle::Haskell,
-                                        errors: EnumSet::empty(),
-                                    },
-                                ),
-                                Token::new(b"  ", SpaceToken::from(b"  ")),
+                                Token::from(SpaceToken::from(b"    ")),
+                                Token::from(BlockCommentToken {
+                                    text: b"1",
+                                    style: BlockCommentStyle::Haskell,
+                                    errors: EnumSet::empty(),
+                                }),
+                                Token::from(SpaceToken::from(b"  ")),
                             ]),
                             words: vec![
                                 (
-                                    Token::new(
-                                        b"push",
-                                        MnemonicToken {
-                                            mnemonic: b"push".into(),
-                                            opcode: Opcode::Push,
-                                        },
-                                    ),
-                                    Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
+                                    Token::from(MnemonicToken {
+                                        mnemonic: b"push".into(),
+                                        opcode: Opcode::Push,
+                                    }),
+                                    Spaces::from(Token::from(SpaceToken::from(b" "))),
                                 ),
                                 (
-                                    Token::new(
-                                        b"1",
-                                        IntegerToken {
-                                            literal: b"1".into(),
-                                            value: Integer::from(1),
-                                            ..Default::default()
-                                        },
-                                    ),
-                                    Spaces::from(Token::new(
-                                        b"\n",
-                                        LineTermToken::from(LineTermStyle::Lf),
-                                    )),
+                                    Token::from(IntegerToken {
+                                        literal: b"1".into(),
+                                        value: Integer::from(1),
+                                        ..Default::default()
+                                    }),
+                                    Spaces::from(Token::from(LineTermToken::from(
+                                        LineTermStyle::Lf,
+                                    ))),
                                 ),
                             ],
                         },
@@ -181,53 +156,38 @@ mod tests {
                         valid_types: true,
                     }),
                     Cst::Empty(Spaces::from(vec![
-                        Token::new(b"    ", SpaceToken::from(b"    ")),
-                        Token::new(
-                            b"; 2",
-                            LineCommentToken {
-                                text: b" 2",
-                                style: LineCommentStyle::Semi,
-                                errors: EnumSet::empty(),
-                            },
-                        ),
-                        Token::new(b"\n", LineTermToken::from(LineTermStyle::Lf)),
+                        Token::from(SpaceToken::from(b"    ")),
+                        Token::from(LineCommentToken {
+                            text: b" 2",
+                            style: LineCommentStyle::Semi,
+                            errors: EnumSet::empty(),
+                        }),
+                        Token::from(LineTermToken::from(LineTermStyle::Lf)),
                     ])),
                     Cst::Inst(Inst {
                         words: Words {
-                            space_before: Spaces::from(Token::new(
-                                b"    ",
-                                SpaceToken::from(b"    "),
-                            )),
+                            space_before: Spaces::from(Token::from(SpaceToken::from(b"    "))),
                             words: vec![
                                 (
-                                    Token::new(
-                                        b"push",
-                                        MnemonicToken {
-                                            mnemonic: b"push".into(),
-                                            opcode: Opcode::Push,
-                                        },
-                                    ),
-                                    Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
+                                    Token::from(MnemonicToken {
+                                        mnemonic: b"push".into(),
+                                        opcode: Opcode::Push,
+                                    }),
+                                    Spaces::from(Token::from(SpaceToken::from(b" "))),
                                 ),
                                 (
-                                    Token::new(
-                                        b"2",
-                                        IntegerToken {
-                                            literal: b"2".into(),
-                                            value: Integer::from(2),
-                                            ..Default::default()
-                                        },
-                                    ),
+                                    Token::from(IntegerToken {
+                                        literal: b"2".into(),
+                                        value: Integer::from(2),
+                                        ..Default::default()
+                                    }),
                                     Spaces::from(vec![
-                                        Token::new(
-                                            b"{-2-}",
-                                            BlockCommentToken {
-                                                text: b"2",
-                                                style: BlockCommentStyle::Haskell,
-                                                errors: EnumSet::empty(),
-                                            },
-                                        ),
-                                        Token::new(b"", EofToken),
+                                        Token::from(BlockCommentToken {
+                                            text: b"2",
+                                            style: BlockCommentStyle::Haskell,
+                                            errors: EnumSet::empty(),
+                                        }),
+                                        Token::from(EofToken),
                                     ]),
                                 ),
                             ],

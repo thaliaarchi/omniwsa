@@ -10,7 +10,7 @@ use crate::{
     dialects::palaiologos::lex::Lexer,
     lex::Lex,
     syntax::Opcode,
-    tokens::{mnemonics::AsciiLower, Token, TokenKind},
+    tokens::{mnemonics::AsciiLower, Token},
 };
 
 /// State for parsing the Palaiologos Whitespace assembly dialect.
@@ -86,7 +86,7 @@ impl Palaiologos {
         let mut tokens = Vec::new();
         loop {
             let tok = lex.next_token();
-            if matches!(tok.kind, TokenKind::Eof(_)) {
+            if matches!(tok, Token::Eof(_)) {
                 return tokens;
             }
             tokens.push(tok);

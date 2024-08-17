@@ -26,27 +26,13 @@ use crate::{
 // - Store byte string uniformly, instead of a mix of &[u8] and Cow.
 //   - Create utilities for slicing and manipulating easier than Cow.
 //   - Display it as conventionally UTF-8.
-// - Move `Token::text` into token variants, so text is not stored redundantly,
-//   and rename `TokenKind` -> `Token`. For example, the line comment prefix
-//   needs to be manipulated in both `Token::text` and `LineComment::prefix`.
-// - Extract each token as a struct to manage manipulation routines.
 // - Make UTF-8 error a first-class token.
 // - Add LineTerm kind (i.e., LF, CRLF, CR).
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
-#[derive(Clone, DebugCustom, PartialEq, Eq)]
-pub struct Token<'s> {
-    /// The raw text of this token.
-    #[debug("{:?}", text.as_bstr())]
-    pub text: Cow<'s, [u8]>,
-    /// The data of this token, including its kind.
-    pub kind: TokenKind<'s>,
-}
-
-/// A kind of token.
-#[derive(Clone, PartialEq, Eq, From)]
-pub enum TokenKind<'s> {
+#[derive(Clone, Default, PartialEq, Eq, From)]
+pub enum Token<'s> {
     /// Instruction or predefined macro opcode.
     Mnemonic(MnemonicToken<'s>),
     /// Integer literal.
@@ -84,6 +70,7 @@ pub enum TokenKind<'s> {
     /// An erroneous sequence.
     Error(ErrorToken<'s>),
     /// A placeholder variant for internal use.
+    #[default]
     Placeholder,
 }
 
@@ -142,22 +129,13 @@ pub enum ErrorToken<'s> {
 }
 
 impl<'s> Token<'s> {
-    /// Constructs a new token.
-    #[inline]
-    pub fn new<S: Into<Cow<'s, [u8]>>, T: Into<TokenKind<'s>>>(text: S, kind: T) -> Self {
-        Token {
-            text: text.into(),
-            kind: kind.into(),
-        }
-    }
-
     /// Unwrap non-semantic splices and quotes.
     pub fn unwrap(&self) -> &Token<'s> {
         let mut tok = self;
         loop {
-            match &tok.kind {
-                TokenKind::Quoted(QuotedToken { inner, .. })
-                | TokenKind::Spliced(SplicedToken { spliced: inner, .. }) => {
+            match tok {
+                Token::Quoted(QuotedToken { inner, .. })
+                | Token::Spliced(SplicedToken { spliced: inner, .. }) => {
                     tok = inner;
                 }
                 _ => return tok,
@@ -169,9 +147,9 @@ impl<'s> Token<'s> {
     pub fn unwrap_mut(&mut self) -> &mut Token<'s> {
         let mut tok = self;
         loop {
-            match tok.kind {
-                TokenKind::Quoted(QuotedToken { ref mut inner, .. })
-                | TokenKind::Spliced(SplicedToken {
+            match tok {
+                Token::Quoted(QuotedToken { ref mut inner, .. })
+                | Token::Spliced(SplicedToken {
                     spliced: ref mut inner,
                     ..
                 }) => {
@@ -179,26 +157,6 @@ impl<'s> Token<'s> {
                 }
                 _ => return tok,
             }
-        }
-    }
-
-    /// Trim trailing whitespace in a line comment.
-    pub fn line_comment_trim_trailing(&mut self) {
-        match &mut self.kind {
-            TokenKind::LineComment(c) => {
-                let i = c
-                    .text
-                    .iter()
-                    .rposition(|&b| b != b' ' && b != b'\t')
-                    .map(|i| i + 1)
-                    .unwrap_or(0);
-                c.text = &c.text[..i];
-                match &mut self.text {
-                    Cow::Borrowed(text) => *text = &text[..c.style.prefix().len() + i],
-                    Cow::Owned(text) => text.truncate(c.style.prefix().len() + i),
-                }
-            }
-            _ => panic!("not a line comment"),
         }
     }
 }
@@ -214,26 +172,26 @@ impl VariableStyle {
 
 impl HasError for Token<'_> {
     fn has_error(&self) -> bool {
-        match &self.kind {
-            TokenKind::Mnemonic(m) => m.has_error(),
-            TokenKind::Integer(i) => i.has_error(),
-            TokenKind::String(s) => s.has_error(),
-            TokenKind::Char(c) => c.has_error(),
-            TokenKind::Variable(v) => v.has_error(),
-            TokenKind::Label(l) => l.has_error(),
-            TokenKind::LabelColon(l) => l.has_error(),
-            TokenKind::InstSep(i) => i.has_error(),
-            TokenKind::ArgSep(a) => a.has_error(),
-            TokenKind::Space(s) => s.has_error(),
-            TokenKind::LineTerm(l) => l.has_error(),
-            TokenKind::Eof(e) => e.has_error(),
-            TokenKind::LineComment(l) => l.has_error(),
-            TokenKind::BlockComment(b) => b.has_error(),
-            TokenKind::Word(w) => w.has_error(),
-            TokenKind::Quoted(q) => q.has_error(),
-            TokenKind::Spliced(s) => s.has_error(),
-            TokenKind::Error(e) => e.has_error(),
-            TokenKind::Placeholder => panic!("placeholder"),
+        match self {
+            Token::Mnemonic(m) => m.has_error(),
+            Token::Integer(i) => i.has_error(),
+            Token::String(s) => s.has_error(),
+            Token::Char(c) => c.has_error(),
+            Token::Variable(v) => v.has_error(),
+            Token::Label(l) => l.has_error(),
+            Token::LabelColon(l) => l.has_error(),
+            Token::InstSep(i) => i.has_error(),
+            Token::ArgSep(a) => a.has_error(),
+            Token::Space(s) => s.has_error(),
+            Token::LineTerm(l) => l.has_error(),
+            Token::Eof(e) => e.has_error(),
+            Token::LineComment(l) => l.has_error(),
+            Token::BlockComment(b) => b.has_error(),
+            Token::Word(w) => w.has_error(),
+            Token::Quoted(q) => q.has_error(),
+            Token::Spliced(s) => s.has_error(),
+            Token::Error(e) => e.has_error(),
+            Token::Placeholder => panic!("placeholder"),
         }
     }
 }
@@ -291,28 +249,28 @@ impl Pretty for ErrorToken<'_> {
     }
 }
 
-impl Debug for TokenKind<'_> {
+impl Debug for Token<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            TokenKind::Mnemonic(m) => Debug::fmt(m, f),
-            TokenKind::Integer(i) => Debug::fmt(i, f),
-            TokenKind::Char(c) => Debug::fmt(c, f),
-            TokenKind::String(s) => Debug::fmt(s, f),
-            TokenKind::Variable(v) => Debug::fmt(v, f),
-            TokenKind::Label(l) => Debug::fmt(l, f),
-            TokenKind::LabelColon(l) => Debug::fmt(l, f),
-            TokenKind::Space(s) => Debug::fmt(s, f),
-            TokenKind::LineTerm(l) => Debug::fmt(l, f),
-            TokenKind::Eof(e) => Debug::fmt(e, f),
-            TokenKind::InstSep(u) => Debug::fmt(u, f),
-            TokenKind::ArgSep(a) => Debug::fmt(a, f),
-            TokenKind::LineComment(l) => Debug::fmt(l, f),
-            TokenKind::BlockComment(b) => Debug::fmt(b, f),
-            TokenKind::Word(w) => Debug::fmt(w, f),
-            TokenKind::Quoted(q) => Debug::fmt(q, f),
-            TokenKind::Spliced(s) => Debug::fmt(s, f),
-            TokenKind::Error(err) => f.debug_tuple("Error").field(err).finish(),
-            TokenKind::Placeholder => write!(f, "Placeholder"),
+            Token::Mnemonic(m) => Debug::fmt(m, f),
+            Token::Integer(i) => Debug::fmt(i, f),
+            Token::Char(c) => Debug::fmt(c, f),
+            Token::String(s) => Debug::fmt(s, f),
+            Token::Variable(v) => Debug::fmt(v, f),
+            Token::Label(l) => Debug::fmt(l, f),
+            Token::LabelColon(l) => Debug::fmt(l, f),
+            Token::Space(s) => Debug::fmt(s, f),
+            Token::LineTerm(l) => Debug::fmt(l, f),
+            Token::Eof(e) => Debug::fmt(e, f),
+            Token::InstSep(u) => Debug::fmt(u, f),
+            Token::ArgSep(a) => Debug::fmt(a, f),
+            Token::LineComment(l) => Debug::fmt(l, f),
+            Token::BlockComment(b) => Debug::fmt(b, f),
+            Token::Word(w) => Debug::fmt(w, f),
+            Token::Quoted(q) => Debug::fmt(q, f),
+            Token::Spliced(s) => Debug::fmt(s, f),
+            Token::Error(err) => f.debug_tuple("Error").field(err).finish(),
+            Token::Placeholder => write!(f, "Placeholder"),
         }
     }
 }

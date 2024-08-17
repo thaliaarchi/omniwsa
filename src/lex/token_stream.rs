@@ -2,7 +2,7 @@
 
 use std::mem;
 
-use crate::tokens::{Token, TokenKind};
+use crate::tokens::Token;
 
 /// A lexical scanner for some Whitespace assembly dialect.
 pub trait Lex<'s> {
@@ -25,9 +25,9 @@ impl<'s, L: Lex<'s>> TokenStream<'s, L> {
         TokenStream { lex: lexer, tok }
     }
 
-    /// Returns the kind of the current token.
-    pub fn curr(&self) -> &TokenKind<'s> {
-        &self.tok.kind
+    /// Returns the current token.
+    pub fn curr(&self) -> &Token<'s> {
+        &self.tok
     }
 
     /// Returns the current token and advances to the next token.
@@ -37,6 +37,6 @@ impl<'s, L: Lex<'s>> TokenStream<'s, L> {
 
     /// Returns whether the parser is at EOF.
     pub fn eof(&self) -> bool {
-        matches!(self.curr(), TokenKind::Eof(_))
+        matches!(self.curr(), Token::Eof(_))
     }
 }

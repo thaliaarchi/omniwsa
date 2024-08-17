@@ -15,7 +15,7 @@ use crate::{
         spaces::Spaces,
         string::{QuoteStyle, StringData, StringToken},
         words::Words,
-        ErrorToken, SplicedToken, Token, TokenKind, VariableStyle, VariableToken,
+        ErrorToken, SplicedToken, Token, VariableStyle, VariableToken,
     },
 };
 
@@ -53,7 +53,7 @@ impl<'s> Iterator for Parser<'s, '_> {
         }
 
         let mut words = Words::new(self.space());
-        while matches!(self.toks.curr(), TokenKind::Word(_) | TokenKind::Quoted(_)) {
+        while matches!(self.toks.curr(), Token::Word(_) | Token::Quoted(_)) {
             let word = self.toks.advance();
             let space = self.space();
             match words.words.last_mut() {
@@ -68,14 +68,12 @@ impl<'s> Iterator for Parser<'s, '_> {
         }
 
         let space_after = words.trailing_spaces_mut();
-        if matches!(self.toks.curr(), TokenKind::LineComment(_)) {
+        if matches!(self.toks.curr(), Token::LineComment(_)) {
             space_after.push(self.toks.advance());
         }
         debug_assert!(matches!(
             self.toks.curr(),
-            TokenKind::LineTerm(_)
-                | TokenKind::Eof(_)
-                | TokenKind::Error(ErrorToken::InvalidUtf8 { .. }),
+            Token::LineTerm(_) | Token::Eof(_) | Token::Error(ErrorToken::InvalidUtf8 { .. }),
         ));
         space_after.push(self.toks.advance());
 
@@ -96,10 +94,7 @@ impl<'s> Parser<'s, '_> {
     /// Consumes space and block comment tokens.
     fn space(&mut self) -> Spaces<'s> {
         let mut space = Spaces::new();
-        while matches!(
-            self.toks.curr(),
-            TokenKind::Space(_) | TokenKind::BlockComment(_)
-        ) {
+        while matches!(self.toks.curr(), Token::Space(_) | Token::BlockComment(_)) {
             space.push(self.toks.advance());
         }
         space
@@ -109,10 +104,12 @@ impl<'s> Parser<'s, '_> {
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
         let ((mnemonic, _), args) = inst.words.words.split_first_mut().unwrap();
         let mnemonic = mnemonic.unwrap_mut();
-        debug_assert!(matches!(mnemonic.kind, TokenKind::Word(_)));
+        let Token::Word(mnemonic_word) = mnemonic else {
+            panic!("unhandled token");
+        };
         let opcodes = self
             .dialect
-            .get_opcodes(&mnemonic.text)
+            .get_opcodes(&mnemonic_word.word)
             .unwrap_or(&[Opcode::Invalid]);
         debug_assert!(opcodes.len() > 0);
 
@@ -126,8 +123,8 @@ impl<'s> Parser<'s, '_> {
             if args.len() >= types.len() || i == 0 {
                 inst.valid_arity = args.len() == types.len() || opcode == Opcode::Invalid;
                 inst.valid_types = valid;
-                mnemonic.kind = TokenKind::from(MnemonicToken {
-                    mnemonic: mnemonic.text.clone(),
+                *mnemonic = Token::from(MnemonicToken {
+                    mnemonic: mem::take(&mut mnemonic_word.word),
                     opcode,
                 });
                 // Process the remaining arguments.
@@ -143,11 +140,11 @@ impl<'s> Parser<'s, '_> {
     /// Parses an argument according to its type and returns whether it is
     /// valid.
     fn parse_arg(&mut self, tok: &mut Token<'_>, ty: ArgType) -> bool {
-        let quoted = matches!(tok.kind, TokenKind::Quoted(_));
+        let quoted = matches!(tok, Token::Quoted(_));
         let inner = tok.unwrap_mut();
-        if !matches!(inner.kind, TokenKind::Word(_)) {
+        let Token::Word(inner_word) = inner else {
             return true;
-        }
+        };
 
         if ty == ArgType::Include || ty == ArgType::Option {
             return true;
@@ -155,8 +152,8 @@ impl<'s> Parser<'s, '_> {
 
         // Parse it as a label.
         if ty == ArgType::Label {
-            inner.kind = TokenKind::from(LabelToken {
-                label: inner.text.clone(),
+            *inner = Token::from(LabelToken {
+                label: mem::take(&mut inner_word.word),
                 style: LabelStyle::NoSigil,
                 errors: EnumSet::empty(),
             });
@@ -164,12 +161,12 @@ impl<'s> Parser<'s, '_> {
         }
 
         // Try to parse it as a variable.
-        if inner.text.starts_with(b"_") {
-            let ident = match &inner.text {
+        if inner_word.word.starts_with(b"_") {
+            let ident = match &inner_word.word {
                 Cow::Borrowed(text) => text[1..].into(),
                 Cow::Owned(text) => text[1..].to_vec().into(),
             };
-            inner.kind = TokenKind::from(VariableToken {
+            *inner = Token::from(VariableToken {
                 ident,
                 style: VariableStyle::UnderscoreSigil,
             });
@@ -178,34 +175,36 @@ impl<'s> Parser<'s, '_> {
 
         // Try to parse it as an integer.
         if ty == ArgType::Integer || ty == ArgType::Variable && !quoted {
-            let text = match inner.text.clone() {
+            let text = match inner_word.word.clone() {
                 Cow::Borrowed(text) => str::from_utf8(text).unwrap().into(),
                 Cow::Owned(text) => String::from_utf8(text).unwrap().into(),
             };
             let int = IntegerToken::parse_haskell(text, &mut self.digit_buf);
             if ty == ArgType::Integer || !int.has_error() {
-                inner.kind = TokenKind::from(int);
+                *inner = Token::from(int);
                 return ty == ArgType::Integer;
             }
         }
 
         // Convert it to a string, including quotes if quoted.
-        let tok = match &mut tok.kind {
-            TokenKind::Spliced(s) => &mut s.spliced,
+        let tok = match tok {
+            Token::Spliced(s) => &mut s.spliced,
             _ => tok,
         };
-        tok.kind = match mem::replace(&mut tok.kind, TokenKind::Placeholder) {
-            TokenKind::Word(_) => TokenKind::from(StringToken {
-                literal: tok.text.clone(),
-                unescaped: StringData::from_utf8(tok.text.clone()).unwrap(),
+        *tok = match mem::take(tok) {
+            Token::Word(w) => Token::from(StringToken {
+                literal: w.word.clone(),
+                unescaped: StringData::from_utf8(w.word.clone()).unwrap(),
                 quotes: QuoteStyle::Bare,
                 errors: EnumSet::empty(),
             }),
-            TokenKind::Quoted(q) => {
-                debug_assert!(matches!(q.inner.kind, TokenKind::Word(_)));
-                TokenKind::from(StringToken {
-                    literal: q.inner.text.clone(),
-                    unescaped: StringData::from_utf8(q.inner.text).unwrap(),
+            Token::Quoted(q) => {
+                let Token::Word(w) = *q.inner else {
+                    panic!("unhandled token");
+                };
+                Token::from(StringToken {
+                    literal: w.word.clone(),
+                    unescaped: StringData::from_utf8(w.word).unwrap(),
                     quotes: q.quotes,
                     errors: EnumSet::empty(),
                 })
@@ -221,27 +220,29 @@ fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Spaces<'s>, rhs: &Token<'s>
     space
         .tokens
         .iter()
-        .all(|tok| matches!(tok.kind, TokenKind::BlockComment(_)))
-        && matches!(lhs.kind, TokenKind::Word(_) | TokenKind::Spliced(_))
-        && matches!(rhs.kind, TokenKind::Word(_))
+        .all(|tok| matches!(tok, Token::BlockComment(_)))
+        && matches!(lhs, Token::Word(_) | Token::Spliced(_))
+        && matches!(rhs, Token::Word(_))
 }
 
 /// Splices adjacent tokens, if they are only separated by block comments.
 fn splice_tokens<'s>(lhs: &mut Token<'s>, space: &mut Spaces<'s>, rhs: Token<'s>) {
-    if matches!(lhs.kind, TokenKind::Word(_)) {
-        lhs.kind = TokenKind::from(SplicedToken {
-            tokens: vec![lhs.clone()],
-            spliced: Box::new(lhs.clone()),
+    if matches!(lhs, Token::Word(_)) {
+        let spliced = lhs.clone();
+        *lhs = Token::from(SplicedToken {
+            tokens: vec![mem::take(lhs)],
+            spliced: Box::new(spliced),
         });
     }
-    match &mut lhs.kind {
-        TokenKind::Spliced(s) => {
-            let text = lhs.text.to_mut();
-            for tok in &space.tokens {
-                text.extend_from_slice(&tok.text);
-            }
-            text.extend_from_slice(&rhs.text);
-            s.spliced.text.to_mut().extend_from_slice(&rhs.text);
+    match lhs {
+        Token::Spliced(s) => {
+            let Token::Word(spliced) = &mut *s.spliced else {
+                panic!("unhandled token");
+            };
+            let Token::Word(rhs_word) = &rhs else {
+                panic!("unhandled token");
+            };
+            spliced.word.to_mut().extend_from_slice(&rhs_word.word);
             s.tokens.reserve(space.tokens.len() + 1);
             s.tokens.append(&mut space.tokens);
             s.tokens.push(rhs);
