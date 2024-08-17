@@ -17,6 +17,7 @@ pub trait Pretty {
 impl Pretty for Token<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         match &self.kind {
+            TokenKind::Integer(i) => i.pretty(buf),
             TokenKind::String(s) => s.pretty(buf),
             TokenKind::Char(c) => c.pretty(buf),
             TokenKind::Space(s) => s.pretty(buf),

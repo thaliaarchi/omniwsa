@@ -49,7 +49,7 @@ pub enum TokenKind<'s> {
     /// Instruction or predefined macro opcode.
     Opcode(Opcode),
     /// Integer literal.
-    Integer(IntegerToken),
+    Integer(IntegerToken<'s>),
     /// String literal.
     String(StringToken<'s>),
     /// Character literal.

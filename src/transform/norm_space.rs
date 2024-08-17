@@ -152,6 +152,7 @@ mod tests {
                                     Token::new(
                                         b"1",
                                         IntegerToken {
+                                            literal: b"1".into(),
                                             value: Integer::from(1),
                                             ..Default::default()
                                         },
@@ -193,6 +194,7 @@ mod tests {
                                     Token::new(
                                         b"2",
                                         IntegerToken {
+                                            literal: b"2".into(),
                                             value: Integer::from(2),
                                             ..Default::default()
                                         },

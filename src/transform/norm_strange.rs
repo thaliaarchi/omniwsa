@@ -112,6 +112,7 @@ mod tests {
                                 Token::new(
                                     b"42",
                                     TokenKind::Integer(IntegerToken {
+                                        literal: b"42".into(),
                                         value: Integer::from(42),
                                         ..Default::default()
                                     }),

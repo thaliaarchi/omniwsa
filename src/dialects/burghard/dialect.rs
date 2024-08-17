@@ -233,6 +233,7 @@ mod tests {
                                 inner: Box::new(Token::new(
                                     b"2",
                                     IntegerToken {
+                                        literal: b"2".into(),
                                         value: Integer::from(2),
                                         ..Default::default()
                                     },

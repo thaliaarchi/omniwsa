@@ -1,17 +1,24 @@
 //! Integer literal parsing and token.
 
+use std::borrow::Cow;
+
+use bstr::ByteSlice;
+use derive_more::Debug as DebugCustom;
 use enumset::{EnumSet, EnumSetType};
 pub use rug::Integer;
 
-use crate::syntax::HasError;
+use crate::syntax::{HasError, Pretty};
 
 // TODO:
 // - Create a integer syntax description struct for dialects to construct, to
 //   make parsing and conversions modular.
 
 /// An integer literal token.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct IntegerToken {
+#[derive(Clone, DebugCustom, Default, PartialEq, Eq)]
+pub struct IntegerToken<'s> {
+    /// The literal integer including formatting.
+    #[debug("{:?}", literal.as_bstr())]
+    pub literal: Cow<'s, [u8]>,
     /// The parsed value represented by the integer literal.
     pub value: Integer,
     /// The sign of the integer literal.
@@ -73,35 +80,32 @@ pub enum IntegerError {
     UnpairedParen,
 }
 
-impl IntegerToken {
+impl<'s> IntegerToken<'s> {
+    /// Constructs a new, empty integer token.
+    pub fn new() -> Self {
+        IntegerToken::default()
+    }
+
     /// Parses the byte string as digits in the given base with optional `_`
     /// digit separators.
-    pub fn parse_digits(
-        s: &[u8],
-        sign: IntegerSign,
-        base: IntegerBase,
-        digits: &mut Vec<u8>,
-    ) -> IntegerToken {
+    pub fn parse_digits(&mut self, s: &[u8], digits: &mut Vec<u8>) {
         digits.clear();
-        let mut errors = EnumSet::new();
 
-        let leading_zeros = s.iter().take_while(|&&ch| ch == b'0').count();
-        let s = &s[leading_zeros..];
+        self.leading_zeros = s.iter().take_while(|&&ch| ch == b'0').count();
+        let s = &s[self.leading_zeros..];
 
-        let mut value = Integer::new();
-        let mut has_digit_sep = false;
         if !s.is_empty() {
             digits.reserve(s.len());
-            match base {
+            match self.base {
                 IntegerBase::Decimal => {
                     for &b in s {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 10 {
                             if digit == b'_' - b'0' {
-                                has_digit_sep = true;
+                                self.has_digit_sep = true;
                                 continue;
                             }
-                            errors |= IntegerError::InvalidDigit;
+                            self.errors |= IntegerError::InvalidDigit;
                             break;
                         }
                         digits.push(digit);
@@ -115,10 +119,10 @@ impl IntegerToken {
                             b'A'..=b'F' => b - b'A' + 10,
                             _ => {
                                 if b == b'_' {
-                                    has_digit_sep = true;
+                                    self.has_digit_sep = true;
                                     continue;
                                 }
-                                errors |= IntegerError::InvalidDigit;
+                                self.errors |= IntegerError::InvalidDigit;
                                 break;
                             }
                         };
@@ -130,10 +134,10 @@ impl IntegerToken {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 8 {
                             if digit == b'_' - b'0' {
-                                has_digit_sep = true;
+                                self.has_digit_sep = true;
                                 continue;
                             }
-                            errors |= IntegerError::InvalidDigit;
+                            self.errors |= IntegerError::InvalidDigit;
                             break;
                         }
                         digits.push(digit);
@@ -144,10 +148,10 @@ impl IntegerToken {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 2 {
                             if digit == b'_' - b'0' {
-                                has_digit_sep = true;
+                                self.has_digit_sep = true;
                                 continue;
                             }
-                            errors |= IntegerError::InvalidDigit;
+                            self.errors |= IntegerError::InvalidDigit;
                             break;
                         }
                         digits.push(digit);
@@ -156,19 +160,14 @@ impl IntegerToken {
             }
             // SAFETY: Digits are constructed to be in range for the base.
             unsafe {
-                value.assign_bytes_radix_unchecked(digits, base as i32, sign == IntegerSign::Neg);
+                self.value.assign_bytes_radix_unchecked(
+                    digits,
+                    self.base as i32,
+                    self.sign == IntegerSign::Neg,
+                );
             }
-        } else if leading_zeros == 0 {
-            errors |= IntegerError::NoDigits;
-        }
-
-        IntegerToken {
-            value,
-            sign,
-            base,
-            leading_zeros,
-            has_digit_sep,
-            errors,
+        } else if self.leading_zeros == 0 {
+            self.errors |= IntegerError::NoDigits;
         }
     }
 
@@ -247,32 +246,42 @@ impl IntegerToken {
     ///         ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadP.html#v:readP_to_S))
     ///   - [`GHC.Err.errorWithoutStackTrace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Err.hs#L42-47)
     ///     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
-    pub fn parse_haskell(s: &str, digits: &mut Vec<u8>) -> Self {
-        let (sign, s, sign_errors) = IntegerToken::strip_haskell_sign(s);
-        let (base, s) = IntegerToken::strip_base_rust(s.as_bytes());
-        let mut int = IntegerToken::parse_digits(s, sign, base, digits);
+    pub fn parse_haskell(literal: Cow<'s, str>, digits: &mut Vec<u8>) -> Self {
+        let mut int = IntegerToken::new();
+        let (sign, s, sign_errors) = IntegerToken::strip_haskell_sign(&literal);
+        int.sign = sign;
         int.errors |= sign_errors;
+        let (base, s) = IntegerToken::strip_base_rust(s.as_bytes());
+        int.base = base;
         if base == IntegerBase::Binary {
             int.errors |= IntegerError::InvalidBase;
         }
+        int.parse_digits(s, digits);
         if int.has_digit_sep {
             int.errors |= IntegerError::InvalidDigitSep;
         }
+        int.literal = match literal {
+            Cow::Borrowed(s) => Cow::Borrowed(s.as_bytes()),
+            Cow::Owned(s) => Cow::Owned(s.into_bytes()),
+        };
         int
     }
 
     /// Parses an integer with Palaiologos syntax, given a buffer of digits to
     /// reuse allocations.
-    pub fn parse_palaiologos(s: &[u8], digits: &mut Vec<u8>) -> Self {
-        let (sign, s) = match s.split_first() {
+    pub fn parse_palaiologos(literal: Cow<'s, [u8]>, digits: &mut Vec<u8>) -> Self {
+        let mut int = IntegerToken::new();
+        let (sign, s) = match literal.split_first() {
             Some((b'-', s)) => (IntegerSign::Neg, s),
-            _ => (IntegerSign::None, s),
+            _ => (IntegerSign::None, &*literal),
         };
+        int.sign = sign;
         let (base, s) = IntegerToken::strip_base_palaiologos(s);
-        let mut int = IntegerToken::parse_digits(s, sign, base, digits);
+        int.base = base;
         if base == IntegerBase::Octal {
             int.errors |= IntegerError::InvalidBase;
         }
+        int.parse_digits(s, digits);
         if int.has_digit_sep {
             int.errors |= IntegerError::InvalidDigitSep;
         }
@@ -374,14 +383,22 @@ impl IntegerToken {
     }
 }
 
-impl HasError for IntegerToken {
+impl HasError for IntegerToken<'_> {
     fn has_error(&self) -> bool {
         !self.errors.is_empty()
     }
 }
 
+impl Pretty for IntegerToken<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.literal.pretty(buf);
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use enumset::EnumSet;
 
     use crate::tokens::integer::{Integer, IntegerBase, IntegerError, IntegerSign, IntegerToken};
@@ -395,11 +412,11 @@ mod tests {
 
     struct Test {
         input: String,
-        output: IntegerToken,
+        output: IntegerToken<'static>,
     }
 
     impl Test {
-        fn new<S: Into<String>>(
+        fn new<S: Into<String> + Clone>(
             input: S,
             output: &'static str,
             sign: IntegerSign,
@@ -409,8 +426,9 @@ mod tests {
             errors: EnumSet<IntegerError>,
         ) -> Self {
             Test {
-                input: input.into(),
+                input: input.clone().into(),
                 output: IntegerToken {
+                    literal: Cow::Owned(input.into().into_bytes()),
                     value: Integer::parse(output).unwrap().into(),
                     sign,
                     base,
@@ -572,7 +590,7 @@ mod tests {
         let mut digits = Vec::new();
         for test in tests {
             assert_eq!(
-                IntegerToken::parse_haskell(&test.input, &mut digits),
+                IntegerToken::parse_haskell(test.input.clone().into(), &mut digits),
                 test.output,
                 "IntegerToken::parse_haskell({:?})",
                 test.input,

@@ -83,7 +83,8 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
                     // Extend the syntax to handle octal, just for errors.
                     scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
-                    let int = IntegerToken::parse_palaiologos(scan.text(), &mut self.digit_buf);
+                    let int =
+                        IntegerToken::parse_palaiologos(scan.text().into(), &mut self.digit_buf);
                     scan.wrap(int)
                 }
             }
