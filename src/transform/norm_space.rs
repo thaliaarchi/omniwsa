@@ -76,6 +76,7 @@ mod tests {
             comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
             integer::{Integer, IntegerToken},
             label::{LabelStyle, LabelToken},
+            mnemonics::MnemonicToken,
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
             words::Words,
             Token,
@@ -107,7 +108,13 @@ mod tests {
                             space_before: Spaces::new(),
                             words: vec![
                                 (
-                                    Token::new(b"label", Opcode::Label),
+                                    Token::new(
+                                        b"label",
+                                        MnemonicToken {
+                                            mnemonic: b"label".into(),
+                                            opcode: Opcode::Label,
+                                        },
+                                    ),
                                     Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
                                 ),
                                 (
@@ -145,7 +152,13 @@ mod tests {
                             ]),
                             words: vec![
                                 (
-                                    Token::new(b"push", Opcode::Push),
+                                    Token::new(
+                                        b"push",
+                                        MnemonicToken {
+                                            mnemonic: b"push".into(),
+                                            opcode: Opcode::Push,
+                                        },
+                                    ),
                                     Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
                                 ),
                                 (
@@ -187,7 +200,13 @@ mod tests {
                             )),
                             words: vec![
                                 (
-                                    Token::new(b"push", Opcode::Push),
+                                    Token::new(
+                                        b"push",
+                                        MnemonicToken {
+                                            mnemonic: b"push".into(),
+                                            opcode: Opcode::Push,
+                                        },
+                                    ),
                                     Spaces::from(Token::new(b" ", SpaceToken::from(b" "))),
                                 ),
                                 (

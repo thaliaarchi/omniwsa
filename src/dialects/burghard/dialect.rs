@@ -92,6 +92,7 @@ mod tests {
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{Integer, IntegerToken},
+            mnemonics::MnemonicToken,
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
             string::{QuoteStyle, QuotedError, QuotedToken, StringData, StringToken},
             words::Words,
@@ -107,6 +108,15 @@ mod tests {
             }),
         }
     }];
+    macro_rules! mnemonic(($mnemonic:expr, $opcode:expr $(,)?) => {
+        Token::new(
+            $mnemonic,
+            MnemonicToken {
+                mnemonic: $mnemonic.into(),
+                opcode: $opcode,
+            },
+        )
+    });
     macro_rules! block_comment(($text:literal) => {
         Token::new(
             // TODO: Use concat_bytes! once stabilized.
@@ -148,7 +158,7 @@ mod tests {
                                     block_comment!("splice"),
                                     Token::new(b"world", WordToken),
                                 ],
-                                spliced: Box::new(Token::new(b"helloworld", Opcode::Invalid)),
+                                spliced: Box::new(mnemonic!(b"helloworld", Opcode::Invalid)),
                             },
                         ),
                         Spaces::from(vec![
@@ -186,7 +196,7 @@ mod tests {
                     Token::new(
                         "\"Debug_PrİntStacK".as_bytes(),
                         QuotedToken {
-                            inner: Box::new(Token::new(
+                            inner: Box::new(mnemonic!(
                                 "Debug_PrİntStacK".as_bytes(),
                                 Opcode::BurghardPrintStack,
                             )),
@@ -211,7 +221,7 @@ mod tests {
                 space_before: Spaces::new(),
                 words: vec![
                     (
-                        Token::new(b"valueinteger", Opcode::BurghardValueInteger),
+                        mnemonic!(b"valueinteger", Opcode::BurghardValueInteger),
                         space!(b" "),
                     ),
                     (
@@ -258,7 +268,7 @@ mod tests {
             Cst::Inst(Inst {
                 words: Words {
                     space_before: Spaces::new(),
-                    words: vec![(Token::new($letter, Opcode::Invalid), lf!())],
+                    words: vec![(mnemonic!($letter, Opcode::Invalid), lf!())],
                 },
                 valid_arity: true,
                 valid_types: true,
@@ -269,7 +279,7 @@ mod tests {
                 words: Words {
                     space_before: Spaces::new(),
                     words: vec![
-                        (Token::new(b"ifoption", Opcode::IfOption), space!(b" ")),
+                        (mnemonic!(b"ifoption", Opcode::IfOption), space!(b" ")),
                         (Token::new($option, WordToken), lf!()),
                     ],
                 },
@@ -282,7 +292,7 @@ mod tests {
                 words: Words {
                     space_before: Spaces::new(),
                     words: vec![
-                        (Token::new(b"elseifoption", Opcode::ElseIfOption), space!(b" ")),
+                        (mnemonic!(b"elseifoption", Opcode::ElseIfOption), space!(b" ")),
                         (Token::new($option, WordToken), lf!()),
                     ],
                 },
@@ -294,7 +304,7 @@ mod tests {
             Inst {
                 words: Words {
                     space_before: Spaces::new(),
-                    words: vec![(Token::new(b"elseoption", Opcode::ElseOption), lf!())],
+                    words: vec![(mnemonic!(b"elseoption", Opcode::ElseOption), lf!())],
                 },
                 valid_arity: true,
                 valid_types: true,
@@ -304,7 +314,7 @@ mod tests {
             Inst {
                 words: Words {
                     space_before: Spaces::new(),
-                    words: vec![(Token::new(b"endoption", Opcode::EndOption), lf!())],
+                    words: vec![(mnemonic!(b"endoption", Opcode::EndOption), lf!())],
                 },
                 valid_arity: true,
                 valid_types: true,

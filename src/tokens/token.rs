@@ -9,11 +9,12 @@ use bstr::ByteSlice;
 use derive_more::{Debug as DebugCustom, From};
 
 use crate::{
-    syntax::{HasError, Opcode},
+    syntax::HasError,
     tokens::{
         comment::{BlockCommentToken, LineCommentToken},
         integer::IntegerToken,
         label::{LabelColonToken, LabelToken},
+        mnemonics::MnemonicToken,
         spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken},
         string::{CharToken, QuotedToken, StringToken},
     },
@@ -47,7 +48,7 @@ pub struct Token<'s> {
 #[derive(Clone, PartialEq, Eq, From)]
 pub enum TokenKind<'s> {
     /// Instruction or predefined macro opcode.
-    Opcode(Opcode),
+    Mnemonic(MnemonicToken<'s>),
     /// Integer literal.
     Integer(IntegerToken<'s>),
     /// String literal.
@@ -186,7 +187,7 @@ impl<'s> Token<'s> {
 impl HasError for Token<'_> {
     fn has_error(&self) -> bool {
         match &self.kind {
-            TokenKind::Opcode(o) => o.has_error(),
+            TokenKind::Mnemonic(m) => m.has_error(),
             TokenKind::Integer(i) => i.has_error(),
             TokenKind::String(s) => s.has_error(),
             TokenKind::Char(c) => c.has_error(),
@@ -208,11 +209,6 @@ impl HasError for Token<'_> {
     }
 }
 
-impl HasError for Opcode {
-    fn has_error(&self) -> bool {
-        matches!(self, Opcode::Invalid)
-    }
-}
 impl HasError for VariableToken<'_> {
     fn has_error(&self) -> bool {
         false
@@ -237,7 +233,7 @@ impl HasError for ErrorToken {
 impl Debug for TokenKind<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            TokenKind::Opcode(opcode) => f.debug_tuple("Opcode").field(opcode).finish(),
+            TokenKind::Mnemonic(m) => Debug::fmt(m, f),
             TokenKind::Integer(i) => Debug::fmt(i, f),
             TokenKind::Char(c) => Debug::fmt(c, f),
             TokenKind::String(s) => Debug::fmt(s, f),

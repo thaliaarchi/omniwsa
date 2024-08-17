@@ -13,6 +13,7 @@ use crate::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
         integer::IntegerToken,
         label::{LabelError, LabelStyle, LabelToken},
+        mnemonics::MnemonicToken,
         spaces::{
             ArgSepStyle, ArgSepToken, EofToken, InstSepStyle, InstSepToken, LineTermStyle,
             LineTermToken, SpaceToken,
@@ -61,7 +62,13 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 let rest = &scan.src()[scan.start_offset()..];
                 if let Some((mnemonic, opcodes)) = scan_mnemonic(rest, self.dialect) {
                     scan.bump_bytes_no_lf(mnemonic.len() - 1);
-                    Token::new(mnemonic, opcodes[0])
+                    Token::new(
+                        mnemonic,
+                        MnemonicToken {
+                            mnemonic: mnemonic.into(),
+                            opcode: opcodes[0],
+                        },
+                    )
                 } else {
                     // Consume as much as possible for an error, until a valid
                     // mnemonic.
@@ -73,7 +80,10 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                         }
                         scan.next_byte();
                     }
-                    scan.wrap(Opcode::Invalid)
+                    scan.wrap(MnemonicToken {
+                        mnemonic: scan.text().into(),
+                        opcode: Opcode::Invalid,
+                    })
                 }
             }
             b @ (b'0'..=b'9' | b'-') => {

@@ -64,6 +64,7 @@ mod tests {
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{Integer, IntegerToken},
+            mnemonics::MnemonicToken,
             spaces::{EofToken, SpaceToken, Spaces},
             words::Words,
             Token, TokenKind,
@@ -98,7 +99,13 @@ mod tests {
                         ]),
                         words: vec![
                             (
-                                Token::new(b"push", Opcode::Push),
+                                Token::new(
+                                    b"push",
+                                    MnemonicToken {
+                                        mnemonic: b"push".into(),
+                                        opcode: Opcode::Push,
+                                    },
+                                ),
                                 Spaces::from(vec![
                                     block_comment!("e"),
                                     block_comment!("l"),

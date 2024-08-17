@@ -1,11 +1,15 @@
 //! Resolution of mnemonics to opcodes.
 
 use std::{
+    borrow::Cow,
     fmt::{self, Debug, Display, Formatter},
     hash::{Hash, Hasher},
 };
 
 use bstr::ByteSlice;
+use derive_more::Debug as DebugCustom;
+
+use crate::syntax::{HasError, Opcode, Pretty};
 
 // TODO:
 // - Make cross-dialect mnemonic map type, where the mnemonic key has an enum
@@ -13,6 +17,16 @@ use bstr::ByteSlice;
 //   most permissive case folding and compare against a string with the exact
 //   case folding.
 // - Make mapping from opcode to mnemonics.
+
+/// Instruction mnemonic token.
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
+pub struct MnemonicToken<'s> {
+    /// The mnemonic text.
+    #[debug("{:?}", mnemonic.as_bstr())]
+    pub mnemonic: Cow<'s, [u8]>,
+    /// The resolved mnemonic.
+    pub opcode: Opcode,
+}
 
 /// A conventionally UTF-8 string which compares by folding to lowercase. Only
 /// characters that fold to ASCII are folded, as those are all that are needed
@@ -27,6 +41,18 @@ pub(crate) struct Utf8LowerToAscii<'s>(pub &'s [u8]);
 /// A byte string which compares by folding ASCII letters to lowercase.
 #[derive(Clone, Copy)]
 pub(crate) struct AsciiLower<'s>(pub &'s [u8]);
+
+impl HasError for MnemonicToken<'_> {
+    fn has_error(&self) -> bool {
+        self.opcode == Opcode::Invalid
+    }
+}
+
+impl Pretty for MnemonicToken<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.mnemonic.pretty(buf);
+    }
+}
 
 impl Iterator for Utf8LowerToAscii<'_> {
     type Item = u8;

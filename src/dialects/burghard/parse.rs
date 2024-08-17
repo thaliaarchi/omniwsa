@@ -11,6 +11,7 @@ use crate::{
     tokens::{
         integer::IntegerToken,
         label::{LabelStyle, LabelToken},
+        mnemonics::MnemonicToken,
         spaces::Spaces,
         string::{QuoteStyle, StringData, StringToken},
         words::Words,
@@ -125,7 +126,10 @@ impl<'s> Parser<'s, '_> {
             if args.len() >= types.len() || i == 0 {
                 inst.valid_arity = args.len() == types.len() || opcode == Opcode::Invalid;
                 inst.valid_types = valid;
-                mnemonic.kind = TokenKind::Opcode(opcode);
+                mnemonic.kind = TokenKind::from(MnemonicToken {
+                    mnemonic: mnemonic.text.clone(),
+                    opcode,
+                });
                 // Process the remaining arguments.
                 let rest = args.len().min(types.len());
                 for (arg, _) in &mut args[rest..] {
