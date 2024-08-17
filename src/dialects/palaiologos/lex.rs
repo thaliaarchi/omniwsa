@@ -12,7 +12,7 @@ use crate::{
     tokens::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
         integer::IntegerToken,
-        label::{LabelError, LabelToken},
+        label::{LabelError, LabelStyle, LabelToken},
         spaces::{
             ArgSepStyle, ArgSepToken, EofToken, InstSepStyle, InstSepToken, LineTermStyle,
             LineTermToken, SpaceToken,
@@ -88,7 +88,12 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     scan.wrap(int)
                 }
             }
-            b'@' | b'%' => {
+            sigil @ (b'@' | b'%') => {
+                let style = if sigil == b'@' {
+                    LabelStyle::AtSigil
+                } else {
+                    LabelStyle::PercentSigil
+                };
                 scan.bump_while(|b| matches!(b, b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_'));
                 let text = scan.text();
                 let errors = match text.get(1) {
@@ -97,8 +102,8 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     _ => EnumSet::empty(),
                 };
                 scan.wrap(LabelToken {
-                    sigil: &text[..1],
                     label: text[1..].into(),
+                    style,
                     errors,
                 })
             }

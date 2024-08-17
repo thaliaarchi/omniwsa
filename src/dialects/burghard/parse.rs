@@ -10,7 +10,7 @@ use crate::{
     syntax::{ArgType, Cst, HasError, Inst, Opcode},
     tokens::{
         integer::IntegerToken,
-        label::LabelToken,
+        label::{LabelStyle, LabelToken},
         spaces::Spaces,
         string::{QuoteStyle, StringData, StringToken},
         words::Words,
@@ -152,8 +152,8 @@ impl<'s> Parser<'s, '_> {
         // Parse it as a label.
         if ty == ArgType::Label {
             inner.kind = TokenKind::from(LabelToken {
-                sigil: b"",
                 label: inner.text.clone(),
+                style: LabelStyle::NoSigil,
                 errors: EnumSet::empty(),
             });
             return true;

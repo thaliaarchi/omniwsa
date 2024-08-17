@@ -20,6 +20,8 @@ impl Pretty for Token<'_> {
             TokenKind::Integer(i) => i.pretty(buf),
             TokenKind::String(s) => s.pretty(buf),
             TokenKind::Char(c) => c.pretty(buf),
+            TokenKind::Label(l) => l.pretty(buf),
+            TokenKind::LabelColon(l) => l.pretty(buf),
             TokenKind::Space(s) => s.pretty(buf),
             TokenKind::LineTerm(l) => l.pretty(buf),
             TokenKind::Eof(e) => e.pretty(buf),

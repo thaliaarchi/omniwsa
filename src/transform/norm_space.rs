@@ -75,7 +75,7 @@ mod tests {
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
             integer::{Integer, IntegerToken},
-            label::LabelToken,
+            label::{LabelStyle, LabelToken},
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
             words::Words,
             Token,
@@ -114,8 +114,8 @@ mod tests {
                                     Token::new(
                                         b"start",
                                         LabelToken {
-                                            sigil: b"",
                                             label: b"start".into(),
+                                            style: LabelStyle::NoSigil,
                                             errors: EnumSet::empty(),
                                         },
                                     ),
