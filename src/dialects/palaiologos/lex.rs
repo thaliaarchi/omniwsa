@@ -10,9 +10,12 @@ use crate::{
     lex::{ByteScanner, Lex},
     syntax::Opcode,
     tokens::{
+        comment::{LineCommentError, LineCommentToken},
         integer::IntegerToken,
+        label::{LabelError, LabelToken},
+        spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken},
         string::{CharData, CharToken, QuoteStyle, StringData, StringToken},
-        LabelError, LineCommentError, Token, TokenError, TokenKind,
+        ErrorToken, Token, TokenKind,
     },
 };
 
@@ -45,7 +48,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
         scan.reset();
 
         if scan.eof() {
-            return Token::new(b"", TokenKind::Eof);
+            return Token::new(b"", EofToken);
         }
 
         match scan.next_byte() {
@@ -53,7 +56,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 let rest = &scan.src()[scan.start_offset()..];
                 if let Some((mnemonic, opcodes)) = scan_mnemonic(rest, self.dialect) {
                     scan.bump_bytes_no_lf(mnemonic.len() - 1);
-                    Token::new(mnemonic, TokenKind::Opcode(opcodes[0]))
+                    Token::new(mnemonic, opcodes[0])
                 } else {
                     // Consume as much as possible for an error, until a valid
                     // mnemonic.
@@ -70,7 +73,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             }
             b @ (b'0'..=b'9' | b'-') => {
                 if b == b'-' && !scan.bump_if(|b| matches!(b, b'0'..=b'9')) {
-                    scan.wrap(TokenError::UnrecognizedChar)
+                    scan.wrap(ErrorToken::UnrecognizedChar)
                 } else {
                     scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
                     // Extend the syntax to handle octal, just for errors.
@@ -87,7 +90,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     Some(b'0'..=b'9') => LabelError::StartsWithDigit.into(),
                     _ => EnumSet::empty(),
                 };
-                scan.wrap(TokenKind::Label {
+                scan.wrap(LabelToken {
                     sigil: &text[..1],
                     label: text[1..].into(),
                     errors,
@@ -122,19 +125,19 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     LineCommentError::MissingLf.into()
                 };
                 let text = scan.text();
-                scan.wrap(TokenKind::LineComment {
+                scan.wrap(LineCommentToken {
                     prefix: &text[..1],
                     text: &text[1..],
                     errors,
                 })
             }
-            b',' => scan.wrap(TokenKind::ArgSep),
+            b',' => scan.wrap(ArgSepToken),
             // Handle instruction separator and LF repetitions in the parser.
-            b'/' => scan.wrap(TokenKind::InstSep),
-            b'\n' => scan.wrap(TokenKind::LineTerm),
+            b'/' => scan.wrap(InstSepToken),
+            b'\n' => scan.wrap(LineTermToken),
             b' ' | b'\t' | b'\r' | b'\x0c' => {
                 scan.bump_while(|b| matches!(b, b' ' | b'\t' | b'\r' | b'\x0c'));
-                scan.wrap(TokenKind::Space)
+                scan.wrap(SpaceToken)
             }
             _ => {
                 scan.bump_while(|b| {
@@ -158,7 +161,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                         | b'\x0c'
                     )
                 });
-                scan.wrap(TokenKind::Error(TokenError::UnrecognizedChar))
+                scan.wrap(TokenKind::Error(ErrorToken::UnrecognizedChar))
             }
         }
     }

@@ -10,10 +10,11 @@ use crate::{
     syntax::{ArgType, Cst, HasError, Inst, Opcode},
     tokens::{
         integer::IntegerToken,
+        label::LabelToken,
         spaces::Spaces,
         string::{QuoteStyle, StringData, StringToken},
         words::Words,
-        Token, TokenError, TokenKind,
+        ErrorToken, SplicedToken, Token, TokenKind, VariableToken, WordToken,
     },
 };
 
@@ -51,7 +52,7 @@ impl<'s> Iterator for Parser<'s, '_> {
         }
 
         let mut words = Words::new(self.space());
-        while matches!(self.toks.curr(), TokenKind::Word | TokenKind::Quoted(_)) {
+        while matches!(self.toks.curr(), TokenKind::Word(_) | TokenKind::Quoted(_)) {
             let word = self.toks.advance();
             let space = self.space();
             match words.words.last_mut() {
@@ -66,12 +67,14 @@ impl<'s> Iterator for Parser<'s, '_> {
         }
 
         let space_after = words.trailing_spaces_mut();
-        if matches!(self.toks.curr(), TokenKind::LineComment { .. }) {
+        if matches!(self.toks.curr(), TokenKind::LineComment(_)) {
             space_after.push(self.toks.advance());
         }
         debug_assert!(matches!(
             self.toks.curr(),
-            TokenKind::LineTerm | TokenKind::Eof | TokenKind::Error(TokenError::Utf8 { .. }),
+            TokenKind::LineTerm(_)
+                | TokenKind::Eof(_)
+                | TokenKind::Error(ErrorToken::InvalidUtf8 { .. }),
         ));
         space_after.push(self.toks.advance());
 
@@ -94,7 +97,7 @@ impl<'s> Parser<'s, '_> {
         let mut space = Spaces::new();
         while matches!(
             self.toks.curr(),
-            TokenKind::Space | TokenKind::BlockComment { .. }
+            TokenKind::Space(_) | TokenKind::BlockComment(_)
         ) {
             space.push(self.toks.advance());
         }
@@ -105,7 +108,7 @@ impl<'s> Parser<'s, '_> {
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
         let ((mnemonic, _), args) = inst.words.words.split_first_mut().unwrap();
         let mnemonic = mnemonic.unwrap_mut();
-        debug_assert_eq!(mnemonic.kind, TokenKind::Word);
+        debug_assert!(matches!(mnemonic.kind, TokenKind::Word(_)));
         let opcodes = self
             .dialect
             .get_opcodes(&mnemonic.text)
@@ -138,7 +141,7 @@ impl<'s> Parser<'s, '_> {
     fn parse_arg(&mut self, tok: &mut Token<'_>, ty: ArgType) -> bool {
         let quoted = matches!(tok.kind, TokenKind::Quoted(_));
         let inner = tok.unwrap_mut();
-        if inner.kind != TokenKind::Word {
+        if !matches!(inner.kind, TokenKind::Word(_)) {
             return true;
         }
 
@@ -148,11 +151,11 @@ impl<'s> Parser<'s, '_> {
 
         // Parse it as a label.
         if ty == ArgType::Label {
-            inner.kind = TokenKind::Label {
+            inner.kind = TokenKind::from(LabelToken {
                 sigil: b"",
                 label: inner.text.clone(),
                 errors: EnumSet::empty(),
-            };
+            });
             return true;
         }
 
@@ -162,7 +165,7 @@ impl<'s> Parser<'s, '_> {
                 Cow::Borrowed(text) => text[1..].into(),
                 Cow::Owned(text) => text[1..].to_vec().into(),
             };
-            inner.kind = TokenKind::Ident { sigil: b"_", ident };
+            inner.kind = TokenKind::from(VariableToken { sigil: b"_", ident });
             return true;
         }
 
@@ -178,16 +181,16 @@ impl<'s> Parser<'s, '_> {
 
         // Convert it to a string, including quotes if quoted.
         let tok = match &mut tok.kind {
-            TokenKind::Spliced { spliced, .. } => spliced,
+            TokenKind::Spliced(s) => &mut s.spliced,
             _ => tok,
         };
-        tok.kind = match mem::replace(&mut tok.kind, TokenKind::Word) {
-            TokenKind::Word => TokenKind::from(StringToken {
+        tok.kind = match mem::replace(&mut tok.kind, WordToken.into()) {
+            TokenKind::Word(_) => TokenKind::from(StringToken {
                 data: StringData::from_utf8(tok.text.clone()).unwrap(),
                 quotes: QuoteStyle::Bare,
             }),
             TokenKind::Quoted(q) => {
-                debug_assert_eq!(q.inner.kind, TokenKind::Word);
+                debug_assert!(matches!(q.inner.kind, TokenKind::Word(_)));
                 TokenKind::from(StringToken {
                     data: StringData::from_utf8(q.inner.text).unwrap(),
                     quotes: q.quotes,
@@ -204,30 +207,30 @@ fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Spaces<'s>, rhs: &Token<'s>
     space
         .tokens
         .iter()
-        .all(|tok| matches!(tok.kind, TokenKind::BlockComment { .. }))
-        && matches!(lhs.kind, TokenKind::Word | TokenKind::Spliced { .. })
-        && matches!(rhs.kind, TokenKind::Word)
+        .all(|tok| matches!(tok.kind, TokenKind::BlockComment(_)))
+        && matches!(lhs.kind, TokenKind::Word(_) | TokenKind::Spliced(_))
+        && matches!(rhs.kind, TokenKind::Word(_))
 }
 
 /// Splices adjacent tokens, if they are only separated by block comments.
 fn splice_tokens<'s>(lhs: &mut Token<'s>, space: &mut Spaces<'s>, rhs: Token<'s>) {
-    if lhs.kind == TokenKind::Word {
-        lhs.kind = TokenKind::Spliced {
+    if matches!(lhs.kind, TokenKind::Word(_)) {
+        lhs.kind = TokenKind::from(SplicedToken {
             tokens: vec![lhs.clone()],
             spliced: Box::new(lhs.clone()),
-        };
+        });
     }
     match &mut lhs.kind {
-        TokenKind::Spliced { tokens, spliced } => {
+        TokenKind::Spliced(s) => {
             let text = lhs.text.to_mut();
             for tok in &space.tokens {
                 text.extend_from_slice(&tok.text);
             }
             text.extend_from_slice(&rhs.text);
-            spliced.text.to_mut().extend_from_slice(&rhs.text);
-            tokens.reserve(space.tokens.len() + 1);
-            tokens.append(&mut space.tokens);
-            tokens.push(rhs);
+            s.spliced.text.to_mut().extend_from_slice(&rhs.text);
+            s.tokens.reserve(space.tokens.len() + 1);
+            s.tokens.append(&mut space.tokens);
+            s.tokens.push(rhs);
         }
         _ => panic!("unhandled token"),
     }

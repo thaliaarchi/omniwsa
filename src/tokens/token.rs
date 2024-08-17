@@ -6,12 +6,15 @@ use std::{
 };
 
 use bstr::ByteSlice;
-use enumset::{EnumSet, EnumSetType};
+use derive_more::{Debug as DebugCustom, From};
 
 use crate::{
     syntax::{HasError, Opcode},
     tokens::{
+        comment::{BlockCommentToken, LineCommentToken},
         integer::IntegerToken,
+        label::{LabelColonToken, LabelToken},
+        spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken},
         string::{CharToken, QuotedToken, StringToken},
     },
 };
@@ -21,6 +24,7 @@ use crate::{
 // - Respace `@define`.
 // - Store byte string uniformly, instead of a mix of &[u8] and Cow.
 //   - Create utilities for slicing and manipulating easier than Cow.
+//   - Display it as conventionally UTF-8.
 // - Move `Token::text` into token variants, so text is not stored redundantly,
 //   and rename `TokenKind` -> `Token`. For example, the line comment prefix
 //   needs to be manipulated in both `Token::text` and `LineComment::prefix`.
@@ -38,7 +42,7 @@ pub struct Token<'s> {
 }
 
 /// A kind of token.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, From)]
 pub enum TokenKind<'s> {
     /// Instruction or predefined macro opcode.
     Opcode(Opcode),
@@ -48,97 +52,66 @@ pub enum TokenKind<'s> {
     String(StringToken<'s>),
     /// Character literal.
     Char(CharToken),
-    /// Identifier.
-    Ident {
-        /// A prefix sigil to mark identifiers (e.g., Burghard `_`).
-        sigil: &'s [u8],
-        /// The identifier with its sigil removed.
-        ident: Cow<'s, [u8]>,
-    },
+    /// Variable identifier.
+    Variable(VariableToken<'s>),
     /// Label.
-    Label {
-        /// A prefix sigil to mark labels (e.g., Palaiologos `@` and `%`).
-        sigil: &'s [u8],
-        /// The label with its sigil removed.
-        label: Cow<'s, [u8]>,
-        /// Errors for this label.
-        errors: EnumSet<LabelError>,
-    },
+    Label(LabelToken<'s>),
     /// Label colon marker (i.e., `:`).
-    LabelColon,
+    LabelColon(LabelColonToken),
     /// Instruction separator (e.g., Respace `;` or Palaiologos `/`).
-    InstSep,
+    InstSep(InstSepToken),
     /// Argument separator (e.g., Palaiologos `,`).
-    ArgSep,
+    ArgSep(ArgSepToken),
     /// Horizontal whitespace.
-    Space,
+    Space(SpaceToken),
     /// Line terminator.
-    LineTerm,
+    LineTerm(LineTermToken),
     /// End of file.
-    Eof,
+    Eof(EofToken),
     /// Line comment (e.g., `#` or `//`).
-    LineComment {
-        /// The prefix marker (e.g., `#` or `//`).
-        prefix: &'s [u8],
-        /// The comment text after the marker, including any leading spaces.
-        text: &'s [u8],
-        /// Errors for this line comment.
-        errors: EnumSet<LineCommentError>,
-    },
+    LineComment(LineCommentToken<'s>),
     /// Block comment (e.g., `{- -}` or `/* */`).
-    /// Sequences ignored due to a bug in the reference parser also count as
-    /// block comments (e.g., voliva ignored arguments).
-    BlockComment {
-        /// The opening marker (e.g., `{-` or `/*`).
-        open: &'s [u8],
-        /// The text contained within the comment markers, including any nested
-        /// block comments.
-        text: &'s [u8],
-        /// The closing marker, or nothing if it is not terminated (e.g., `-}`
-        /// or `*/`).
-        close: &'s [u8],
-        /// Whether the kind of block comment allows nesting.
-        nested: bool,
-        /// Whether this block comment is correctly closed.
-        terminated: bool,
-    },
+    BlockComment(BlockCommentToken<'s>),
     /// A word of uninterpreted meaning.
-    Word,
+    Word(WordToken),
     /// A token enclosed in non-semantic quotes (Burghard).
     Quoted(QuotedToken<'s>),
     /// Tokens spliced by block comments (Burghard).
-    Spliced {
-        /// A list of words interspersed with block comments. Only contains
-        /// `Word` and `BlockComment`.
-        tokens: Vec<Token<'s>>,
-        /// The effective token.
-        spliced: Box<Token<'s>>,
-    },
+    Spliced(SplicedToken<'s>),
     /// An erroneous sequence.
-    Error(TokenError),
+    Error(ErrorToken),
 }
 
-/// A parse error for a label.
-#[derive(EnumSetType, Debug)]
-pub enum LabelError {
-    /// The label has no characters (Palaiologos).
-    Empty,
-    /// The first character is a digit, which is not allowed (Palaiologos).
-    StartsWithDigit,
+/// Variable identifier token.
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
+pub struct VariableToken<'s> {
+    /// A prefix sigil to mark identifiers (e.g., Burghard `_`).
+    #[debug("{:?}", sigil.as_bstr())]
+    pub sigil: &'s [u8],
+    /// The identifier with its sigil removed.
+    #[debug("{:?}", ident.as_bstr())]
+    pub ident: Cow<'s, [u8]>,
 }
 
-/// A parse error for a line comment.
-#[derive(EnumSetType, Debug)]
-pub enum LineCommentError {
-    /// The line comment is not terminated by a line feed (Palaiologos).
-    MissingLf,
+/// A word token of uninterpreted meaning.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WordToken;
+
+/// Tokens spliced by block comments (Burghard).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SplicedToken<'s> {
+    /// A list of words interspersed with block comments. Only contains
+    /// `Word` and `BlockComment`.
+    pub tokens: Vec<Token<'s>>,
+    /// The effective token.
+    pub spliced: Box<Token<'s>>,
 }
 
 /// A lexical error.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TokenError {
+pub enum ErrorToken {
     /// Invalid UTF-8 sequence (Burghard).
-    Utf8 {
+    InvalidUtf8 {
         /// Length of the invalid sequence.
         error_len: usize,
     },
@@ -162,7 +135,7 @@ impl<'s> Token<'s> {
         loop {
             match &tok.kind {
                 TokenKind::Quoted(QuotedToken { inner, .. })
-                | TokenKind::Spliced { spliced: inner, .. } => {
+                | TokenKind::Spliced(SplicedToken { spliced: inner, .. }) => {
                     tok = inner;
                 }
                 _ => return tok,
@@ -176,10 +149,10 @@ impl<'s> Token<'s> {
         loop {
             match tok.kind {
                 TokenKind::Quoted(QuotedToken { ref mut inner, .. })
-                | TokenKind::Spliced {
+                | TokenKind::Spliced(SplicedToken {
                     spliced: ref mut inner,
                     ..
-                } => {
+                }) => {
                     tok = inner;
                 }
                 _ => return tok,
@@ -190,16 +163,17 @@ impl<'s> Token<'s> {
     /// Trim trailing whitespace in a line comment.
     pub fn line_comment_trim_trailing(&mut self) {
         match &mut self.kind {
-            TokenKind::LineComment { prefix, text, .. } => {
-                let i = text
+            TokenKind::LineComment(c) => {
+                let i = c
+                    .text
                     .iter()
                     .rposition(|&b| b != b' ' && b != b'\t')
                     .map(|i| i + 1)
                     .unwrap_or(0);
-                *text = &text[..i];
+                c.text = &c.text[..i];
                 match &mut self.text {
-                    Cow::Borrowed(text) => *text = &text[..prefix.len() + i],
-                    Cow::Owned(text) => text.truncate(prefix.len() + i),
+                    Cow::Borrowed(text) => *text = &text[..c.prefix.len() + i],
+                    Cow::Owned(text) => text.truncate(c.prefix.len() + i),
                 }
             }
             _ => panic!("not a line comment"),
@@ -210,14 +184,24 @@ impl<'s> Token<'s> {
 impl HasError for Token<'_> {
     fn has_error(&self) -> bool {
         match &self.kind {
-            TokenKind::Opcode(Opcode::Invalid) | TokenKind::Error(_) => true,
-            TokenKind::Char(c) => c.data.has_error() || c.quotes.has_error(),
-            TokenKind::String(s) => s.quotes.has_error(),
-            TokenKind::LineComment { errors, .. } => !errors.is_empty(),
-            TokenKind::BlockComment { terminated, .. } => !terminated,
-            TokenKind::Quoted(q) => q.inner.has_error() || q.quotes.has_error(),
-            TokenKind::Spliced { tokens, .. } => tokens.iter().any(Token::has_error),
-            _ => false,
+            TokenKind::Opcode(o) => o.has_error(),
+            TokenKind::Integer(i) => i.has_error(),
+            TokenKind::String(s) => s.has_error(),
+            TokenKind::Char(c) => c.has_error(),
+            TokenKind::Variable(v) => v.has_error(),
+            TokenKind::Label(l) => l.has_error(),
+            TokenKind::LabelColon(l) => l.has_error(),
+            TokenKind::InstSep(i) => i.has_error(),
+            TokenKind::ArgSep(a) => a.has_error(),
+            TokenKind::Space(s) => s.has_error(),
+            TokenKind::LineTerm(l) => l.has_error(),
+            TokenKind::Eof(e) => e.has_error(),
+            TokenKind::LineComment(l) => l.has_error(),
+            TokenKind::BlockComment(b) => b.has_error(),
+            TokenKind::Word(w) => w.has_error(),
+            TokenKind::Quoted(q) => q.has_error(),
+            TokenKind::Spliced(s) => s.has_error(),
+            TokenKind::Error(e) => e.has_error(),
         }
     }
 }
@@ -227,35 +211,24 @@ impl HasError for Opcode {
         matches!(self, Opcode::Invalid)
     }
 }
-
-impl From<Opcode> for TokenKind<'_> {
-    fn from(opcode: Opcode) -> Self {
-        TokenKind::Opcode(opcode)
+impl HasError for VariableToken<'_> {
+    fn has_error(&self) -> bool {
+        false
     }
 }
-impl From<IntegerToken> for TokenKind<'_> {
-    fn from(int: IntegerToken) -> Self {
-        TokenKind::Integer(int)
+impl HasError for WordToken {
+    fn has_error(&self) -> bool {
+        false
     }
 }
-impl<'s> From<StringToken<'s>> for TokenKind<'s> {
-    fn from(s: StringToken<'s>) -> Self {
-        TokenKind::String(s)
+impl HasError for SplicedToken<'_> {
+    fn has_error(&self) -> bool {
+        self.tokens.iter().any(Token::has_error)
     }
 }
-impl From<CharToken> for TokenKind<'_> {
-    fn from(c: CharToken) -> Self {
-        TokenKind::Char(c)
-    }
-}
-impl<'s> From<QuotedToken<'s>> for TokenKind<'s> {
-    fn from(quoted: QuotedToken<'s>) -> Self {
-        TokenKind::Quoted(quoted)
-    }
-}
-impl From<TokenError> for TokenKind<'_> {
-    fn from(err: TokenError) -> Self {
-        TokenKind::Error(err)
+impl HasError for ErrorToken {
+    fn has_error(&self) -> bool {
+        true
     }
 }
 
@@ -275,58 +248,19 @@ impl Debug for TokenKind<'_> {
             TokenKind::Integer(i) => Debug::fmt(i, f),
             TokenKind::Char(c) => Debug::fmt(c, f),
             TokenKind::String(s) => Debug::fmt(s, f),
-            TokenKind::Ident { sigil, ident } => f
-                .debug_struct("Ident")
-                .field("sigil", &sigil.as_bstr())
-                .field("ident", &ident.as_bstr())
-                .finish(),
-            TokenKind::Label {
-                sigil,
-                label,
-                errors,
-            } => f
-                .debug_struct("Label")
-                .field("sigil", &sigil.as_bstr())
-                .field("label", &label.as_bstr())
-                .field("errors", errors)
-                .finish(),
-            TokenKind::LabelColon => write!(f, "LabelColon"),
-            TokenKind::InstSep => write!(f, "InstSep"),
-            TokenKind::ArgSep => write!(f, "ArgSep"),
-            TokenKind::Space => write!(f, "Space"),
-            TokenKind::LineTerm => write!(f, "LineTerm"),
-            TokenKind::Eof => write!(f, "Eof"),
-            TokenKind::LineComment {
-                prefix,
-                text,
-                errors,
-            } => f
-                .debug_struct("LineComment")
-                .field("prefix", &prefix.as_bstr())
-                .field("text", &text.as_bstr())
-                .field("errors", errors)
-                .finish(),
-            TokenKind::BlockComment {
-                open,
-                text,
-                close,
-                nested,
-                terminated,
-            } => f
-                .debug_struct("BlockComment")
-                .field("open", &open.as_bstr())
-                .field("text", &text.as_bstr())
-                .field("close", &close.as_bstr())
-                .field("nested", nested)
-                .field("terminated", terminated)
-                .finish(),
-            TokenKind::Word => write!(f, "Word"),
+            TokenKind::Variable(v) => Debug::fmt(v, f),
+            TokenKind::Label(l) => Debug::fmt(l, f),
+            TokenKind::LabelColon(l) => Debug::fmt(l, f),
+            TokenKind::InstSep(u) => Debug::fmt(u, f),
+            TokenKind::ArgSep(a) => Debug::fmt(a, f),
+            TokenKind::Space(s) => Debug::fmt(s, f),
+            TokenKind::LineTerm(l) => Debug::fmt(l, f),
+            TokenKind::Eof(e) => Debug::fmt(e, f),
+            TokenKind::LineComment(l) => Debug::fmt(l, f),
+            TokenKind::BlockComment(b) => Debug::fmt(b, f),
+            TokenKind::Word(w) => Debug::fmt(w, f),
             TokenKind::Quoted(q) => Debug::fmt(q, f),
-            TokenKind::Spliced { tokens, spliced } => f
-                .debug_struct("Spliced")
-                .field("tokens", tokens)
-                .field("spliced", spliced)
-                .finish(),
+            TokenKind::Spliced(s) => Debug::fmt(s, f),
             TokenKind::Error(err) => f.debug_tuple("Error").field(err).finish(),
         }
     }

@@ -2,7 +2,10 @@
 
 use enumset::EnumSet;
 
-use crate::tokens::{Token, TokenKind};
+use crate::tokens::{
+    comment::{BlockCommentToken, LineCommentToken},
+    Token, TokenKind,
+};
 
 // TODO:
 // - Abstract common functionality between scanners to trait.
@@ -107,7 +110,7 @@ impl<'s> Utf8Scanner<'s> {
         let text_start = self.offset();
         self.bump_while(|c| c != '\n');
         let src = self.src.as_bytes();
-        self.wrap(TokenKind::LineComment {
+        self.wrap(LineCommentToken {
             prefix: &src[self.start_offset()..text_start],
             text: &src[text_start..self.offset()],
             errors: EnumSet::empty(),
@@ -130,7 +133,7 @@ impl<'s> Utf8Scanner<'s> {
             self.next_char();
         };
         let src = self.src.as_bytes();
-        self.wrap(TokenKind::BlockComment {
+        self.wrap(BlockCommentToken {
             open: &src[self.start_offset()..text_start],
             text: &src[text_start..text_end],
             close: &src[text_end..self.offset()],
@@ -163,7 +166,7 @@ impl<'s> Utf8Scanner<'s> {
             }
         };
         let src = self.src.as_bytes();
-        self.wrap(TokenKind::BlockComment {
+        self.wrap(BlockCommentToken {
             open: &src[self.start_offset()..text_start],
             text: &src[text_start..text_end],
             close: &src[text_end..self.offset()],
@@ -327,7 +330,7 @@ impl<'s> ByteScanner<'s> {
     pub fn line_comment(&mut self) -> Token<'s> {
         let text_start = self.offset();
         self.bump_while(|b| b != b'\n');
-        self.wrap(TokenKind::LineComment {
+        self.wrap(LineCommentToken {
             prefix: &self.src[self.start_offset()..text_start],
             text: &self.src[text_start..self.offset()],
             errors: EnumSet::empty(),
@@ -350,7 +353,7 @@ impl<'s> ByteScanner<'s> {
             self.next_byte();
         };
         let src = self.src;
-        self.wrap(TokenKind::BlockComment {
+        self.wrap(BlockCommentToken {
             open: &src[self.start_offset()..text_start],
             text: &src[text_start..text_end],
             close: &src[text_end..self.offset()],
@@ -382,7 +385,7 @@ impl<'s> ByteScanner<'s> {
                 self.next_byte();
             }
         };
-        self.wrap(TokenKind::BlockComment {
+        self.wrap(BlockCommentToken {
             open: &self.src[self.start_offset()..text_start],
             text: &self.src[text_start..text_end],
             close: &self.src[text_end..self.offset()],

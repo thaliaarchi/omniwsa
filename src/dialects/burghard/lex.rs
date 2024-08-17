@@ -5,8 +5,9 @@ use std::str;
 use crate::{
     lex::{Lex, Utf8Scanner},
     tokens::{
+        spaces::{EofToken, LineTermToken, SpaceToken},
         string::{QuoteStyle, QuotedToken},
-        Token, TokenError, TokenKind,
+        ErrorToken, Token, WordToken,
     },
 };
 
@@ -47,9 +48,9 @@ impl<'s> Lex<'s> for Lexer<'s> {
 
         if scan.eof() {
             if let Some((rest, error_len)) = self.invalid_utf8.take() {
-                return Token::new(rest, TokenError::Utf8 { error_len });
+                return Token::new(rest, ErrorToken::InvalidUtf8 { error_len });
             }
-            return Token::new(b"", TokenKind::Eof);
+            return Token::new(b"", EofToken);
         }
 
         match scan.next_char() {
@@ -58,9 +59,9 @@ impl<'s> Lex<'s> for Lexer<'s> {
             '{' if scan.bump_if(|c| c == '-') => scan.nested_block_comment(*b"{-", *b"-}"),
             ' ' | '\t' => {
                 scan.bump_while(|c| c == ' ' || c == '\t');
-                scan.wrap(TokenKind::Space)
+                scan.wrap(SpaceToken)
             }
-            '\n' => scan.wrap(TokenKind::LineTerm),
+            '\n' => scan.wrap(LineTermToken),
             '"' => {
                 let word_start = scan.offset();
                 scan.bump_while(|c| c != '"' && c != '\n');
@@ -71,7 +72,7 @@ impl<'s> Lex<'s> for Lexer<'s> {
                     QuoteStyle::UnclosedDouble
                 };
                 scan.wrap(QuotedToken {
-                    inner: Box::new(Token::new(word, TokenKind::Word)),
+                    inner: Box::new(Token::new(word, WordToken)),
                     quotes,
                 })
             }
@@ -85,7 +86,7 @@ impl<'s> Lex<'s> for Lexer<'s> {
                     }
                     scan.next_char();
                 }
-                scan.wrap(TokenKind::Word)
+                scan.wrap(WordToken)
             }
         }
     }

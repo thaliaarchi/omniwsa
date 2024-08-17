@@ -86,7 +86,7 @@ impl Palaiologos {
         let mut tokens = Vec::new();
         loop {
             let tok = lex.next_token();
-            if tok.kind == TokenKind::Eof {
+            if matches!(tok.kind, TokenKind::Eof(_)) {
                 return tokens;
             }
             tokens.push(tok);

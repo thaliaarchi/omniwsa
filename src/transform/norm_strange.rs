@@ -4,7 +4,7 @@ use std::mem;
 
 use crate::{
     syntax::{Cst, Inst},
-    tokens::{spaces::Spaces, TokenKind},
+    tokens::{spaces::Spaces, TokenKind, WordToken},
     transform::Visitor,
 };
 
@@ -27,25 +27,24 @@ impl<'s> Visitor<'s> for StrangeVisitor {
             match word.kind {
                 TokenKind::Quoted(_) => {
                     // Remove non-semantic quotes.
-                    let TokenKind::Quoted(q) = mem::replace(&mut word.kind, TokenKind::Word) else {
+                    let TokenKind::Quoted(q) = mem::replace(&mut word.kind, WordToken.into())
+                    else {
                         unreachable!();
                     };
                     *word = *q.inner;
                 }
-                TokenKind::Spliced { .. } => {
+                TokenKind::Spliced(_) => {
                     // Move block comments out of a token splice to after it.
                     let (_, word, space_after) = inst.words.get_spaced_mut(i);
-                    let TokenKind::Spliced {
-                        mut tokens,
-                        spliced,
-                    } = mem::replace(&mut word.kind, TokenKind::Word)
+                    let TokenKind::Spliced(mut s) = mem::replace(&mut word.kind, WordToken.into())
                     else {
                         unreachable!();
                     };
-                    tokens.retain(|tok| matches!(tok.kind, TokenKind::BlockComment { .. }));
-                    tokens.append(&mut space_after.tokens);
-                    space_after.tokens = tokens;
-                    *word = *spliced;
+                    s.tokens
+                        .retain(|tok| matches!(tok.kind, TokenKind::BlockComment(_)));
+                    s.tokens.append(&mut space_after.tokens);
+                    space_after.tokens = s.tokens;
+                    *word = *s.spliced;
                 }
                 _ => {}
             }
@@ -61,8 +60,9 @@ mod tests {
         dialects::Burghard,
         syntax::{Cst, Dialect, Inst, Opcode},
         tokens::{
+            comment::BlockCommentToken,
             integer::{Integer, IntegerToken},
-            spaces::Spaces,
+            spaces::{EofToken, SpaceToken, Spaces},
             words::Words,
             Token, TokenKind,
         },
@@ -72,7 +72,7 @@ mod tests {
         Token::new(
             // TODO: Use concat_bytes! once stabilized.
             concat!("{-", $text, "-}").as_bytes(),
-            TokenKind::BlockComment {
+            BlockCommentToken {
                 open: b"{-",
                 text: $text.as_bytes(),
                 close: b"-}",
@@ -93,18 +93,18 @@ mod tests {
                 nodes: vec![Cst::Inst(Inst {
                     words: Words {
                         space_before: Spaces::from(vec![
-                            Token::new(b" ", TokenKind::Space),
+                            Token::new(b" ", SpaceToken),
                             block_comment!("h"),
                         ]),
                         words: vec![
                             (
-                                Token::new(b"push", TokenKind::Opcode(Opcode::Push)),
+                                Token::new(b"push", Opcode::Push),
                                 Spaces::from(vec![
                                     block_comment!("e"),
                                     block_comment!("l"),
                                     block_comment!("l"),
                                     block_comment!("o"),
-                                    Token::new(b" ", TokenKind::Space),
+                                    Token::new(b" ", SpaceToken),
                                     block_comment!("!"),
                                 ]),
                             ),
@@ -116,7 +116,7 @@ mod tests {
                                         ..Default::default()
                                     }),
                                 ),
-                                Spaces::from(Token::new(b"", TokenKind::Eof)),
+                                Spaces::from(Token::new(b"", EofToken)),
                             ),
                         ],
                     },

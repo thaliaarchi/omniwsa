@@ -4,7 +4,10 @@ use std::borrow::Cow;
 
 use crate::{
     syntax::{Cst, Inst, Opcode},
-    tokens::{spaces::Spaces, Token, TokenKind},
+    tokens::{
+        spaces::{SpaceToken, Spaces},
+        Token, TokenKind,
+    },
     transform::Visitor,
 };
 
@@ -34,13 +37,13 @@ impl<'s> Visitor<'s> for SpaceVisitor<'s> {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
         inst.words.leading_spaces_mut().trim_leading();
         if inst.opcode() != Opcode::Label {
-            let indent = Token::new(self.indent.clone(), TokenKind::Space);
+            let indent = Token::new(self.indent.clone(), SpaceToken);
             inst.words.leading_spaces_mut().push_front(indent);
         }
         let trailing = inst.words.trailing_spaces_mut();
         trailing.trim_trailing();
         if let Some(tok) = trailing.tokens_mut().last_mut() {
-            if matches!(tok.kind, TokenKind::LineComment { .. }) {
+            if matches!(tok.kind, TokenKind::LineComment(_)) {
                 tok.line_comment_trim_trailing();
             }
         }
@@ -50,10 +53,10 @@ impl<'s> Visitor<'s> for SpaceVisitor<'s> {
         let len_before = empty.len();
         empty.trim_leading();
         if let Some(tok) = empty.tokens_mut().first_mut() {
-            if matches!(tok.kind, TokenKind::LineComment { .. }) {
+            if matches!(tok.kind, TokenKind::LineComment(_)) {
                 tok.line_comment_trim_trailing();
                 if empty.len() != len_before {
-                    let indent = Token::new(self.indent.clone(), TokenKind::Space);
+                    let indent = Token::new(self.indent.clone(), SpaceToken);
                     empty.push_front(indent);
                 }
             }
@@ -69,10 +72,12 @@ mod tests {
         dialects::Burghard,
         syntax::{Cst, Dialect, Inst, Opcode},
         tokens::{
+            comment::{BlockCommentToken, LineCommentToken},
             integer::{Integer, IntegerToken},
-            spaces::Spaces,
+            label::LabelToken,
+            spaces::{EofToken, LineTermToken, SpaceToken, Spaces},
             words::Words,
-            Token, TokenKind,
+            Token,
         },
     };
 
@@ -88,13 +93,13 @@ mod tests {
                     Cst::Empty(Spaces::from(vec![
                         Token::new(
                             b"; start",
-                            TokenKind::LineComment {
+                            LineCommentToken {
                                 prefix: b";",
                                 text: b" start",
                                 errors: EnumSet::empty(),
                             },
                         ),
-                        Token::new(b"\n", TokenKind::LineTerm),
+                        Token::new(b"\n", LineTermToken),
                     ])),
                     Cst::Inst(Inst {
                         words: Words {
@@ -102,18 +107,18 @@ mod tests {
                             words: vec![
                                 (
                                     Token::new(b"label", Opcode::Label),
-                                    Spaces::from(Token::new(b" ", TokenKind::Space)),
+                                    Spaces::from(Token::new(b" ", SpaceToken)),
                                 ),
                                 (
                                     Token::new(
                                         b"start",
-                                        TokenKind::Label {
+                                        LabelToken {
                                             sigil: b"",
                                             label: b"start".into(),
                                             errors: EnumSet::empty(),
                                         },
                                     ),
-                                    Spaces::from(Token::new(b"\n", TokenKind::LineTerm)),
+                                    Spaces::from(Token::new(b"\n", LineTermToken)),
                                 ),
                             ],
                         },
@@ -123,10 +128,10 @@ mod tests {
                     Cst::Inst(Inst {
                         words: Words {
                             space_before: Spaces::from(vec![
-                                Token::new(b"    ", TokenKind::Space),
+                                Token::new(b"    ", SpaceToken),
                                 Token::new(
                                     b"{-1-}",
-                                    TokenKind::BlockComment {
+                                    BlockCommentToken {
                                         open: b"{-",
                                         text: b"1",
                                         close: b"-}",
@@ -134,12 +139,12 @@ mod tests {
                                         terminated: true,
                                     },
                                 ),
-                                Token::new(b"  ", TokenKind::Space),
+                                Token::new(b"  ", SpaceToken),
                             ]),
                             words: vec![
                                 (
                                     Token::new(b"push", Opcode::Push),
-                                    Spaces::from(Token::new(b" ", TokenKind::Space)),
+                                    Spaces::from(Token::new(b" ", SpaceToken)),
                                 ),
                                 (
                                     Token::new(
@@ -149,7 +154,7 @@ mod tests {
                                             ..Default::default()
                                         },
                                     ),
-                                    Spaces::from(Token::new(b"\n", TokenKind::LineTerm)),
+                                    Spaces::from(Token::new(b"\n", LineTermToken)),
                                 ),
                             ],
                         },
@@ -157,24 +162,24 @@ mod tests {
                         valid_types: true,
                     }),
                     Cst::Empty(Spaces::from(vec![
-                        Token::new(b"    ", TokenKind::Space),
+                        Token::new(b"    ", SpaceToken),
                         Token::new(
                             b"; 2",
-                            TokenKind::LineComment {
+                            LineCommentToken {
                                 prefix: b";",
                                 text: b" 2",
                                 errors: EnumSet::empty(),
                             },
                         ),
-                        Token::new(b"\n", TokenKind::LineTerm),
+                        Token::new(b"\n", LineTermToken),
                     ])),
                     Cst::Inst(Inst {
                         words: Words {
-                            space_before: Spaces::from(Token::new(b"    ", TokenKind::Space)),
+                            space_before: Spaces::from(Token::new(b"    ", SpaceToken)),
                             words: vec![
                                 (
                                     Token::new(b"push", Opcode::Push),
-                                    Spaces::from(Token::new(b" ", TokenKind::Space)),
+                                    Spaces::from(Token::new(b" ", SpaceToken)),
                                 ),
                                 (
                                     Token::new(
@@ -187,7 +192,7 @@ mod tests {
                                     Spaces::from(vec![
                                         Token::new(
                                             b"{-2-}",
-                                            TokenKind::BlockComment {
+                                            BlockCommentToken {
                                                 open: b"{-",
                                                 text: b"2",
                                                 close: b"-}",
@@ -195,7 +200,7 @@ mod tests {
                                                 terminated: true,
                                             },
                                         ),
-                                        Token::new(b"", TokenKind::Eof),
+                                        Token::new(b"", EofToken),
                                     ]),
                                 ),
                             ],

@@ -37,6 +37,6 @@ impl<'s, L: Lex<'s>> TokenStream<'s, L> {
 
     /// Returns whether the parser is at EOF.
     pub fn eof(&self) -> bool {
-        matches!(self.curr(), TokenKind::Eof)
+        matches!(self.curr(), TokenKind::Eof(_))
     }
 }

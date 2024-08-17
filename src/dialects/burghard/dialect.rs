@@ -88,11 +88,12 @@ mod tests {
         dialects::Burghard,
         syntax::{Cst, Dialect, Inst, Opcode, OptionBlock},
         tokens::{
+            comment::BlockCommentToken,
             integer::{Integer, IntegerToken},
-            spaces::Spaces,
+            spaces::{EofToken, LineTermToken, SpaceToken, Spaces},
             string::{QuoteStyle, QuotedToken, StringData, StringToken},
             words::Words,
-            Token, TokenKind,
+            SplicedToken, Token, WordToken,
         },
     };
 
@@ -108,7 +109,7 @@ mod tests {
         Token::new(
             // TODO: Use concat_bytes! once stabilized.
             concat!("{-", $text, "-}").as_bytes(),
-            TokenKind::BlockComment {
+            BlockCommentToken {
                 open: b"{-",
                 text: $text.as_bytes(),
                 close: b"-}",
@@ -118,13 +119,13 @@ mod tests {
         )
     });
     macro_rules! space(($space:literal) => {
-        Spaces::from(Token::new($space, TokenKind::Space))
+        Spaces::from(Token::new($space, SpaceToken))
     });
     macro_rules! lf(() => {
-        Spaces::from(Token::new(b"\n", TokenKind::LineTerm))
+        Spaces::from(Token::new(b"\n", LineTermToken))
     });
     macro_rules! eof(() => {
-        Spaces::from(Token::new(b"", TokenKind::Eof))
+        Spaces::from(Token::new(b"", EofToken))
     });
 
     #[test]
@@ -134,26 +135,23 @@ mod tests {
         let expect = root![Cst::Inst(Inst {
             words: Words {
                 space_before: Spaces::from(vec![
-                    Token::new(b" ", TokenKind::Space),
+                    Token::new(b" ", SpaceToken),
                     block_comment!("c1"),
                 ]),
                 words: vec![
                     (
                         Token::new(
                             b"hello{-splice-}world",
-                            TokenKind::Spliced {
+                            SplicedToken {
                                 tokens: vec![
-                                    Token::new(b"hello", TokenKind::Word),
+                                    Token::new(b"hello", WordToken),
                                     block_comment!("splice"),
-                                    Token::new(b"world", TokenKind::Word),
+                                    Token::new(b"world", WordToken),
                                 ],
                                 spliced: Box::new(Token::new(b"helloworld", Opcode::Invalid)),
                             },
                         ),
-                        Spaces::from(vec![
-                            block_comment!("c2"),
-                            Token::new(b"\t", TokenKind::Space),
-                        ]),
+                        Spaces::from(vec![block_comment!("c2"), Token::new(b"\t", SpaceToken)]),
                     ),
                     (
                         Token::new(
@@ -262,7 +260,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![
                         (Token::new(b"ifoption", Opcode::IfOption), space!(b" ")),
-                        (Token::new($option, TokenKind::Word), lf!()),
+                        (Token::new($option, WordToken), lf!()),
                     ],
                 },
                 valid_arity: true,
@@ -275,7 +273,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![
                         (Token::new(b"elseifoption", Opcode::ElseIfOption), space!(b" ")),
-                        (Token::new($option, TokenKind::Word), lf!()),
+                        (Token::new($option, WordToken), lf!()),
                     ],
                 },
                 valid_arity: true,

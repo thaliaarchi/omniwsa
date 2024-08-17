@@ -8,6 +8,7 @@ use std::{
 };
 
 use bstr::ByteSlice;
+use derive_more::Debug as DebugCustom;
 
 use crate::{syntax::HasError, tokens::Token};
 
@@ -16,6 +17,7 @@ use crate::{syntax::HasError, tokens::Token};
 // - How to represent char literals with buggy delimiters, like those allowed
 //   with littleBugHunter's `'..` pattern? Maybe QuoteStyle::Custom with open
 //   and close.
+// - Supply default value on error for char and instead mark error in flags.
 
 /// A string literal token.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -45,12 +47,12 @@ pub struct QuotedToken<'s> {
 }
 
 /// The unescaped data of a string literal.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
 pub enum StringData<'s> {
     /// A string encoded as UTF-8 chars.
     Utf8(Cow<'s, str>),
     /// A string encoded as raw bytes.
-    Bytes(Cow<'s, [u8]>),
+    Bytes(#[debug("{:?}", _0.as_bstr())] Cow<'s, [u8]>),
 }
 
 /// The unescaped data of a char literal.
@@ -119,6 +121,24 @@ impl<'s> From<Cow<'s, [u8]>> for StringData<'s> {
     }
 }
 
+impl HasError for StringToken<'_> {
+    fn has_error(&self) -> bool {
+        self.quotes.has_error()
+    }
+}
+
+impl HasError for CharToken {
+    fn has_error(&self) -> bool {
+        self.data.has_error() || self.quotes.has_error()
+    }
+}
+
+impl HasError for QuotedToken<'_> {
+    fn has_error(&self) -> bool {
+        self.inner.has_error() || self.quotes.has_error()
+    }
+}
+
 impl HasError for CharData {
     fn has_error(&self) -> bool {
         match self {
@@ -133,15 +153,6 @@ impl HasError for QuoteStyle {
         match self {
             QuoteStyle::Double | QuoteStyle::Single | QuoteStyle::Bare => false,
             QuoteStyle::UnclosedDouble | QuoteStyle::UnclosedSingle => true,
-        }
-    }
-}
-
-impl Debug for StringData<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            StringData::Utf8(s) => f.debug_tuple("Utf8").field(s).finish(),
-            StringData::Bytes(b) => f.debug_tuple("Bytes").field(&b.as_bstr()).finish(),
         }
     }
 }

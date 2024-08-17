@@ -4,7 +4,7 @@ use std::fmt::{self, Debug, Formatter};
 
 use crate::{
     syntax::HasError,
-    tokens::{Token, TokenError, TokenKind},
+    tokens::{ErrorToken, Token, TokenKind},
 };
 
 // TODO:
@@ -17,6 +17,26 @@ pub struct Spaces<'s> {
     /// `LineComment`, `BlockComment`, `InstSep`, or `ArgSep`.
     pub tokens: Vec<Token<'s>>,
 }
+
+/// Instruction separator token (e.g., Respace `;` or Palaiologos `/`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InstSepToken;
+
+/// Argument separator token (e.g., Palaiologos `,`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ArgSepToken;
+
+/// Horizontal whitespace token.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SpaceToken;
+
+/// Line terminator token.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LineTermToken;
+
+/// End of file token.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EofToken;
 
 impl<'s> Spaces<'s> {
     /// Constructs a new, empty space sequence.
@@ -51,7 +71,7 @@ impl<'s> Spaces<'s> {
         let i = self
             .tokens
             .iter()
-            .position(|tok| tok.kind != TokenKind::Space)
+            .position(|tok| !matches!(tok.kind, TokenKind::Space(_)))
             .unwrap_or(self.tokens.len());
         self.tokens.drain(..i);
     }
@@ -62,17 +82,19 @@ impl<'s> Spaces<'s> {
         if j > 0
             && matches!(
                 self.tokens[j - 1].kind,
-                TokenKind::LineTerm | TokenKind::Eof | TokenKind::Error(TokenError::Utf8 { .. })
+                TokenKind::LineTerm(_)
+                    | TokenKind::Eof(_)
+                    | TokenKind::Error(ErrorToken::InvalidUtf8 { .. })
             )
         {
             j -= 1;
         }
-        if j > 0 && matches!(self.tokens[j - 1].kind, TokenKind::LineComment { .. }) {
+        if j > 0 && matches!(self.tokens[j - 1].kind, TokenKind::LineComment(_)) {
             j -= 1;
         }
         let i = self.tokens[..j]
             .iter()
-            .rposition(|tok| tok.kind != TokenKind::Space)
+            .rposition(|tok| !matches!(tok.kind, TokenKind::Space(_)))
             .map(|i| i + 1)
             .unwrap_or(0);
         self.tokens.drain(i..j);
@@ -93,13 +115,13 @@ impl<'s> Spaces<'s> {
     fn assert_space(token: &Token<'s>) {
         debug_assert!(matches!(
             token.kind,
-            TokenKind::Space
-                | TokenKind::LineTerm
-                | TokenKind::Eof
-                | TokenKind::InstSep
-                | TokenKind::ArgSep
-                | TokenKind::LineComment { .. }
-                | TokenKind::BlockComment { .. }
+            TokenKind::Space(_)
+                | TokenKind::LineTerm(_)
+                | TokenKind::Eof(_)
+                | TokenKind::InstSep(_)
+                | TokenKind::ArgSep(_)
+                | TokenKind::LineComment(_)
+                | TokenKind::BlockComment(_)
         ));
     }
 }
@@ -130,5 +152,35 @@ impl Debug for Spaces<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "Spaces ")?;
         f.debug_list().entries(&self.tokens).finish()
+    }
+}
+
+impl HasError for InstSepToken {
+    fn has_error(&self) -> bool {
+        false
+    }
+}
+
+impl HasError for ArgSepToken {
+    fn has_error(&self) -> bool {
+        false
+    }
+}
+
+impl HasError for SpaceToken {
+    fn has_error(&self) -> bool {
+        false
+    }
+}
+
+impl HasError for LineTermToken {
+    fn has_error(&self) -> bool {
+        false
+    }
+}
+
+impl HasError for EofToken {
+    fn has_error(&self) -> bool {
+        false
     }
 }
