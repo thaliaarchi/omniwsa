@@ -3,8 +3,8 @@
 use std::mem;
 
 use crate::{
-    syntax::{Cst, Inst, InstSep, Space},
-    tokens::{Token, TokenKind},
+    syntax::{Cst, Inst},
+    tokens::{spaces::Spaces, TokenKind},
     transform::Visitor,
 };
 
@@ -22,54 +22,48 @@ struct StrangeVisitor;
 
 impl<'s> Visitor<'s> for StrangeVisitor {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
-        match inst.opcode.kind {
-            TokenKind::Quoted(_) => unquote(&mut inst.opcode),
-            TokenKind::Spliced { .. } => unsplice(inst.opcode_space_after_mut()),
-            _ => {}
-        }
-        for arg in 0..inst.args.len() {
-            match inst.args[arg].1.kind {
-                TokenKind::Quoted(_) => unquote(&mut inst.args[arg].1),
-                TokenKind::Spliced { .. } => unsplice(inst.arg_space_after_mut(arg)),
+        for i in 0..inst.words.len() {
+            let word = &mut inst.words.words[i].0;
+            match word.kind {
+                TokenKind::Quoted(_) => {
+                    // Remove non-semantic quotes.
+                    let TokenKind::Quoted(q) = mem::replace(&mut word.kind, TokenKind::Word) else {
+                        unreachable!();
+                    };
+                    *word = *q.inner;
+                }
+                TokenKind::Spliced { .. } => {
+                    // Move block comments out of a token splice to after it.
+                    let (_, word, space_after) = inst.words.get_spaced_mut(i);
+                    let TokenKind::Spliced {
+                        mut tokens,
+                        spliced,
+                    } = mem::replace(&mut word.kind, TokenKind::Word)
+                    else {
+                        unreachable!();
+                    };
+                    tokens.retain(|tok| matches!(tok.kind, TokenKind::BlockComment { .. }));
+                    tokens.append(&mut space_after.tokens);
+                    space_after.tokens = tokens;
+                    *word = *spliced;
+                }
                 _ => {}
             }
         }
     }
 
-    fn visit_empty(&mut self, _empty: &mut InstSep<'s>) {}
-}
-
-/// Removes non-semantic quotes.
-#[inline]
-fn unquote<'s>(word: &mut Token<'s>) {
-    let TokenKind::Quoted(q) = mem::replace(&mut word.kind, TokenKind::Word) else {
-        panic!("not quoted");
-    };
-    *word = *q.inner;
-}
-
-/// Moves block comments out of a token splice to after it.
-fn unsplice<'s>((word, space_after): (&mut Token<'s>, &mut Space<'s>)) {
-    let TokenKind::Spliced {
-        mut tokens,
-        spliced,
-    } = mem::replace(&mut word.kind, TokenKind::Word)
-    else {
-        panic!("not spliced");
-    };
-    tokens.retain(|tok| matches!(tok.kind, TokenKind::BlockComment { .. }));
-    tokens.append(&mut space_after.tokens);
-    space_after.tokens = tokens;
-    *word = *spliced;
+    fn visit_empty(&mut self, _empty: &mut Spaces<'s>) {}
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
         dialects::Burghard,
-        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Opcode, Space},
+        syntax::{Cst, Dialect, Inst, Opcode},
         tokens::{
             integer::{Integer, IntegerToken},
+            spaces::Spaces,
+            words::Words,
             Token, TokenKind,
         },
     };
@@ -97,32 +91,34 @@ mod tests {
             dialect: Dialect::Burghard,
             inner: Box::new(Cst::Block {
                 nodes: vec![Cst::Inst(Inst {
-                    space_before: Space::from(vec![
-                        Token::new(b" ", TokenKind::Space),
-                        block_comment!("h"),
-                    ]),
-                    opcode: Token::new(b"push", TokenKind::Opcode(Opcode::Push)),
-                    args: vec![(
-                        ArgSep::Space(Space::from(vec![
-                            block_comment!("e"),
-                            block_comment!("l"),
-                            block_comment!("l"),
-                            block_comment!("o"),
+                    words: Words {
+                        space_before: Spaces::from(vec![
                             Token::new(b" ", TokenKind::Space),
-                            block_comment!("!"),
-                        ])),
-                        Token::new(
-                            b"42",
-                            TokenKind::Integer(IntegerToken {
-                                value: Integer::from(42),
-                                ..Default::default()
-                            }),
-                        ),
-                    )],
-                    inst_sep: InstSep::LineTerm {
-                        space_before: Space::new(),
-                        line_comment: None,
-                        line_term: Token::new(b"", TokenKind::Eof),
+                            block_comment!("h"),
+                        ]),
+                        words: vec![
+                            (
+                                Token::new(b"push", TokenKind::Opcode(Opcode::Push)),
+                                Spaces::from(vec![
+                                    block_comment!("e"),
+                                    block_comment!("l"),
+                                    block_comment!("l"),
+                                    block_comment!("o"),
+                                    Token::new(b" ", TokenKind::Space),
+                                    block_comment!("!"),
+                                ]),
+                            ),
+                            (
+                                Token::new(
+                                    b"42",
+                                    TokenKind::Integer(IntegerToken {
+                                        value: Integer::from(42),
+                                        ..Default::default()
+                                    }),
+                                ),
+                                Spaces::from(Token::new(b"", TokenKind::Eof)),
+                            ),
+                        ],
                     },
                     valid_arity: true,
                     valid_types: true,

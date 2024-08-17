@@ -7,11 +7,13 @@ use enumset::EnumSet;
 use crate::{
     dialects::{burghard::lex::Lexer, Burghard},
     lex::TokenStream,
-    syntax::{ArgSep, ArgType, Cst, HasError, Inst, Opcode, Space},
+    syntax::{ArgType, Cst, HasError, Inst, Opcode},
     tokens::{
         integer::IntegerToken,
+        spaces::Spaces,
         string::{QuoteStyle, StringData, StringToken},
-        Token, TokenKind,
+        words::Words,
+        Token, TokenError, TokenKind,
     },
 };
 
@@ -48,34 +50,36 @@ impl<'s> Iterator for Parser<'s, '_> {
             return None;
         }
 
-        let space_before = self.toks.space();
-        let mut opcode = match self.toks.curr() {
-            TokenKind::Word | TokenKind::Quoted(_) => self.toks.advance(),
-            _ => return Some(Cst::Empty(self.toks.line_term_sep(space_before))),
-        };
-
-        let mut prev_word = &mut opcode;
-        let mut args = Vec::new();
-        let space_after = loop {
-            let space = self.toks.space();
-            let arg = match self.toks.curr() {
-                TokenKind::Word | TokenKind::Quoted(_) => self.toks.advance(),
-                _ => break space,
-            };
-            if should_splice_tokens(prev_word, &space, &arg) {
-                splice_tokens(prev_word, space, arg);
-            } else {
-                args.push((ArgSep::Space(space), arg));
-                prev_word = &mut args.last_mut().unwrap().1;
+        let mut words = Words::new(self.space());
+        while matches!(self.toks.curr(), TokenKind::Word | TokenKind::Quoted(_)) {
+            let word = self.toks.advance();
+            let space = self.space();
+            match words.words.last_mut() {
+                Some((prev_word, prev_space))
+                    if should_splice_tokens(prev_word, prev_space, &word) =>
+                {
+                    splice_tokens(prev_word, prev_space, word);
+                    *prev_space = space;
+                }
+                _ => words.push(word, space),
             }
-        };
-        let inst_sep = self.toks.line_term_sep(space_after);
+        }
 
+        let space_after = words.trailing_spaces_mut();
+        if matches!(self.toks.curr(), TokenKind::LineComment { .. }) {
+            space_after.push(self.toks.advance());
+        }
+        debug_assert!(matches!(
+            self.toks.curr(),
+            TokenKind::LineTerm | TokenKind::Eof | TokenKind::Error(TokenError::Utf8 { .. }),
+        ));
+        space_after.push(self.toks.advance());
+
+        if words.is_empty() {
+            return Some(Cst::Empty(words.space_before));
+        }
         let mut inst = Inst {
-            space_before,
-            opcode,
-            args,
-            inst_sep,
+            words,
             valid_arity: false,
             valid_types: false,
         };
@@ -85,9 +89,22 @@ impl<'s> Iterator for Parser<'s, '_> {
 }
 
 impl<'s> Parser<'s, '_> {
-    /// Parses the opcode and arguments of an instruction.
+    /// Consumes space and block comment tokens.
+    fn space(&mut self) -> Spaces<'s> {
+        let mut space = Spaces::new();
+        while matches!(
+            self.toks.curr(),
+            TokenKind::Space | TokenKind::BlockComment { .. }
+        ) {
+            space.push(self.toks.advance());
+        }
+        space
+    }
+
+    /// Parses the mnemonic and arguments of an instruction.
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
-        let mnemonic = inst.opcode.unwrap_mut();
+        let ((mnemonic, _), args) = inst.words.words.split_first_mut().unwrap();
+        let mnemonic = mnemonic.unwrap_mut();
         debug_assert_eq!(mnemonic.kind, TokenKind::Word);
         let opcodes = self
             .dialect
@@ -99,16 +116,16 @@ impl<'s> Parser<'s, '_> {
         for (i, &opcode) in opcodes.iter().enumerate().rev() {
             let types = opcode.arg_types();
             let mut valid = true;
-            for ((_, arg), &ty) in inst.args.iter_mut().zip(types.iter()) {
+            for ((arg, _), &ty) in args.iter_mut().zip(types.iter()) {
                 valid &= self.parse_arg(arg, ty);
             }
-            if inst.args.len() >= types.len() || i == 0 {
-                inst.valid_arity = inst.args.len() == types.len() || opcode == Opcode::Invalid;
+            if args.len() >= types.len() || i == 0 {
+                inst.valid_arity = args.len() == types.len() || opcode == Opcode::Invalid;
                 inst.valid_types = valid;
                 mnemonic.kind = TokenKind::Opcode(opcode);
                 // Process the remaining arguments.
-                let rest = inst.args.len().min(types.len());
-                for (_, arg) in &mut inst.args[rest..] {
+                let rest = args.len().min(types.len());
+                for (arg, _) in &mut args[rest..] {
                     self.parse_arg(arg, ArgType::Variable);
                 }
                 return;
@@ -183,7 +200,7 @@ impl<'s> Parser<'s, '_> {
 }
 
 /// Returns whether these tokens should be spliced by block comments.
-fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Space<'s>, rhs: &Token<'s>) -> bool {
+fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Spaces<'s>, rhs: &Token<'s>) -> bool {
     space
         .tokens
         .iter()
@@ -193,7 +210,7 @@ fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Space<'s>, rhs: &Token<'s>)
 }
 
 /// Splices adjacent tokens, if they are only separated by block comments.
-fn splice_tokens<'s>(lhs: &mut Token<'s>, mut space: Space<'s>, rhs: Token<'s>) {
+fn splice_tokens<'s>(lhs: &mut Token<'s>, space: &mut Spaces<'s>, rhs: Token<'s>) {
     if lhs.kind == TokenKind::Word {
         lhs.kind = TokenKind::Spliced {
             tokens: vec![lhs.clone()],

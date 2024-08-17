@@ -3,8 +3,8 @@
 use std::borrow::Cow;
 
 use crate::{
-    syntax::{Cst, Inst, InstSep, Opcode},
-    tokens::{Token, TokenKind},
+    syntax::{Cst, Inst, Opcode},
+    tokens::{spaces::Spaces, Token, TokenKind},
     transform::Visitor,
 };
 
@@ -13,6 +13,9 @@ use crate::{
 // - Multi-instruction lines are incorrectly indented.
 // - Fold multiple adjacent blank lines and add a final line terminator when
 //   missing.
+// - Handle styles with not exactly one instruction per line. trim_leading and
+//   trim_trailing are not sufficient, because multiple lines can be in the same
+//   Space.
 
 impl<'s> Cst<'s> {
     /// Normalizes whitespace. Indentation is normalized to `indent`, except for
@@ -29,45 +32,31 @@ struct SpaceVisitor<'s> {
 
 impl<'s> Visitor<'s> for SpaceVisitor<'s> {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
-        inst.space_before.trim_leading();
+        inst.words.leading_spaces_mut().trim_leading();
         if inst.opcode() != Opcode::Label {
             let indent = Token::new(self.indent.clone(), TokenKind::Space);
-            inst.space_before.tokens.insert(0, indent);
+            inst.words.leading_spaces_mut().push_front(indent);
         }
-        match &mut inst.inst_sep {
-            InstSep::LineTerm {
-                space_before,
-                line_comment,
-                ..
-            } => {
-                if let Some(line_comment) = line_comment {
-                    line_comment.line_comment_trim_trailing();
-                } else {
-                    space_before.trim_trailing();
-                }
+        let trailing = inst.words.trailing_spaces_mut();
+        trailing.trim_trailing();
+        if let Some(tok) = trailing.tokens_mut().last_mut() {
+            if matches!(tok.kind, TokenKind::LineComment { .. }) {
+                tok.line_comment_trim_trailing();
             }
-            InstSep::Sep(_) => {}
         }
     }
 
-    fn visit_empty(&mut self, empty: &mut InstSep<'s>) {
-        match empty {
-            InstSep::LineTerm {
-                space_before,
-                line_comment,
-                ..
-            } => {
-                let len = space_before.tokens.len();
-                space_before.trim_leading();
-                if let Some(line_comment) = line_comment {
-                    if space_before.tokens.len() != len {
-                        let indent = Token::new(self.indent.clone(), TokenKind::Space);
-                        space_before.tokens.insert(0, indent);
-                    }
-                    line_comment.line_comment_trim_trailing();
+    fn visit_empty(&mut self, empty: &mut Spaces<'s>) {
+        let len_before = empty.len();
+        empty.trim_leading();
+        if let Some(tok) = empty.tokens_mut().first_mut() {
+            if matches!(tok.kind, TokenKind::LineComment { .. }) {
+                tok.line_comment_trim_trailing();
+                if empty.len() != len_before {
+                    let indent = Token::new(self.indent.clone(), TokenKind::Space);
+                    empty.push_front(indent);
                 }
             }
-            InstSep::Sep(_) => {}
         }
     }
 }
@@ -78,9 +67,11 @@ mod tests {
 
     use crate::{
         dialects::Burghard,
-        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Opcode, Space},
+        syntax::{Cst, Dialect, Inst, Opcode},
         tokens::{
             integer::{Integer, IntegerToken},
+            spaces::Spaces,
+            words::Words,
             Token, TokenKind,
         },
     };
@@ -94,112 +85,120 @@ mod tests {
             dialect: Dialect::Burghard,
             inner: Box::new(Cst::Block {
                 nodes: vec![
-                    Cst::Empty(InstSep::LineTerm {
-                        space_before: Space::new(),
-                        line_comment: Some(Token::new(
+                    Cst::Empty(Spaces::from(vec![
+                        Token::new(
                             b"; start",
                             TokenKind::LineComment {
                                 prefix: b";",
                                 text: b" start",
                                 errors: EnumSet::empty(),
                             },
-                        )),
-                        line_term: Token::new(b"\n", TokenKind::LineTerm),
-                    }),
+                        ),
+                        Token::new(b"\n", TokenKind::LineTerm),
+                    ])),
                     Cst::Inst(Inst {
-                        space_before: Space::new(),
-                        opcode: Token::new(b"label", Opcode::Label),
-                        args: vec![(
-                            ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
-                            Token::new(
-                                b"start",
-                                TokenKind::Label {
-                                    sigil: b"",
-                                    label: b"start".into(),
-                                    errors: EnumSet::empty(),
-                                },
-                            ),
-                        )],
-                        inst_sep: InstSep::LineTerm {
-                            space_before: Space::new(),
-                            line_comment: None,
-                            line_term: Token::new(b"\n", TokenKind::LineTerm),
+                        words: Words {
+                            space_before: Spaces::new(),
+                            words: vec![
+                                (
+                                    Token::new(b"label", Opcode::Label),
+                                    Spaces::from(Token::new(b" ", TokenKind::Space)),
+                                ),
+                                (
+                                    Token::new(
+                                        b"start",
+                                        TokenKind::Label {
+                                            sigil: b"",
+                                            label: b"start".into(),
+                                            errors: EnumSet::empty(),
+                                        },
+                                    ),
+                                    Spaces::from(Token::new(b"\n", TokenKind::LineTerm)),
+                                ),
+                            ],
                         },
                         valid_arity: true,
                         valid_types: true,
                     }),
                     Cst::Inst(Inst {
-                        space_before: Space::from(vec![
-                            Token::new(b"    ", TokenKind::Space),
-                            Token::new(
-                                b"{-1-}",
-                                TokenKind::BlockComment {
-                                    open: b"{-",
-                                    text: b"1",
-                                    close: b"-}",
-                                    nested: true,
-                                    terminated: true,
-                                },
-                            ),
-                            Token::new(b"  ", TokenKind::Space),
-                        ]),
-                        opcode: Token::new(b"push", Opcode::Push),
-                        args: vec![(
-                            ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
-                            Token::new(
-                                b"1",
-                                IntegerToken {
-                                    value: Integer::from(1),
-                                    ..Default::default()
-                                },
-                            ),
-                        )],
-                        inst_sep: InstSep::LineTerm {
-                            space_before: Space::new(),
-                            line_comment: None,
-                            line_term: Token::new(b"\n", TokenKind::LineTerm),
+                        words: Words {
+                            space_before: Spaces::from(vec![
+                                Token::new(b"    ", TokenKind::Space),
+                                Token::new(
+                                    b"{-1-}",
+                                    TokenKind::BlockComment {
+                                        open: b"{-",
+                                        text: b"1",
+                                        close: b"-}",
+                                        nested: true,
+                                        terminated: true,
+                                    },
+                                ),
+                                Token::new(b"  ", TokenKind::Space),
+                            ]),
+                            words: vec![
+                                (
+                                    Token::new(b"push", Opcode::Push),
+                                    Spaces::from(Token::new(b" ", TokenKind::Space)),
+                                ),
+                                (
+                                    Token::new(
+                                        b"1",
+                                        IntegerToken {
+                                            value: Integer::from(1),
+                                            ..Default::default()
+                                        },
+                                    ),
+                                    Spaces::from(Token::new(b"\n", TokenKind::LineTerm)),
+                                ),
+                            ],
                         },
                         valid_arity: true,
                         valid_types: true,
                     }),
-                    Cst::Empty(InstSep::LineTerm {
-                        space_before: Space::from(vec![Token::new(b"    ", TokenKind::Space)]),
-                        line_comment: Some(Token::new(
+                    Cst::Empty(Spaces::from(vec![
+                        Token::new(b"    ", TokenKind::Space),
+                        Token::new(
                             b"; 2",
                             TokenKind::LineComment {
                                 prefix: b";",
                                 text: b" 2",
                                 errors: EnumSet::empty(),
                             },
-                        )),
-                        line_term: Token::new(b"\n", TokenKind::LineTerm),
-                    }),
+                        ),
+                        Token::new(b"\n", TokenKind::LineTerm),
+                    ])),
                     Cst::Inst(Inst {
-                        space_before: Space::from(vec![Token::new(b"    ", TokenKind::Space)]),
-                        opcode: Token::new(b"push", Opcode::Push),
-                        args: vec![(
-                            ArgSep::Space(Space::from(vec![Token::new(b" ", TokenKind::Space)])),
-                            Token::new(
-                                b"2",
-                                IntegerToken {
-                                    value: Integer::from(2),
-                                    ..Default::default()
-                                },
-                            ),
-                        )],
-                        inst_sep: InstSep::LineTerm {
-                            space_before: Space::from(vec![Token::new(
-                                b"{-2-}",
-                                TokenKind::BlockComment {
-                                    open: b"{-",
-                                    text: b"2",
-                                    close: b"-}",
-                                    nested: true,
-                                    terminated: true,
-                                },
-                            )]),
-                            line_comment: None,
-                            line_term: Token::new(b"", TokenKind::Eof),
+                        words: Words {
+                            space_before: Spaces::from(Token::new(b"    ", TokenKind::Space)),
+                            words: vec![
+                                (
+                                    Token::new(b"push", Opcode::Push),
+                                    Spaces::from(Token::new(b" ", TokenKind::Space)),
+                                ),
+                                (
+                                    Token::new(
+                                        b"2",
+                                        IntegerToken {
+                                            value: Integer::from(2),
+                                            ..Default::default()
+                                        },
+                                    ),
+                                    Spaces::from(vec![
+                                        Token::new(
+                                            b"{-2-}",
+                                            TokenKind::BlockComment {
+                                                open: b"{-",
+                                                text: b"2",
+                                                close: b"-}",
+                                                nested: true,
+                                                terminated: true,
+                                            },
+                                        ),
+                                        Token::new(b"", TokenKind::Eof),
+                                    ]),
+                                ),
+                            ],
                         },
                         valid_arity: true,
                         valid_types: true,

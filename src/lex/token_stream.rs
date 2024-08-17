@@ -2,10 +2,7 @@
 
 use std::mem;
 
-use crate::{
-    syntax::{InstSep, Space},
-    tokens::{Token, TokenError, TokenKind},
-};
+use crate::tokens::{Token, TokenKind};
 
 /// A lexical scanner for some Whitespace assembly dialect.
 pub trait Lex<'s> {
@@ -41,45 +38,5 @@ impl<'s, L: Lex<'s>> TokenStream<'s, L> {
     /// Returns whether the parser is at EOF.
     pub fn eof(&self) -> bool {
         matches!(self.curr(), TokenKind::Eof)
-    }
-
-    /// Consumes space and block comment tokens.
-    pub fn space(&mut self) -> Space<'s> {
-        let mut space = Space::new();
-        while matches!(
-            self.curr(),
-            TokenKind::Space | TokenKind::BlockComment { .. }
-        ) {
-            space.push(self.advance());
-        }
-        space
-    }
-
-    /// Consumes a line comment token.
-    pub fn line_comment(&mut self) -> Option<Token<'s>> {
-        match self.curr() {
-            TokenKind::LineComment { .. } => Some(self.advance()),
-            _ => None,
-        }
-    }
-
-    /// Consumes a line terminator, EOF, or invalid UTF-8 error token.
-    pub fn line_term(&mut self) -> Option<Token<'s>> {
-        match self.curr() {
-            TokenKind::LineTerm | TokenKind::Eof | TokenKind::Error(TokenError::Utf8 { .. }) => {
-                Some(self.advance())
-            }
-            _ => None,
-        }
-    }
-
-    /// Consumes an optional line comment, followed by a line terminator (or EOF
-    /// or invalid UTF-8 error). Panics if not at such a token.
-    pub fn line_term_sep(&mut self, space_before: Space<'s>) -> InstSep<'s> {
-        InstSep::LineTerm {
-            space_before,
-            line_comment: self.line_comment(),
-            line_term: self.line_term().expect("line terminator"),
-        }
     }
 }

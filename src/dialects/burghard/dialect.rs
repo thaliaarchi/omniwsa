@@ -86,10 +86,12 @@ impl Burghard {
 mod tests {
     use crate::{
         dialects::Burghard,
-        syntax::{ArgSep, Cst, Dialect, Inst, InstSep, Opcode, OptionBlock, Space},
+        syntax::{Cst, Dialect, Inst, Opcode, OptionBlock},
         tokens::{
             integer::{Integer, IntegerToken},
+            spaces::Spaces,
             string::{QuoteStyle, QuotedToken, StringData, StringToken},
+            words::Words,
             Token, TokenKind,
         },
     };
@@ -116,21 +118,13 @@ mod tests {
         )
     });
     macro_rules! space(($space:literal) => {
-        Space::from(vec![Token::new($space, TokenKind::Space)])
+        Spaces::from(Token::new($space, TokenKind::Space))
     });
     macro_rules! lf(() => {
-        InstSep::LineTerm {
-            space_before: Space::new(),
-            line_comment: None,
-            line_term: Token::new(b"\n", TokenKind::LineTerm),
-        }
+        Spaces::from(Token::new(b"\n", TokenKind::LineTerm))
     });
     macro_rules! eof(() => {
-        InstSep::LineTerm {
-            space_before: Space::new(),
-            line_comment: None,
-            line_term: Token::new(b"", TokenKind::Eof),
-        }
+        Spaces::from(Token::new(b"", TokenKind::Eof))
     });
 
     #[test]
@@ -138,35 +132,41 @@ mod tests {
         let src = b" {-c1-}hello{-splice-}world{-c2-}\t!";
         let cst = Burghard::new().parse(src);
         let expect = root![Cst::Inst(Inst {
-            space_before: Space::from(vec![
-                Token::new(b" ", TokenKind::Space),
-                block_comment!("c1"),
-            ]),
-            opcode: Token::new(
-                b"hello{-splice-}world",
-                TokenKind::Spliced {
-                    tokens: vec![
-                        Token::new(b"hello", TokenKind::Word),
-                        block_comment!("splice"),
-                        Token::new(b"world", TokenKind::Word),
-                    ],
-                    spliced: Box::new(Token::new(b"helloworld", Opcode::Invalid)),
-                },
-            ),
-            args: vec![(
-                ArgSep::Space(Space::from(vec![
-                    block_comment!("c2"),
-                    Token::new(b"\t", TokenKind::Space),
-                ])),
-                Token::new(
-                    b"!",
-                    StringToken {
-                        data: StringData::Utf8("!".into()),
-                        quotes: QuoteStyle::Bare,
-                    },
-                ),
-            )],
-            inst_sep: eof!(),
+            words: Words {
+                space_before: Spaces::from(vec![
+                    Token::new(b" ", TokenKind::Space),
+                    block_comment!("c1"),
+                ]),
+                words: vec![
+                    (
+                        Token::new(
+                            b"hello{-splice-}world",
+                            TokenKind::Spliced {
+                                tokens: vec![
+                                    Token::new(b"hello", TokenKind::Word),
+                                    block_comment!("splice"),
+                                    Token::new(b"world", TokenKind::Word),
+                                ],
+                                spliced: Box::new(Token::new(b"helloworld", Opcode::Invalid)),
+                            },
+                        ),
+                        Spaces::from(vec![
+                            block_comment!("c2"),
+                            Token::new(b"\t", TokenKind::Space),
+                        ]),
+                    ),
+                    (
+                        Token::new(
+                            b"!",
+                            StringToken {
+                                data: StringData::Utf8("!".into()),
+                                quotes: QuoteStyle::Bare,
+                            },
+                        ),
+                        eof!(),
+                    ),
+                ],
+            },
             valid_arity: true,
             valid_types: true,
         })];
@@ -177,19 +177,22 @@ mod tests {
     fn mnemonic_utf8_folding() {
         let cst = Burghard::new().parse("\"Debug_PrİntStacK".as_bytes());
         let expect = root![Cst::Inst(Inst {
-            space_before: Space::new(),
-            opcode: Token::new(
-                "\"Debug_PrİntStacK".as_bytes(),
-                QuotedToken {
-                    inner: Box::new(Token::new(
-                        "Debug_PrİntStacK".as_bytes(),
-                        Opcode::BurghardPrintStack,
-                    )),
-                    quotes: QuoteStyle::UnclosedDouble,
-                },
-            ),
-            args: vec![],
-            inst_sep: eof!(),
+            words: Words {
+                space_before: Spaces::new(),
+                words: vec![(
+                    Token::new(
+                        "\"Debug_PrİntStacK".as_bytes(),
+                        QuotedToken {
+                            inner: Box::new(Token::new(
+                                "Debug_PrİntStacK".as_bytes(),
+                                Opcode::BurghardPrintStack,
+                            )),
+                            quotes: QuoteStyle::UnclosedDouble,
+                        },
+                    ),
+                    eof!(),
+                )],
+            },
             valid_arity: true,
             valid_types: true,
         })];
@@ -200,37 +203,41 @@ mod tests {
     fn bad_args() {
         let cst = Burghard::new().parse(b"valueinteger \"1\" \"2\"");
         let expect = root![Cst::Inst(Inst {
-            space_before: Space::new(),
-            opcode: Token::new(b"valueinteger", Opcode::BurghardValueInteger),
-            args: vec![
-                (
-                    ArgSep::Space(space!(b" ")),
-                    Token::new(
-                        b"\"1\"",
-                        StringToken {
-                            data: StringData::Utf8("1".into()),
-                            quotes: QuoteStyle::Double,
-                        },
+            words: Words {
+                space_before: Spaces::new(),
+                words: vec![
+                    (
+                        Token::new(b"valueinteger", Opcode::BurghardValueInteger),
+                        space!(b" "),
                     ),
-                ),
-                (
-                    ArgSep::Space(space!(b" ")),
-                    Token::new(
-                        b"\"2\"",
-                        QuotedToken {
-                            inner: Box::new(Token::new(
-                                b"2",
-                                IntegerToken {
-                                    value: Integer::from(2),
-                                    ..Default::default()
-                                },
-                            )),
-                            quotes: QuoteStyle::Double,
-                        },
+                    (
+                        Token::new(
+                            b"\"1\"",
+                            StringToken {
+                                data: StringData::Utf8("1".into()),
+                                quotes: QuoteStyle::Double,
+                            },
+                        ),
+                        space!(b" "),
                     ),
-                ),
-            ],
-            inst_sep: eof!(),
+                    (
+                        Token::new(
+                            b"\"2\"",
+                            QuotedToken {
+                                inner: Box::new(Token::new(
+                                    b"2",
+                                    IntegerToken {
+                                        value: Integer::from(2),
+                                        ..Default::default()
+                                    },
+                                )),
+                                quotes: QuoteStyle::Double,
+                            },
+                        ),
+                        eof!(),
+                    ),
+                ],
+            },
             valid_arity: true,
             valid_types: false,
         })];
@@ -241,56 +248,56 @@ mod tests {
     fn option_blocks() {
         macro_rules! letter(($letter:literal) => {
             Cst::Inst(Inst {
-                space_before: Space::new(),
-                opcode: Token::new($letter, Opcode::Invalid),
-                args: vec![],
-                inst_sep: lf!(),
+                words: Words {
+                    space_before: Spaces::new(),
+                    words: vec![(Token::new($letter, Opcode::Invalid), lf!())],
+                },
                 valid_arity: true,
                 valid_types: true,
             })
         });
         macro_rules! ifoption(($option:literal) => {
             Inst {
-                space_before: Space::new(),
-                opcode: Token::new(b"ifoption", Opcode::IfOption),
-                args: vec![(
-                    ArgSep::Space(space!(b" ")),
-                    Token::new($option, TokenKind::Word),
-                )],
-                inst_sep: lf!(),
+                words: Words {
+                    space_before: Spaces::new(),
+                    words: vec![
+                        (Token::new(b"ifoption", Opcode::IfOption), space!(b" ")),
+                        (Token::new($option, TokenKind::Word), lf!()),
+                    ],
+                },
                 valid_arity: true,
                 valid_types: true,
             }
         });
         macro_rules! elseifoption(($option:literal) => {
             Inst {
-                space_before: Space::new(),
-                opcode: Token::new(b"elseifoption", Opcode::ElseIfOption),
-                args: vec![(
-                    ArgSep::Space(space!(b" ")),
-                    Token::new($option, TokenKind::Word),
-                )],
-                inst_sep: lf!(),
+                words: Words {
+                    space_before: Spaces::new(),
+                    words: vec![
+                        (Token::new(b"elseifoption", Opcode::ElseIfOption), space!(b" ")),
+                        (Token::new($option, TokenKind::Word), lf!()),
+                    ],
+                },
                 valid_arity: true,
                 valid_types: true,
             }
         });
         macro_rules! elseoption(() => {
             Inst {
-                space_before: Space::new(),
-                opcode: Token::new(b"elseoption", Opcode::ElseOption),
-                args: vec![],
-                inst_sep: lf!(),
+                words: Words {
+                    space_before: Spaces::new(),
+                    words: vec![(Token::new(b"elseoption", Opcode::ElseOption), lf!())],
+                },
                 valid_arity: true,
                 valid_types: true,
             }
         });
         macro_rules! endoption(() => {
             Inst {
-                space_before: Space::new(),
-                opcode: Token::new(b"endoption", Opcode::EndOption),
-                args: vec![],
-                inst_sep: lf!(),
+                words: Words {
+                    space_before: Spaces::new(),
+                    words: vec![(Token::new(b"endoption", Opcode::EndOption), lf!())],
+                },
                 valid_arity: true,
                 valid_types: true,
             }

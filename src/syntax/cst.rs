@@ -1,6 +1,9 @@
 //! Concrete syntax tree for interoperable Whitespace assembly.
 
-use crate::syntax::{Inst, InstSep, Opcode};
+use crate::{
+    syntax::{Inst, Opcode},
+    tokens::spaces::Spaces,
+};
 
 // TODO:
 // - Macro definitions and invocations.
@@ -9,6 +12,8 @@ use crate::syntax::{Inst, InstSep, Opcode};
 //   `struct Cst`.
 // - Make a `SourceSet` to store program sources from several files, manage
 //   positions, and be referenced by the CST.
+// - `Inst` and `Empty` could be unified as just `Words`, renamed to `Inst`,
+//   where `Empty` is `Nop`.
 
 /// A node in a concrete syntax tree for interoperable Whitespace assembly.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -16,7 +21,7 @@ pub enum Cst<'s> {
     /// Instruction.
     Inst(Inst<'s>),
     /// A line with no instructions.
-    Empty(InstSep<'s>),
+    Empty(Spaces<'s>),
     /// Sequence of nodes.
     Block {
         /// The nodes in this block.

@@ -1,8 +1,8 @@
 //! Pretty-printing for CST nodes.
 
 use crate::{
-    syntax::{ArgSep, Cst, Inst, InstSep, OptionBlock, Space, Spaced},
-    tokens::Token,
+    syntax::{Cst, Inst, OptionBlock},
+    tokens::{spaces::Spaces, words::Words, Token},
 };
 
 /// Pretty-prints this node as Whitespace assembly syntax.
@@ -32,53 +32,23 @@ impl Pretty for Cst<'_> {
 
 impl Pretty for Inst<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
+        self.words.pretty(buf);
+    }
+}
+
+impl Pretty for Words<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
         self.space_before.pretty(buf);
-        self.opcode.pretty(buf);
-        self.args.iter().for_each(|(sep, arg)| {
-            sep.pretty(buf);
-            arg.pretty(buf);
+        self.words.iter().for_each(|(word, space)| {
+            word.pretty(buf);
+            space.pretty(buf);
         });
-        self.inst_sep.pretty(buf);
     }
 }
 
-impl Pretty for Space<'_> {
+impl Pretty for Spaces<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
-        self.tokens.iter().for_each(|tok| tok.pretty(buf))
-    }
-}
-
-impl<T: Pretty> Pretty for Spaced<'_, T> {
-    fn pretty(&self, buf: &mut Vec<u8>) {
-        self.space_before.pretty(buf);
-        self.inner.pretty(buf);
-        self.space_after.pretty(buf);
-    }
-}
-
-impl Pretty for ArgSep<'_> {
-    fn pretty(&self, buf: &mut Vec<u8>) {
-        match self {
-            ArgSep::Space(space) => space.pretty(buf),
-            ArgSep::Sep(sep) => sep.pretty(buf),
-        }
-    }
-}
-
-impl Pretty for InstSep<'_> {
-    fn pretty(&self, buf: &mut Vec<u8>) {
-        match self {
-            InstSep::LineTerm {
-                space_before,
-                line_comment,
-                line_term,
-            } => {
-                space_before.pretty(buf);
-                line_comment.pretty(buf);
-                line_term.pretty(buf);
-            }
-            InstSep::Sep(sep) => sep.pretty(buf),
-        }
+        self.tokens().iter().for_each(|tok| tok.pretty(buf))
     }
 }
 
