@@ -17,8 +17,11 @@ pub trait Pretty {
 impl Pretty for Token<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         match &self.kind {
+            TokenKind::String(s) => s.pretty(buf),
+            TokenKind::Char(c) => c.pretty(buf),
             TokenKind::LineComment(l) => l.pretty(buf),
             TokenKind::BlockComment(b) => b.pretty(buf),
+            TokenKind::Quoted(q) => q.pretty(buf),
             _ => self.text.pretty(buf),
         }
     }

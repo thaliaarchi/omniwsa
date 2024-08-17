@@ -186,14 +186,18 @@ impl<'s> Parser<'s, '_> {
         };
         tok.kind = match mem::replace(&mut tok.kind, WordToken.into()) {
             TokenKind::Word(_) => TokenKind::from(StringToken {
-                data: StringData::from_utf8(tok.text.clone()).unwrap(),
+                literal: tok.text.clone(),
+                unescaped: StringData::from_utf8(tok.text.clone()).unwrap(),
                 quotes: QuoteStyle::Bare,
+                errors: EnumSet::empty(),
             }),
             TokenKind::Quoted(q) => {
                 debug_assert!(matches!(q.inner.kind, TokenKind::Word(_)));
                 TokenKind::from(StringToken {
-                    data: StringData::from_utf8(q.inner.text).unwrap(),
+                    literal: q.inner.text.clone(),
+                    unescaped: StringData::from_utf8(q.inner.text).unwrap(),
                     quotes: q.quotes,
+                    errors: EnumSet::empty(),
                 })
             }
             _ => panic!("unhandled token"),

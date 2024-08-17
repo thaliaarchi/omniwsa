@@ -14,13 +14,15 @@ use crate::{
         integer::IntegerToken,
         label::{LabelError, LabelToken},
         spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken},
-        string::{CharData, CharToken, QuoteStyle, StringData, StringToken},
+        string::{
+            CharData, CharError, CharToken, QuoteStyle, StringData, StringError, StringToken,
+        },
         ErrorToken, Token, TokenKind,
     },
 };
 
 // TODO:
-// - How to represent empty and overlong char literals?
+// - Scan overlong char literals, instead of always marking unterminated.
 
 /// A lexer for tokens in the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -97,24 +99,36 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 })
             }
             b'\'' => {
-                let (data, quotes, len) = match *scan.rest() {
-                    [b'\\', b, b'\'', ..] => (CharData::Byte(b), QuoteStyle::Single, 3),
+                let (unescaped, errors, len) = match *scan.rest() {
+                    [b'\\', b, b'\'', ..] => (CharData::Byte(b), EnumSet::empty(), 3),
                     // A buggy escape, that is parsed as `'\''`.
-                    [b'\\', b'\'', ..] => (CharData::Byte(b'\''), QuoteStyle::Single, 2),
-                    [b, b'\'', ..] => (CharData::Byte(b), QuoteStyle::Single, 2),
-                    [b'\'', ..] => (CharData::Error, QuoteStyle::Single, 1),
-                    [b'\\', ..] => (CharData::Error, QuoteStyle::UnclosedSingle, 1),
-                    _ => (CharData::Error, QuoteStyle::UnclosedSingle, 0),
+                    [b'\\', b'\'', ..] => (CharData::Byte(b'\''), EnumSet::empty(), 2),
+                    [b, b'\'', ..] => (CharData::Byte(b), EnumSet::empty(), 2),
+                    [b'\'', ..] => (CharData::Byte(0), CharError::Empty.into(), 1),
+                    [b'\\', b, ..] => (CharData::Byte(b), CharError::Unterminated.into(), 2),
+                    [b'\\', ..] => (CharData::Byte(0), CharError::Unterminated.into(), 1),
+                    _ => (CharData::Byte(0), CharError::Unterminated.into(), 0),
                 };
+                let literal =
+                    &scan.rest()[..len - !errors.contains(CharError::Unterminated) as usize];
                 scan.bump_bytes(len);
-                scan.wrap(CharToken { data, quotes })
+                scan.wrap(CharToken {
+                    literal: literal.into(),
+                    unescaped,
+                    quotes: QuoteStyle::Single,
+                    errors,
+                })
             }
             b'"' => {
-                let (unquoted, quotes, len) = scan_string(scan.rest());
+                let (unescaped, errors, len) = scan_string(scan.rest());
+                let literal =
+                    &scan.rest()[..len - !errors.contains(StringError::Unterminated) as usize];
                 scan.bump_bytes(len);
                 scan.wrap(StringToken {
-                    data: StringData::Bytes(unquoted),
-                    quotes,
+                    literal: literal.into(),
+                    unescaped: StringData::Bytes(unescaped),
+                    quotes: QuoteStyle::Double,
+                    errors,
                 })
             }
             b';' => {
@@ -186,12 +200,12 @@ fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], &'
 /// Scans a string at the start of the bytes and returns the unquoted and
 /// unescaped string, and the number of bytes consumed. The string must start at
 /// the byte after the open `"`.
-fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, QuoteStyle, usize) {
+fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, EnumSet<StringError>, usize) {
     let Some(mut j) = s.find_byteset(b"\"\\") else {
-        return (s.into(), QuoteStyle::UnclosedDouble, s.len());
+        return (s.into(), StringError::Unterminated.into(), s.len());
     };
     if s[j] == b'"' {
-        return (s[..j].into(), QuoteStyle::Double, j + 1);
+        return (s[..j].into(), EnumSet::empty(), j + 1);
     }
     let mut unquoted = Vec::new();
     let mut i = 0;
@@ -199,7 +213,7 @@ fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, QuoteStyle, usize) {
         unquoted.extend_from_slice(&s[i..j]);
         match s[j] {
             b'"' => {
-                return (unquoted.into(), QuoteStyle::Double, j + 1);
+                return (unquoted.into(), EnumSet::empty(), j + 1);
             }
             b'\\' => {
                 j += 1;
@@ -216,5 +230,5 @@ fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, QuoteStyle, usize) {
         };
         j = j2;
     }
-    (unquoted.into(), QuoteStyle::UnclosedDouble, s.len())
+    (unquoted.into(), StringError::Unterminated.into(), s.len())
 }

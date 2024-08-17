@@ -34,9 +34,10 @@ use crate::{
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
 pub struct Token<'s> {
     /// The raw text of this token.
+    #[debug("{:?}", text.as_bstr())]
     pub text: Cow<'s, [u8]>,
     /// The data of this token, including its kind.
     pub kind: TokenKind<'s>,
@@ -52,7 +53,7 @@ pub enum TokenKind<'s> {
     /// String literal.
     String(StringToken<'s>),
     /// Character literal.
-    Char(CharToken),
+    Char(CharToken<'s>),
     /// Variable identifier.
     Variable(VariableToken<'s>),
     /// Label.
@@ -230,15 +231,6 @@ impl HasError for SplicedToken<'_> {
 impl HasError for ErrorToken {
     fn has_error(&self) -> bool {
         true
-    }
-}
-
-impl Debug for Token<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Token")
-            .field(&self.text.as_bstr())
-            .field(&self.kind)
-            .finish()
     }
 }
 

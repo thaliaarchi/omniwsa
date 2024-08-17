@@ -2,12 +2,14 @@
 
 use std::str;
 
+use enumset::EnumSet;
+
 use crate::{
     lex::{Lex, Utf8Scanner},
     tokens::{
         comment::{BlockCommentStyle, LineCommentStyle},
         spaces::{EofToken, LineTermToken, SpaceToken},
-        string::{QuoteStyle, QuotedToken},
+        string::{QuoteStyle, QuotedError, QuotedToken},
         ErrorToken, Token, WordToken,
     },
 };
@@ -69,14 +71,15 @@ impl<'s> Lex<'s> for Lexer<'s> {
                 let word_start = scan.offset();
                 scan.bump_while(|c| c != '"' && c != '\n');
                 let word = &scan.src().as_bytes()[word_start..scan.offset()];
-                let quotes = if scan.bump_if(|c| c == '"') {
-                    QuoteStyle::Double
+                let errors = if scan.bump_if(|c| c == '"') {
+                    EnumSet::empty()
                 } else {
-                    QuoteStyle::UnclosedDouble
+                    QuotedError::Unterminated.into()
                 };
                 scan.wrap(QuotedToken {
                     inner: Box::new(Token::new(word, WordToken)),
-                    quotes,
+                    quotes: QuoteStyle::Double,
+                    errors,
                 })
             }
             _ => {
