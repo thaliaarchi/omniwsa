@@ -27,7 +27,7 @@ impl<'s> Inst<'s> {
     /// Returns the opcode for this instruction. Panics if `self.opcode` is not
     /// an opcode token.
     pub fn opcode(&self) -> Opcode {
-        match self.words[0].unwrap() {
+        match self.words[0].ungroup() {
             Token::Mnemonic(m) => m.opcode,
             _ => panic!("not a mnemonic"),
         }

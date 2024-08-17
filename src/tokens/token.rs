@@ -129,8 +129,8 @@ pub enum ErrorToken<'s> {
 }
 
 impl<'s> Token<'s> {
-    /// Unwrap non-semantic splices and quotes.
-    pub fn unwrap(&self) -> &Token<'s> {
+    /// Unwraps non-semantic splices and quotes.
+    pub fn ungroup(&self) -> &Token<'s> {
         let mut tok = self;
         loop {
             match tok {
@@ -143,8 +143,8 @@ impl<'s> Token<'s> {
         }
     }
 
-    /// Unwrap non-semantic splices and quotes and return a mutable reference.
-    pub fn unwrap_mut(&mut self) -> &mut Token<'s> {
+    /// Unwraps non-semantic splices and quotes and return a mutable reference.
+    pub fn ungroup_mut(&mut self) -> &mut Token<'s> {
         let mut tok = self;
         loop {
             match tok {

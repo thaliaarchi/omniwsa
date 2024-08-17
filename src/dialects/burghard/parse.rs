@@ -103,7 +103,7 @@ impl<'s> Parser<'s, '_> {
     /// Parses the mnemonic and arguments of an instruction.
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
         let ((mnemonic, _), args) = inst.words.words.split_first_mut().unwrap();
-        let mnemonic = mnemonic.unwrap_mut();
+        let mnemonic = mnemonic.ungroup_mut();
         let Token::Word(mnemonic_word) = mnemonic else {
             panic!("unhandled token");
         };
@@ -141,7 +141,7 @@ impl<'s> Parser<'s, '_> {
     /// valid.
     fn parse_arg(&mut self, tok: &mut Token<'_>, ty: ArgType) -> bool {
         let quoted = matches!(tok, Token::Quoted(_));
-        let inner = tok.unwrap_mut();
+        let inner = tok.ungroup_mut();
         let Token::Word(inner_word) = inner else {
             return true;
         };
