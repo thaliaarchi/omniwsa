@@ -101,12 +101,34 @@ the AST kind `STOP`.
 
 ## Generation
 
-- Instructions prefixed with `rep` are repeated as many times as specified. The
-  repeated instruction does not take a constant argument.
-- `push` without an argument is `push 0`.
-- `xchg / xchg` is replaced with nothing. This is always done and is the only
-  optimization, regardless of the optimization level with `-Os` or `-Of` or
-  neither.
+- `push` => `push 0`
+- `xchg / xchg` => nothing
+- `add n` -> `push n / add`
+- `sub n` -> `push n / sub`
+- `mul n` -> `push n / mul`
+- `div n` -> `push n / div`
+- `mod n` -> `push n / mod`
+- `store n` => `push n / store`
+- `store x, y` => `push y / push x / store`
+- `rcl n` -> `push n / rcl`
+- `putc n` -> `push n / putc`
+- `putn n` -> `push n / putn`
+- `getc n` -> `push n / getc`
+- `getn n` -> `push n / getn`
+- `rep dup` -> `dup` repeated `n` times
+- `rep drop` -> `drop` repeated `n` times
+- `rep add` -> `add` repeated `n` times
+- `rep sub` -> `sub` repeated `n` times
+- `rep mul` -> `mul` repeated `n` times
+- `rep div` -> `div` repeated `n` times
+- `rep mod` -> `mod` repeated `n` times
+- `rep putn` -> `putn` repeated `n` times
+
+Instructions prefixed with `rep` are repeated as many times as specified. The
+repeated instruction does not take a constant argument.
+
+Double-`xchg` replacement is always done, regardless of the optimization level
+with `-Os`, `-Of`, or neither, and is the only optimization.
 
 ### Labels
 

@@ -16,49 +16,53 @@ use crate::{
 /// State for parsing the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Palaiologos {
-    mnemonics: HashMap<AsciiLower<'static>, Opcode>,
+    mnemonics: HashMap<AsciiLower<'static>, &'static [Opcode]>,
 }
 
-macro_rules! mnemonics[($($mnemonic:literal => $opcode:ident,)*) => {
-    &[$(($mnemonic, Opcode::$opcode),)+]
-}];
-static MNEMONICS: &[(&'static str, Opcode)] = mnemonics![
-    "psh" => Push,
-    "push" => Push,
-    "dup" => Dup,
-    "copy" => Copy,
-    "take" => Copy,
-    "pull" => Copy,
-    "xchg" => Swap,
-    "swp" => Swap,
-    "swap" => Swap,
-    "drop" => Drop,
-    "dsc" => Drop,
-    "slide" => Slide,
-    "add" => Add,
-    "sub" => Sub,
-    "mul" => Mul,
-    "div" => Div,
-    "mod" => Mod,
-    "sto" => Store,
-    "rcl" => Retrieve,
-    "call" => Call,
-    "gosub" => Call,
-    "jsr" => Call,
-    "jmp" => Jmp,
-    "j" => Jmp,
-    "b" => Jmp,
-    "jz" => Jz,
-    "bz" => Jz,
-    "jltz" => Jn,
-    "bltz" => Jn,
-    "ret" => Ret,
-    "end" => End,
-    "putc" => Printc,
-    "putn" => Printi,
-    "getc" => Readc,
-    "getn" => Readi,
-    "rep" => PalaiologosRep,
+static MNEMONICS: &[(&str, &[Opcode])] = &[
+    ("psh", &[Opcode::Push, Opcode::Push0]),
+    ("push", &[Opcode::Push, Opcode::Push0]),
+    ("dup", &[Opcode::Dup]),
+    ("copy", &[Opcode::Copy]),
+    ("take", &[Opcode::Copy]),
+    ("pull", &[Opcode::Copy]),
+    ("xchg", &[Opcode::Swap]),
+    ("swp", &[Opcode::Swap]),
+    ("swap", &[Opcode::Swap]),
+    ("drop", &[Opcode::Drop]),
+    ("dsc", &[Opcode::Drop]),
+    ("slide", &[Opcode::Slide]),
+    ("add", &[Opcode::Add, Opcode::AddConstRhs]),
+    ("sub", &[Opcode::Sub, Opcode::SubConstRhs]),
+    ("mul", &[Opcode::Mul, Opcode::MulConstRhs]),
+    ("div", &[Opcode::Div, Opcode::DivConstRhs]),
+    ("mod", &[Opcode::Mod, Opcode::ModConstRhs]),
+    (
+        "sto",
+        &[
+            Opcode::Store,
+            Opcode::StoreConstRhs,
+            Opcode::StoreConstConst,
+        ],
+    ),
+    ("rcl", &[Opcode::Retrieve, Opcode::RetrieveConst]),
+    ("call", &[Opcode::Call]),
+    ("gosub", &[Opcode::Call]),
+    ("jsr", &[Opcode::Call]),
+    ("jmp", &[Opcode::Jmp]),
+    ("j", &[Opcode::Jmp]),
+    ("b", &[Opcode::Jmp]),
+    ("jz", &[Opcode::Jz]),
+    ("bz", &[Opcode::Jz]),
+    ("jltz", &[Opcode::Jn]),
+    ("bltz", &[Opcode::Jn]),
+    ("ret", &[Opcode::Ret]),
+    ("end", &[Opcode::End]),
+    ("putc", &[Opcode::Printc, Opcode::PrintcConst]),
+    ("putn", &[Opcode::Printi, Opcode::PrintiConst]),
+    ("getc", &[Opcode::Readc, Opcode::ReadcConst]),
+    ("getn", &[Opcode::Readi, Opcode::ReadiConst]),
+    ("rep", &[Opcode::PalaiologosRep]),
 ];
 
 impl Palaiologos {
@@ -70,7 +74,7 @@ impl Palaiologos {
         Palaiologos {
             mnemonics: MNEMONICS
                 .iter()
-                .map(|&(mnemonic, opcode)| (AsciiLower(mnemonic.as_bytes()), opcode))
+                .map(|&(mnemonic, opcodes)| (AsciiLower(mnemonic.as_bytes()), opcodes))
                 .collect(),
         }
     }
@@ -89,8 +93,8 @@ impl Palaiologos {
         }
     }
 
-    /// Gets the opcode for a mnemonic.
-    pub(super) fn get_opcode(&self, mnemonic: &[u8]) -> Option<Opcode> {
+    /// Gets the overloaded opcodes for a mnemonic.
+    pub(super) fn get_opcodes(&self, mnemonic: &[u8]) -> Option<&'static [Opcode]> {
         self.mnemonics.get(&AsciiLower(mnemonic)).copied()
     }
 }

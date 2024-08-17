@@ -76,7 +76,7 @@ impl Burghard {
         OptionNester::new().nest(&mut Parser::new(src, self))
     }
 
-    /// Gets the overloaded opcode and arguments signatures for a mnemonic.
+    /// Gets the overloaded opcodes for a mnemonic.
     pub(super) fn get_opcodes(&self, mnemonic: &[u8]) -> Option<&'static [Opcode]> {
         self.mnemonics.get(&Utf8LowerToAscii(mnemonic)).copied()
     }

@@ -8,7 +8,7 @@ macro_rules! opcodes[
         ),* $(,)?
     ) => {
         /// Instruction or predefined macro opcode.
-        #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
         pub enum Opcode {
             $($(#[doc = $doc])* $opcode),*
         }
@@ -25,7 +25,7 @@ macro_rules! opcodes[
 ];
 
 opcodes! {
-    // Whitespace instructions:
+    // Standard Whitespace instructions:
     /// Whitespace `push`.
     Push(Integer),
     /// Whitespace `dup`.
@@ -89,7 +89,10 @@ opcodes! {
     /// voliva `debugger`.
     VolivaBreakpoint,
 
-    // Additional arguments for standard instructions:
+    // Standard instructions with overloaded arguments:
+    /// `push` with zero value: `push` => `push 0`
+    /// (Palaiologos).
+    Push0,
     /// `add` with constant RHS: `add n` => `push n / add`
     /// (Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips).
     AddConstRhs(Integer),

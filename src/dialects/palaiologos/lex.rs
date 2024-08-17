@@ -51,9 +51,9 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
         match scan.next_byte() {
             b'A'..=b'Z' | b'a'..=b'z' | b'_' => {
                 let rest = &scan.src()[scan.start_offset()..];
-                if let Some((mnemonic, opcode)) = scan_mnemonic(rest, self.dialect) {
+                if let Some((mnemonic, opcodes)) = scan_mnemonic(rest, self.dialect) {
                     scan.bump_bytes_no_lf(mnemonic.len() - 1);
-                    Token::new(mnemonic, TokenKind::Opcode(opcode))
+                    Token::new(mnemonic, TokenKind::Opcode(opcodes[0]))
                 } else {
                     // Consume as much as possible for an error, until a valid
                     // mnemonic.
@@ -165,7 +165,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
 }
 
 /// Tries to scan a mnemonic at the start of the bytes.
-fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], Opcode)> {
+fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], &'static [Opcode])> {
     let chunk = &s[..Palaiologos::MAX_MNEMONIC_LEN.min(s.len())];
     let mut chunk_lower = [0; Palaiologos::MAX_MNEMONIC_LEN];
     chunk_lower[..chunk.len()].copy_from_slice(chunk);
@@ -173,8 +173,8 @@ fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], Op
 
     for len in (1..chunk.len()).rev() {
         let mnemonic = &chunk[..len];
-        if let Some(opcode) = dialect.get_opcode(mnemonic) {
-            return Some((mnemonic, opcode));
+        if let Some(opcodes) = dialect.get_opcodes(mnemonic) {
+            return Some((mnemonic, opcodes));
         }
     }
     None
