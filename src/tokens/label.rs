@@ -17,7 +17,7 @@ pub struct LabelToken<'s> {
     /// The label with its sigil removed.
     #[debug("{:?}", label.as_bstr())]
     pub label: Cow<'s, [u8]>,
-    /// Errors for this label.
+    /// All errors from parsing this label.
     pub errors: EnumSet<LabelError>,
 }
 

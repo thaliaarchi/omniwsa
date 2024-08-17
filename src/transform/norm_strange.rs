@@ -56,11 +56,13 @@ impl<'s> Visitor<'s> for StrangeVisitor {
 
 #[cfg(test)]
 mod tests {
+    use enumset::EnumSet;
+
     use crate::{
         dialects::Burghard,
         syntax::{Cst, Dialect, Inst, Opcode},
         tokens::{
-            comment::BlockCommentToken,
+            comment::{BlockCommentStyle, BlockCommentToken},
             integer::{Integer, IntegerToken},
             spaces::{EofToken, SpaceToken, Spaces},
             words::Words,
@@ -73,11 +75,9 @@ mod tests {
             // TODO: Use concat_bytes! once stabilized.
             concat!("{-", $text, "-}").as_bytes(),
             BlockCommentToken {
-                open: b"{-",
                 text: $text.as_bytes(),
-                close: b"-}",
-                nested: true,
-                terminated: true,
+                style: BlockCommentStyle::Haskell,
+                errors: EnumSet::empty(),
             },
         )
     });

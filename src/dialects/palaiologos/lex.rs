@@ -10,7 +10,7 @@ use crate::{
     lex::{ByteScanner, Lex},
     syntax::Opcode,
     tokens::{
-        comment::{LineCommentError, LineCommentToken},
+        comment::{LineCommentError, LineCommentStyle, LineCommentToken},
         integer::IntegerToken,
         label::{LabelError, LabelToken},
         spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken},
@@ -126,8 +126,8 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 };
                 let text = scan.text();
                 scan.wrap(LineCommentToken {
-                    prefix: &text[..1],
                     text: &text[1..],
+                    style: LineCommentStyle::Semi,
                     errors,
                 })
             }

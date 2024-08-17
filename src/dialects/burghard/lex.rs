@@ -5,6 +5,7 @@ use std::str;
 use crate::{
     lex::{Lex, Utf8Scanner},
     tokens::{
+        comment::{BlockCommentStyle, LineCommentStyle},
         spaces::{EofToken, LineTermToken, SpaceToken},
         string::{QuoteStyle, QuotedToken},
         ErrorToken, Token, WordToken,
@@ -54,9 +55,11 @@ impl<'s> Lex<'s> for Lexer<'s> {
         }
 
         match scan.next_char() {
-            ';' => scan.line_comment(),
-            '-' if scan.bump_if(|c| c == '-') => scan.line_comment(),
-            '{' if scan.bump_if(|c| c == '-') => scan.nested_block_comment(*b"{-", *b"-}"),
+            ';' => scan.line_comment(LineCommentStyle::Semi),
+            '-' if scan.bump_if(|c| c == '-') => scan.line_comment(LineCommentStyle::DashDash),
+            '{' if scan.bump_if(|c| c == '-') => {
+                scan.nested_block_comment(*b"{-", *b"-}", BlockCommentStyle::Haskell)
+            }
             ' ' | '\t' => {
                 scan.bump_while(|c| c == ' ' || c == '\t');
                 scan.wrap(SpaceToken)

@@ -30,6 +30,7 @@ use crate::{
 //   needs to be manipulated in both `Token::text` and `LineComment::prefix`.
 // - Extract each token as a struct to manage manipulation routines.
 // - Make UTF-8 error a first-class token.
+// - Add LineTerm kind (i.e., LF, CRLF, CR).
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
@@ -172,8 +173,8 @@ impl<'s> Token<'s> {
                     .unwrap_or(0);
                 c.text = &c.text[..i];
                 match &mut self.text {
-                    Cow::Borrowed(text) => *text = &text[..c.prefix.len() + i],
-                    Cow::Owned(text) => text.truncate(c.prefix.len() + i),
+                    Cow::Borrowed(text) => *text = &text[..c.style.prefix().len() + i],
+                    Cow::Owned(text) => text.truncate(c.style.prefix().len() + i),
                 }
             }
             _ => panic!("not a line comment"),

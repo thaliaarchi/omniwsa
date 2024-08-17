@@ -1,8 +1,10 @@
 //! Pretty-printing for CST nodes.
 
+use std::borrow::Cow;
+
 use crate::{
     syntax::{Cst, Inst, OptionBlock},
-    tokens::{spaces::Spaces, words::Words, Token},
+    tokens::{spaces::Spaces, words::Words, Token, TokenKind},
 };
 
 /// Pretty-prints this node as Whitespace assembly syntax.
@@ -14,7 +16,11 @@ pub trait Pretty {
 
 impl Pretty for Token<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
-        buf.extend_from_slice(&self.text);
+        match &self.kind {
+            TokenKind::LineComment(l) => l.pretty(buf),
+            TokenKind::BlockComment(b) => b.pretty(buf),
+            _ => self.text.pretty(buf),
+        }
     }
 }
 
@@ -65,5 +71,23 @@ impl Pretty for OptionBlock<'_> {
 impl<T: Pretty> Pretty for Option<T> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         self.as_ref().inspect(|v| v.pretty(buf));
+    }
+}
+
+impl Pretty for &[u8] {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        buf.extend_from_slice(self);
+    }
+}
+
+impl Pretty for Cow<'_, [u8]> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        buf.extend_from_slice(self.as_ref());
+    }
+}
+
+impl Pretty for &str {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        buf.extend_from_slice(self.as_bytes());
     }
 }

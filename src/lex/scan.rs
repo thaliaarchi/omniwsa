@@ -3,7 +3,9 @@
 use enumset::EnumSet;
 
 use crate::tokens::{
-    comment::{BlockCommentToken, LineCommentToken},
+    comment::{
+        BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken,
+    },
     Token, TokenKind,
 };
 
@@ -106,57 +108,61 @@ impl<'s> Utf8Scanner<'s> {
     }
 
     /// Consumes a line comment. The cursor must start after the comment prefix.
-    pub fn line_comment(&mut self) -> Token<'s> {
+    pub fn line_comment(&mut self, style: LineCommentStyle) -> Token<'s> {
         let text_start = self.offset();
         self.bump_while(|c| c != '\n');
         let src = self.src.as_bytes();
         self.wrap(LineCommentToken {
-            prefix: &src[self.start_offset()..text_start],
             text: &src[text_start..self.offset()],
+            style,
             errors: EnumSet::empty(),
         })
     }
 
     /// Consumes a non-nested block comment. The cursor must start after the
     /// opening sequence.
-    pub fn block_comment(&mut self, close: [u8; 2]) -> Token<'s> {
+    pub fn block_comment(&mut self, close: [u8; 2], style: BlockCommentStyle) -> Token<'s> {
+        debug_assert!(!style.can_nest());
         let text_start = self.offset();
-        let (text_end, terminated) = loop {
+        let (text_end, errors) = loop {
             let rest = self.rest().as_bytes();
             if rest.len() < 2 {
                 self.end.offset = self.src.len();
-                break (self.end.offset, false);
+                break (self.end.offset, BlockCommentError::Unterminated.into());
             } else if rest[..2] == close {
                 self.end.offset += 2;
-                break (self.end.offset - 2, true);
+                break (self.end.offset - 2, EnumSet::empty());
             }
             self.next_char();
         };
-        let src = self.src.as_bytes();
         self.wrap(BlockCommentToken {
-            open: &src[self.start_offset()..text_start],
-            text: &src[text_start..text_end],
-            close: &src[text_end..self.offset()],
-            nested: false,
-            terminated,
+            text: &self.src.as_bytes()[text_start..text_end],
+            style,
+            errors,
         })
     }
 
     /// Consumes a nested block comment. The cursor must start after the opening
     /// sequence.
-    pub fn nested_block_comment(&mut self, open: [u8; 2], close: [u8; 2]) -> Token<'s> {
+    pub fn nested_block_comment(
+        &mut self,
+        open: [u8; 2],
+        close: [u8; 2],
+        style: BlockCommentStyle,
+    ) -> Token<'s> {
+        debug_assert!(style.can_nest());
         let mut level = 1;
         let text_start = self.offset();
-        let (text_end, terminated) = loop {
+        let (text_end, errors) = loop {
             let rest = self.rest().as_bytes();
             if rest.len() < 2 {
                 self.end.offset = self.src.len();
-                break (self.end.offset, false);
+                break (self.end.offset, BlockCommentError::Unterminated.into());
             } else if rest[..2] == close {
                 self.end.offset += 2;
                 level -= 1;
                 if level == 0 {
-                    break (self.end.offset - 2, true);
+                    break (self.end.offset - 2, EnumSet::empty());
                 }
             } else if rest[..2] == open {
                 self.end.offset += 2;
@@ -165,13 +171,10 @@ impl<'s> Utf8Scanner<'s> {
                 self.next_char();
             }
         };
-        let src = self.src.as_bytes();
         self.wrap(BlockCommentToken {
-            open: &src[self.start_offset()..text_start],
-            text: &src[text_start..text_end],
-            close: &src[text_end..self.offset()],
-            nested: true,
-            terminated,
+            text: &self.src.as_bytes()[text_start..text_end],
+            style,
+            errors,
         })
     }
 
@@ -327,56 +330,60 @@ impl<'s> ByteScanner<'s> {
     }
 
     /// Consumes a line comment. The cursor must start after the comment prefix.
-    pub fn line_comment(&mut self) -> Token<'s> {
+    pub fn line_comment(&mut self, style: LineCommentStyle) -> Token<'s> {
         let text_start = self.offset();
         self.bump_while(|b| b != b'\n');
         self.wrap(LineCommentToken {
-            prefix: &self.src[self.start_offset()..text_start],
             text: &self.src[text_start..self.offset()],
+            style,
             errors: EnumSet::empty(),
         })
     }
 
     /// Consumes a non-nested block comment. The cursor must start after the
     /// opening sequence.
-    pub fn block_comment(&mut self, close: [u8; 2]) -> Token<'s> {
+    pub fn block_comment(&mut self, close: [u8; 2], style: BlockCommentStyle) -> Token<'s> {
+        debug_assert!(!style.can_nest());
         let text_start = self.offset();
-        let (text_end, terminated) = loop {
+        let (text_end, errors) = loop {
             let rest = self.rest();
             if rest.len() < 2 {
                 self.end.offset = self.src.len();
-                break (self.end.offset, false);
+                break (self.end.offset, BlockCommentError::Unterminated.into());
             } else if rest[..2] == close {
                 self.end.offset += 2;
-                break (self.end.offset - 2, true);
+                break (self.end.offset - 2, EnumSet::empty());
             }
             self.next_byte();
         };
-        let src = self.src;
         self.wrap(BlockCommentToken {
-            open: &src[self.start_offset()..text_start],
-            text: &src[text_start..text_end],
-            close: &src[text_end..self.offset()],
-            nested: false,
-            terminated,
+            text: &self.src[text_start..text_end],
+            style,
+            errors,
         })
     }
 
     /// Consumes a nested block comment. The cursor must start after the opening
     /// sequence.
-    pub fn nested_block_comment(&mut self, open: [u8; 2], close: [u8; 2]) -> Token<'s> {
+    pub fn nested_block_comment(
+        &mut self,
+        open: [u8; 2],
+        close: [u8; 2],
+        style: BlockCommentStyle,
+    ) -> Token<'s> {
+        debug_assert!(style.can_nest());
         let mut level = 1;
         let text_start = self.offset();
-        let (text_end, terminated) = loop {
+        let (text_end, errors) = loop {
             let rest = self.rest();
             if rest.len() < 2 {
                 self.end.offset = self.src.len();
-                break (self.end.offset, false);
+                break (self.end.offset, BlockCommentError::Unterminated.into());
             } else if rest[..2] == close {
                 self.end.offset += 2;
                 level -= 1;
                 if level == 0 {
-                    break (self.end.offset - 2, true);
+                    break (self.end.offset - 2, EnumSet::empty());
                 }
             } else if rest[..2] == open {
                 self.end.offset += 2;
@@ -386,11 +393,9 @@ impl<'s> ByteScanner<'s> {
             }
         };
         self.wrap(BlockCommentToken {
-            open: &self.src[self.start_offset()..text_start],
             text: &self.src[text_start..text_end],
-            close: &self.src[text_end..self.offset()],
-            nested: true,
-            terminated,
+            style,
+            errors,
         })
     }
 

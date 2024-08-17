@@ -72,7 +72,7 @@ mod tests {
         dialects::Burghard,
         syntax::{Cst, Dialect, Inst, Opcode},
         tokens::{
-            comment::{BlockCommentToken, LineCommentToken},
+            comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
             integer::{Integer, IntegerToken},
             label::LabelToken,
             spaces::{EofToken, LineTermToken, SpaceToken, Spaces},
@@ -94,8 +94,8 @@ mod tests {
                         Token::new(
                             b"; start",
                             LineCommentToken {
-                                prefix: b";",
                                 text: b" start",
+                                style: LineCommentStyle::Semi,
                                 errors: EnumSet::empty(),
                             },
                         ),
@@ -132,11 +132,9 @@ mod tests {
                                 Token::new(
                                     b"{-1-}",
                                     BlockCommentToken {
-                                        open: b"{-",
                                         text: b"1",
-                                        close: b"-}",
-                                        nested: true,
-                                        terminated: true,
+                                        style: BlockCommentStyle::Haskell,
+                                        errors: EnumSet::empty(),
                                     },
                                 ),
                                 Token::new(b"  ", SpaceToken),
@@ -166,8 +164,8 @@ mod tests {
                         Token::new(
                             b"; 2",
                             LineCommentToken {
-                                prefix: b";",
                                 text: b" 2",
+                                style: LineCommentStyle::Semi,
                                 errors: EnumSet::empty(),
                             },
                         ),
@@ -193,11 +191,9 @@ mod tests {
                                         Token::new(
                                             b"{-2-}",
                                             BlockCommentToken {
-                                                open: b"{-",
                                                 text: b"2",
-                                                close: b"-}",
-                                                nested: true,
-                                                terminated: true,
+                                                style: BlockCommentStyle::Haskell,
+                                                errors: EnumSet::empty(),
                                             },
                                         ),
                                         Token::new(b"", EofToken),
