@@ -118,10 +118,15 @@ NON_SPACE ::= [^ ]
 - `jumpnz l` => `push 1 / sub / jn l`
 - `jumppz l` => `jn __internal_label_{id} / jmp l / __internal_label_{id}:`
 - `jumppn l` => `jz __internal_label_{id} / jmp l / __internal_label_{id}:`
+- `or` => Whitespace TSLS
+- `not` => Whitespace TSLT
+- `and` => Whitespace TSLL
+- `debugger` => Whitespace LLS
 
 Where `{id}` is substituted for an integer, globally counting from 0 for every
-internal label constructed, in lexical order. However, these are never
-displayed.
+internal label constructed, in lexical order. These internal labels are
+displayed in the debugger instruction listing, along with any other assembled
+labels.
 
 Labels are assigned integers by first use (definitions and references), starting
 at 0. Labels are not encoded with a leading S (positive) sign.
