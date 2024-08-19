@@ -5,7 +5,7 @@ use std::{collections::HashMap, str};
 use crate::{
     dialects::burghard::{option::OptionNester, parse::Parser},
     syntax::{Cst, Opcode},
-    tokens::mnemonics::Utf8LowerToAscii,
+    tokens::mnemonics::FoldedStr,
 };
 
 // TODO:
@@ -14,7 +14,7 @@ use crate::{
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Burghard {
-    mnemonics: HashMap<Utf8LowerToAscii<'static>, &'static [Opcode]>,
+    mnemonics: HashMap<FoldedStr<'static>, &'static [Opcode]>,
 }
 
 static MNEMONICS: &[(&str, &[Opcode])] = &[
@@ -66,7 +66,7 @@ impl Burghard {
         Burghard {
             mnemonics: MNEMONICS
                 .iter()
-                .map(|&(mnemonic, sigs)| (Utf8LowerToAscii(mnemonic.as_bytes()), sigs))
+                .map(|&(mnemonic, sigs)| (FoldedStr::ascii_ik(mnemonic.as_bytes()), sigs))
                 .collect(),
         }
     }
@@ -78,7 +78,7 @@ impl Burghard {
 
     /// Gets the overloaded opcodes for a mnemonic.
     pub(super) fn get_opcodes(&self, mnemonic: &[u8]) -> Option<&'static [Opcode]> {
-        self.mnemonics.get(&Utf8LowerToAscii(mnemonic)).copied()
+        self.mnemonics.get(&FoldedStr::exact(mnemonic)).copied()
     }
 }
 

@@ -2,8 +2,8 @@
 
 use std::{
     borrow::Cow,
-    fmt::{self, Debug, Display, Formatter},
     hash::{Hash, Hasher},
+    marker::PhantomData,
 };
 
 use bstr::ByteSlice;
@@ -28,19 +28,37 @@ pub struct MnemonicToken<'s> {
     pub opcode: Opcode,
 }
 
-/// A conventionally UTF-8 string which compares by folding to lowercase. Only
-/// characters that fold to ASCII are folded, as those are all that are needed
-/// for mnemonics. In addition to `[A-Z]`, those are 'İ' (U+0130, LATIN CAPITAL
-/// LETTER I WITH DOT ABOVE), which maps to 'i', and 'K' (U+212A, KELVIN SIGN),
-/// which maps to 'k'. This matches a subset of the case folding behavior of
-/// Haskell `toLower` from `Data.Char`, which performs single
-/// character-to-character mappings.
-#[derive(Clone, Copy)]
-pub(crate) struct Utf8LowerToAscii<'s>(pub &'s [u8]);
+/// A conventionally UTF-8 string which compares with configurable case folding.
+/// When two `FoldedStr` are compared, the most permissive case folding between
+/// the two is used.
+#[derive(Clone, Copy, DebugCustom)]
+pub struct FoldedStr<'a> {
+    /// The bytes of the string, which are conventionally UTF-8, though not
+    /// required to be.
+    #[debug("{:?}", s.as_bstr())]
+    pub s: &'a [u8],
+    /// The case folding used when comparing this string.
+    pub fold: CaseFold,
+}
 
-/// A byte string which compares by folding ASCII letters to lowercase.
-#[derive(Clone, Copy)]
-pub(crate) struct AsciiLower<'s>(pub &'s [u8]);
+/// Describes the style of case folding to perform when comparing strings. This
+/// only considers case folding involving ASCII letters. The two special cases
+/// in Unicode are 'İ' (U+0130: LATIN CAPITAL LETTER I WITH DOT ABOVE) and 'K'
+/// (U+212A: KELVIN SIGN). 'İ' folds to 'i' in Turkic languages and to the
+/// combining sequence 'i̇' (U+0069: LATIN SMALL LETTER I, U+0307: COMBINING DOT
+/// ABOVE) otherwise; however some implementations which cannot change character
+/// length may always fold to ASCII 'i'. 'K' always folds to 'k'.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CaseFold {
+    /// Compares verbatim, without case folding,
+    Exact,
+    /// Compares ASCII letters case-insensitively.
+    Ascii,
+    /// Compares ASCII letters and 'K' case-insensitively.
+    AsciiK,
+    /// Compares ASCII letters, 'İ', and 'K' case-insensitively.
+    AsciiIK,
+}
 
 impl HasError for MnemonicToken<'_> {
     fn has_error(&self) -> bool {
@@ -54,11 +72,144 @@ impl Pretty for MnemonicToken<'_> {
     }
 }
 
-impl Iterator for Utf8LowerToAscii<'_> {
+impl<'a> FoldedStr<'a> {
+    /// Wraps the byte string so it compares with the given case folding.
+    pub const fn new(s: &'a [u8], fold: CaseFold) -> Self {
+        FoldedStr { s, fold }
+    }
+
+    /// Wraps the byte string so it compares verbatim, without case folding,
+    pub const fn exact(s: &'a [u8]) -> Self {
+        FoldedStr::new(s, CaseFold::Exact)
+    }
+
+    /// Wraps the byte string so it compares ASCII letters case-insensitively.
+    pub const fn ascii(s: &'a [u8]) -> Self {
+        FoldedStr::new(s, CaseFold::Ascii)
+    }
+
+    /// Wraps the byte string so it compares ASCII letters and 'K'
+    /// case-insensitively.
+    pub const fn ascii_k(s: &'a [u8]) -> Self {
+        FoldedStr::new(s, CaseFold::AsciiK)
+    }
+
+    /// Wraps the byte string so it compares ASCII letters, 'İ', and 'K'
+    /// case-insensitively.
+    pub const fn ascii_ik(s: &'a [u8]) -> Self {
+        FoldedStr::new(s, CaseFold::AsciiIK)
+    }
+}
+
+impl PartialEq<[u8]> for FoldedStr<'_> {
+    fn eq(&self, other: &[u8]) -> bool {
+        self.fold.compare(self.s, other)
+    }
+}
+
+impl PartialEq for FoldedStr<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.fold.max(other.fold).compare(self.s, other.s)
+    }
+}
+
+impl Eq for FoldedStr<'_> {}
+
+impl Hash for FoldedStr<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Hash with the most permissive case folding, so different folding
+        // styles can be mixed.
+        CaseFoldIter::<CaseFoldAsciiIK>::new(self.s).for_each(|b| b.hash(state))
+    }
+}
+
+impl CaseFold {
+    /// Compares two byte strings for equality using the specified style of case
+    /// folding.
+    pub fn compare(&self, a: &[u8], b: &[u8]) -> bool {
+        match self {
+            CaseFold::Exact => a == b,
+            CaseFold::Ascii => Iterator::eq(
+                CaseFoldIter::<CaseFoldAscii>::new(a),
+                CaseFoldIter::<CaseFoldAscii>::new(b),
+            ),
+            CaseFold::AsciiK => Iterator::eq(
+                CaseFoldIter::<CaseFoldAsciiK>::new(a),
+                CaseFoldIter::<CaseFoldAsciiK>::new(b),
+            ),
+            CaseFold::AsciiIK => Iterator::eq(
+                CaseFoldIter::<CaseFoldAsciiIK>::new(a),
+                CaseFoldIter::<CaseFoldAsciiIK>::new(b),
+            ),
+        }
+    }
+}
+
+/// An iterator over case-folded bytes.
+struct CaseFoldIter<'a, F> {
+    s: &'a [u8],
+    fold: PhantomData<F>,
+}
+struct CaseFoldAscii;
+struct CaseFoldAsciiK;
+struct CaseFoldAsciiIK;
+
+impl<'a, F> CaseFoldIter<'a, F> {
+    fn new(s: &'a [u8]) -> Self {
+        CaseFoldIter {
+            s,
+            fold: PhantomData,
+        }
+    }
+}
+
+impl Iterator for CaseFoldIter<'_, CaseFoldAscii> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let s = &mut self.0;
+        let s = &mut self.s;
+        let Some(&b) = s.first() else {
+            return None;
+        };
+        *s = &s[1..];
+        Some(if (b'A'..=b'Z').contains(&b) {
+            b | 0x20
+        } else {
+            b
+        })
+    }
+}
+
+impl Iterator for CaseFoldIter<'_, CaseFoldAsciiK> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let s = &mut self.s;
+        let Some(&b) = s.first() else {
+            return None;
+        };
+        let (lower, len) = if b <= b'\x7f' {
+            if (b'A'..=b'Z').contains(&b) {
+                (b | 0x20, 1)
+            } else {
+                (b, 1)
+            }
+        } else if s.starts_with("K".as_bytes()) {
+            (b'k', "K".len())
+        } else {
+            // Don't bother decoding codepoints that don't lowercase to ASCII.
+            (b, 1)
+        };
+        *s = &s[len..];
+        Some(lower)
+    }
+}
+
+impl Iterator for CaseFoldIter<'_, CaseFoldAsciiIK> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let s = &mut self.s;
         let Some(&b) = s.first() else {
             return None;
         };
@@ -73,7 +224,7 @@ impl Iterator for Utf8LowerToAscii<'_> {
         } else if s.starts_with("K".as_bytes()) {
             (b'k', "K".len())
         } else {
-            // Don't bother decoding codepoints that don't lower to ASCII.
+            // Don't bother decoding codepoints that don't lowercase to ASCII.
             (b, 1)
         };
         *s = &s[len..];
@@ -81,63 +232,12 @@ impl Iterator for Utf8LowerToAscii<'_> {
     }
 }
 
-impl Iterator for AsciiLower<'_> {
-    type Item = u8;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let s = &mut self.0;
-        let Some(&b) = s.first() else {
-            return None;
-        };
-        *s = &s[1..];
-        Some(if (b'A'..=b'Z').contains(&b) {
-            b | 0x20
-        } else {
-            b
-        })
-    }
-}
-
-macro_rules! impl_folding_traits(($Ty:ty) => {
-    impl PartialEq for $Ty {
-        fn eq(&self, other: &Self) -> bool {
-            Iterator::eq(*self, *other)
-        }
-    }
-
-    impl Eq for $Ty {}
-
-    impl Hash for $Ty {
-        fn hash<H: Hasher>(&self, state: &mut H) {
-            self.for_each(|b| b.hash(state));
-        }
-    }
-
-    impl Debug for $Ty {
-        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-            Debug::fmt(self.0.as_bstr(), f)
-        }
-    }
-
-    impl Display for $Ty {
-        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-            Display::fmt(self.0.as_bstr(), f)
-        }
-    }
-});
-
-impl_folding_traits!(Utf8LowerToAscii<'_>);
-impl_folding_traits!(AsciiLower<'_>);
-
 #[cfg(test)]
 mod tests {
-    use crate::tokens::mnemonics::Utf8LowerToAscii;
+    use crate::tokens::mnemonics::CaseFold;
 
     #[test]
     fn utf8_folding() {
-        assert_eq!(
-            Utf8LowerToAscii(b"debug_printStack"),
-            Utf8LowerToAscii("Debug_PrİntStacK".as_bytes()),
-        );
+        assert!(CaseFold::AsciiIK.compare(b"debug_printStack", "Debug_PrİntStacK".as_bytes()));
     }
 }

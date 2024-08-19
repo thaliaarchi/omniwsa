@@ -9,13 +9,13 @@ use std::collections::HashMap;
 use crate::{
     dialects::palaiologos::parse::Parser,
     syntax::{Cst, Opcode},
-    tokens::mnemonics::AsciiLower,
+    tokens::mnemonics::FoldedStr,
 };
 
 /// State for parsing the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Palaiologos {
-    mnemonics: HashMap<AsciiLower<'static>, &'static [Opcode]>,
+    mnemonics: HashMap<FoldedStr<'static>, &'static [Opcode]>,
 }
 
 static MNEMONICS: &[(&str, &[Opcode])] = &[
@@ -73,7 +73,7 @@ impl Palaiologos {
         Palaiologos {
             mnemonics: MNEMONICS
                 .iter()
-                .map(|&(mnemonic, opcodes)| (AsciiLower(mnemonic.as_bytes()), opcodes))
+                .map(|&(mnemonic, opcodes)| (FoldedStr::ascii(mnemonic.as_bytes()), opcodes))
                 .collect(),
         }
     }
@@ -85,6 +85,6 @@ impl Palaiologos {
 
     /// Gets the overloaded opcodes for a mnemonic.
     pub(super) fn get_opcodes(&self, mnemonic: &[u8]) -> Option<&'static [Opcode]> {
-        self.mnemonics.get(&AsciiLower(mnemonic)).copied()
+        self.mnemonics.get(&FoldedStr::exact(mnemonic)).copied()
     }
 }
