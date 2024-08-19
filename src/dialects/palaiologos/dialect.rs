@@ -1,67 +1,57 @@
 //! Parsing for the Palaiologos Whitespace assembly dialect.
 
-// TODO:
-// - Create another table mapping opcode to argument types and the canonical
-//   mnemonic.
-
-use std::collections::HashMap;
-
 use crate::{
     dialects::palaiologos::parse::Parser,
     syntax::{Cst, Opcode},
-    tokens::mnemonics::FoldedStr,
+    tokens::mnemonics::{FoldedStr, MnemonicMap},
 };
 
 /// State for parsing the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Palaiologos {
-    mnemonics: HashMap<FoldedStr<'static>, &'static [Opcode]>,
+    mnemonics: MnemonicMap,
 }
 
-static MNEMONICS: &[(&str, &[Opcode])] = &[
-    ("psh", &[Opcode::Push, Opcode::Push0]),
-    ("push", &[Opcode::Push, Opcode::Push0]),
-    ("dup", &[Opcode::Dup]),
-    ("copy", &[Opcode::Copy]),
-    ("take", &[Opcode::Copy]),
-    ("pull", &[Opcode::Copy]),
-    ("xchg", &[Opcode::Swap]),
-    ("swp", &[Opcode::Swap]),
-    ("swap", &[Opcode::Swap]),
-    ("drop", &[Opcode::Drop]),
-    ("dsc", &[Opcode::Drop]),
-    ("slide", &[Opcode::Slide]),
-    ("add", &[Opcode::Add, Opcode::AddConstRhs]),
-    ("sub", &[Opcode::Sub, Opcode::SubConstRhs]),
-    ("mul", &[Opcode::Mul, Opcode::MulConstRhs]),
-    ("div", &[Opcode::Div, Opcode::DivConstRhs]),
-    ("mod", &[Opcode::Mod, Opcode::ModConstRhs]),
-    (
-        "sto",
-        &[
-            Opcode::Store,
-            Opcode::StoreConstRhs,
-            Opcode::StoreConstConst,
-        ],
-    ),
-    ("rcl", &[Opcode::Retrieve, Opcode::RetrieveConst]),
-    ("call", &[Opcode::Call]),
-    ("gosub", &[Opcode::Call]),
-    ("jsr", &[Opcode::Call]),
-    ("jmp", &[Opcode::Jmp]),
-    ("j", &[Opcode::Jmp]),
-    ("b", &[Opcode::Jmp]),
-    ("jz", &[Opcode::Jz]),
-    ("bz", &[Opcode::Jz]),
-    ("jltz", &[Opcode::Jn]),
-    ("bltz", &[Opcode::Jn]),
-    ("ret", &[Opcode::Ret]),
-    ("end", &[Opcode::End]),
-    ("putc", &[Opcode::Printc, Opcode::PrintcConst]),
-    ("putn", &[Opcode::Printi, Opcode::PrintiConst]),
-    ("getc", &[Opcode::Readc, Opcode::ReadcConst]),
-    ("getn", &[Opcode::Readi, Opcode::ReadiConst]),
-    ("rep", &[Opcode::PalaiologosRep]),
+macro_rules! mnemonics[($($mnemonic:literal => [$($opcode:ident),+],)+) => {
+    &[$((FoldedStr::ascii($mnemonic), &[$(Opcode::$opcode),+])),+]
+}];
+static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
+    b"psh" => [Push, Push0],
+    b"push" => [Push, Push0],
+    b"dup" => [Dup],
+    b"copy" => [Copy],
+    b"take" => [Copy],
+    b"pull" => [Copy],
+    b"xchg" => [Swap],
+    b"swp" => [Swap],
+    b"swap" => [Swap],
+    b"drop" => [Drop],
+    b"dsc" => [Drop],
+    b"slide" => [Slide],
+    b"add" => [Add, AddConstRhs],
+    b"sub" => [Sub, SubConstRhs],
+    b"mul" => [Mul, MulConstRhs],
+    b"div" => [Div, DivConstRhs],
+    b"mod" => [Mod, ModConstRhs],
+    b"sto" => [Store, StoreConstRhs, StoreConstConst],
+    b"rcl" => [Retrieve, RetrieveConst],
+    b"call" => [Call],
+    b"gosub" => [Call],
+    b"jsr" => [Call],
+    b"jmp" => [Jmp],
+    b"j" => [Jmp],
+    b"b" => [Jmp],
+    b"jz" => [Jz],
+    b"bz" => [Jz],
+    b"jltz" => [Jn],
+    b"bltz" => [Jn],
+    b"ret" => [Ret],
+    b"end" => [End],
+    b"putc" => [Printc, PrintcConst],
+    b"putn" => [Printi, PrintiConst],
+    b"getc" => [Readc, ReadcConst],
+    b"getn" => [Readi, ReadiConst],
+    b"rep" => [PalaiologosRep],
 ];
 
 impl Palaiologos {
@@ -71,10 +61,7 @@ impl Palaiologos {
     /// constructed for parsing any number of programs.
     pub fn new() -> Self {
         Palaiologos {
-            mnemonics: MNEMONICS
-                .iter()
-                .map(|&(mnemonic, opcodes)| (FoldedStr::ascii(mnemonic.as_bytes()), opcodes))
-                .collect(),
+            mnemonics: MnemonicMap::from(MNEMONICS),
         }
     }
 
@@ -83,8 +70,8 @@ impl Palaiologos {
         Parser::new(src, &Palaiologos::new()).parse()
     }
 
-    /// Gets the overloaded opcodes for a mnemonic.
-    pub(super) fn get_opcodes(&self, mnemonic: &[u8]) -> Option<&'static [Opcode]> {
-        self.mnemonics.get(&FoldedStr::exact(mnemonic)).copied()
+    /// Returns the mnemonic map for this dialect.
+    pub(super) fn mnemonics(&self) -> &MnemonicMap {
+        &self.mnemonics
     }
 }

@@ -109,6 +109,7 @@ impl<'s> Parser<'s, '_> {
         };
         let opcodes = self
             .dialect
+            .mnemonics()
             .get_opcodes(&mnemonic_word.word)
             .unwrap_or(&[Opcode::Invalid]);
         debug_assert!(opcodes.len() > 0);

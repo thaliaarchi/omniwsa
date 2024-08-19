@@ -2,6 +2,7 @@
 
 use std::{
     borrow::Cow,
+    collections::HashMap,
     hash::{Hash, Hasher},
     marker::PhantomData,
 };
@@ -12,11 +13,9 @@ use derive_more::Debug as DebugCustom;
 use crate::syntax::{HasError, Opcode, Pretty};
 
 // TODO:
-// - Make cross-dialect mnemonic map type, where the mnemonic key has an enum
-//   with variants for different case folding strategies. They hash with the
-//   most permissive case folding and compare against a string with the exact
-//   case folding.
 // - Make mapping from opcode to mnemonics.
+// - Make mnemonics configurable on the fly.
+//   - Make the double-insertion panic an error.
 
 /// Instruction mnemonic token.
 #[derive(Clone, DebugCustom, PartialEq, Eq)]
@@ -26,6 +25,12 @@ pub struct MnemonicToken<'s> {
     pub mnemonic: Cow<'s, [u8]>,
     /// The resolved mnemonic.
     pub opcode: Opcode,
+}
+
+/// A mapping from instruction mnemonic to overloaded opcodes.
+#[derive(Clone, Debug)]
+pub struct MnemonicMap {
+    map: HashMap<FoldedStr<'static>, &'static [Opcode]>,
 }
 
 /// A conventionally UTF-8 string which compares with configurable case folding.
@@ -69,6 +74,45 @@ impl HasError for MnemonicToken<'_> {
 impl Pretty for MnemonicToken<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         self.mnemonic.pretty(buf);
+    }
+}
+
+impl MnemonicMap {
+    /// Constructs an empty mnemonic map.
+    pub fn new() -> Self {
+        MnemonicMap {
+            map: HashMap::new(),
+        }
+    }
+
+    /// Associates a mnemonic with opcode overloads.
+    pub fn insert(&mut self, mnemonic: FoldedStr<'static>, opcodes: &'static [Opcode]) {
+        if self.map.insert(mnemonic, opcodes).is_some() {
+            panic!("conflicting mnemonics");
+        }
+    }
+
+    /// Gets the opcode overloads for a mnemonic.
+    pub fn get_opcodes(&self, mnemonic: &[u8]) -> Option<&'static [Opcode]> {
+        self.map.get(&FoldedStr::exact(mnemonic)).copied()
+    }
+
+    /// Returns the number of mnemonics in this map.
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    /// Returns whether this map has no elements.
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+}
+
+impl From<&'static [(FoldedStr<'static>, &'static [Opcode])]> for MnemonicMap {
+    fn from(map: &'static [(FoldedStr<'static>, &'static [Opcode])]) -> Self {
+        MnemonicMap {
+            map: map.iter().copied().collect(),
+        }
     }
 }
 

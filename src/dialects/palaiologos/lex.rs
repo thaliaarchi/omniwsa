@@ -207,7 +207,7 @@ fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], &'
 
     for len in (1..chunk.len()).rev() {
         let mnemonic = &chunk[..len];
-        if let Some(opcodes) = dialect.get_opcodes(mnemonic) {
+        if let Some(opcodes) = dialect.mnemonics().get_opcodes(mnemonic) {
             return Some((mnemonic, opcodes));
         }
     }

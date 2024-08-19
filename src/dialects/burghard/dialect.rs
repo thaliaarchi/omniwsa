@@ -1,11 +1,9 @@
 //! Parsing for the Burghard Whitespace assembly dialect.
 
-use std::{collections::HashMap, str};
-
 use crate::{
     dialects::burghard::{option::OptionNester, parse::Parser},
     syntax::{Cst, Opcode},
-    tokens::mnemonics::FoldedStr,
+    tokens::mnemonics::{FoldedStr, MnemonicMap},
 };
 
 // TODO:
@@ -14,49 +12,52 @@ use crate::{
 /// State for parsing the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Burghard {
-    mnemonics: HashMap<FoldedStr<'static>, &'static [Opcode]>,
+    mnemonics: MnemonicMap,
 }
 
-static MNEMONICS: &[(&str, &[Opcode])] = &[
-    ("push", &[Opcode::Push]),
-    ("pushs", &[Opcode::PushString0]),
-    ("doub", &[Opcode::Dup]),
-    ("swap", &[Opcode::Swap]),
-    ("pop", &[Opcode::Drop]),
-    ("add", &[Opcode::Add, Opcode::AddConstRhs]),
-    ("sub", &[Opcode::Sub, Opcode::SubConstRhs]),
-    ("mul", &[Opcode::Mul, Opcode::MulConstRhs]),
-    ("div", &[Opcode::Div, Opcode::DivConstRhs]),
-    ("mod", &[Opcode::Mod, Opcode::ModConstRhs]),
-    ("store", &[Opcode::Store, Opcode::StoreConstLhs]),
-    ("retrive", &[Opcode::Retrieve, Opcode::RetrieveConst]),
-    ("label", &[Opcode::Label]),
-    ("call", &[Opcode::Call]),
-    ("jump", &[Opcode::Jmp]),
-    ("jumpz", &[Opcode::Jz]),
-    ("jumpn", &[Opcode::Jn]),
-    ("jumpp", &[Opcode::BurghardJmpP]),
-    ("jumpnp", &[Opcode::BurghardJmpNP]),
-    ("jumppn", &[Opcode::BurghardJmpNP]),
-    ("jumpnz", &[Opcode::BurghardJmpNZ]),
-    ("jumppz", &[Opcode::BurghardJmpPZ]),
-    ("ret", &[Opcode::Ret]),
-    ("exit", &[Opcode::End]),
-    ("outC", &[Opcode::Printc]),
-    ("outN", &[Opcode::Printi]),
-    ("inC", &[Opcode::Readc]),
-    ("inN", &[Opcode::Readi]),
-    ("debug_printstack", &[Opcode::BurghardPrintStack]),
-    ("debug_printheap", &[Opcode::BurghardPrintHeap]),
-    ("test", &[Opcode::BurghardTest]),
-    ("valueinteger", &[Opcode::BurghardValueInteger]),
-    ("valuestring", &[Opcode::BurghardValueString]),
-    ("include", &[Opcode::BurghardInclude]),
-    ("option", &[Opcode::DefineOption]),
-    ("ifoption", &[Opcode::IfOption]),
-    ("elseifoption", &[Opcode::ElseIfOption]),
-    ("elseoption", &[Opcode::ElseOption]),
-    ("endoption", &[Opcode::EndOption]),
+macro_rules! mnemonics[($($mnemonic:literal => [$($opcode:ident),+],)+) => {
+    &[$((FoldedStr::ascii_ik($mnemonic), &[$(Opcode::$opcode),+])),+]
+}];
+static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
+    b"push" => [Push],
+    b"pushs" => [PushString0],
+    b"doub" => [Dup],
+    b"swap" => [Swap],
+    b"pop" => [Drop],
+    b"add" => [Add, AddConstRhs],
+    b"sub" => [Sub, SubConstRhs],
+    b"mul" => [Mul, MulConstRhs],
+    b"div" => [Div, DivConstRhs],
+    b"mod" => [Mod, ModConstRhs],
+    b"store" => [Store, StoreConstLhs],
+    b"retrive" => [Retrieve, RetrieveConst],
+    b"label" => [Label],
+    b"call" => [Call],
+    b"jump" => [Jmp],
+    b"jumpz" => [Jz],
+    b"jumpn" => [Jn],
+    b"jumpp" => [BurghardJmpP],
+    b"jumpnp" => [BurghardJmpNP],
+    b"jumppn" => [BurghardJmpNP],
+    b"jumpnz" => [BurghardJmpNZ],
+    b"jumppz" => [BurghardJmpPZ],
+    b"ret" => [Ret],
+    b"exit" => [End],
+    b"outC" => [Printc],
+    b"outN" => [Printi],
+    b"inC" => [Readc],
+    b"inN" => [Readi],
+    b"debug_printstack" => [BurghardPrintStack],
+    b"debug_printheap" => [BurghardPrintHeap],
+    b"test" => [BurghardTest],
+    b"valueinteger" => [BurghardValueInteger],
+    b"valuestring" => [BurghardValueString],
+    b"include" => [BurghardInclude],
+    b"option" => [DefineOption],
+    b"ifoption" => [IfOption],
+    b"elseifoption" => [ElseIfOption],
+    b"elseoption" => [ElseOption],
+    b"endoption" => [EndOption],
 ];
 
 impl Burghard {
@@ -64,10 +65,7 @@ impl Burghard {
     /// constructed for parsing any number of programs.
     pub fn new() -> Self {
         Burghard {
-            mnemonics: MNEMONICS
-                .iter()
-                .map(|&(mnemonic, sigs)| (FoldedStr::ascii_ik(mnemonic.as_bytes()), sigs))
-                .collect(),
+            mnemonics: MnemonicMap::from(MNEMONICS),
         }
     }
 
@@ -76,9 +74,9 @@ impl Burghard {
         OptionNester::new().nest(&mut Parser::new(src, self))
     }
 
-    /// Gets the overloaded opcodes for a mnemonic.
-    pub(super) fn get_opcodes(&self, mnemonic: &[u8]) -> Option<&'static [Opcode]> {
-        self.mnemonics.get(&FoldedStr::exact(mnemonic)).copied()
+    /// Returns the mnemonic map for this dialect.
+    pub(super) fn mnemonics(&self) -> &MnemonicMap {
+        &self.mnemonics
     }
 }
 
