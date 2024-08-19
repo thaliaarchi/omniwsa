@@ -1,105 +1,84 @@
 # voliva Whitespace assembly
 
 - Source: [code](https://github.com/voliva/wsa)
-  (last updated [2024-07-25](https://github.com/voliva/wsa/commit/3a99669b57f266e7328143e49579f6d33da7c6f5))
+  (last updated [2024-08-19](https://github.com/voliva/wsa/pull/1) in fork)
 - Corpus: [typescript/voliva-wsa](https://github.com/wspace/corpus/blob/main/typescript/voliva-wsa/project.json)
 
 ## Grammar
 
+The program is divided into lines and each line is lexed into tokens:
+
 ```bnf
 program ::= (line "\n")* line?
-line ::=
-    | WHITESPACE instruction WHITESPACE
-    | WHITESPACE comment
-comment ::= ";" .*
+line ::= (SPACE? token)* SPACE? LINE_COMMENT?
+token ::= STRING | CHAR | VARIABLE | INTEGER | WORD
 
-# BUG: Arities are not enforced.
-# BUG: Mnemonics are compared with locale-aware Unicode case folding.
-instruction ::=
-    | (?i)"push" required_int
-    | (?i)"dup" ignored
-    | (?i)"copy" required_int
-    | (?i)"swap" ignored
-    | (?i)"pop" ignored
-    | (?i)"slide" required_int
-    # When non-empty, that number is pushed before the operation. As an
-    # optimization, add 0, sub 0, mul 1, and div 1 are substituted with nothing
-    # (where 0 and 1 are the parsed values).
-    | (?i)"add" optional_int
-    | (?i)"sub" optional_int
-    | (?i)"mul" optional_int
-    | (?i)"div" optional_int
-    | (?i)"mod" optional_int
-    | (?i)"and" ignored
-    | (?i)"or" ignored
-    | (?i)"not" ignored
-    | (?i)"store" optional_int
-    | (?i)"storestr" required_string
-    | (?i)"retrieve" optional_int
-    | (?i)"label" required_label
-    | (?i)"call" required_label
-    | (?i)"jump" required_label
-    | (?i)"jumpz" required_label
-    | (?i)"jumpn" required_label
-    | (?i)"jumpp" required_label
-    | (?i)"jumpnz" required_label
-    | (?i)"jumppz" required_label
-    | ((?i)"jumppn" | (?i)"jumpnp") required_label
-    | (?i)"ret" ignored
-    | (?i)"exit" ignored
-    | (?i)"outn" ignored
-    | (?i)"outc" ignored
-    | (?i)"readn" ignored
-    | (?i)"readc" ignored
-    | (?i)"valuestring" SPACE ident (SPACE arg)?
-    | (?i)"valueinteger" SPACE ident (SPACE bigint)?
-    | (?i)"debugger" ignored
-    | (?i)"include" (SPACE arg)?
+STRING ::= "\"" ([^"\\\n] | \\["\\bfnrtv])* "\""
+CHAR ::= "'" ([^'\\\n] | \\['\\bfnrtv]) "'"
+VARIABLE ::= "_" WORD
+INTEGER ::= BIGINT
+WORD ::= [^\s;"']+
+LINE_COMMENT ::= ";" [^\n]*
+SPACE ::= \s+
 
-# BUG: A value can be omitted and it is 0 when empty.
-required_int ::= (SPACE int)?
-# When empty (not including the SPACE), no argument is present.
-optional_int ::= (SPACE int)?
-# Labels are unrestricted.
-required_label ::= (SPACE arg)?
-required_string ::= (SPACE string)?
-
-int ::=
-    | bigint
-    | char
-    | ident
-string ::=
-    | arg
-    | ident
-    # BUG: A char should not be valid here; it is converted to a BigInt, then to
-    # a string, then to codepoints.
-    | char
-char ::= "'" . "'"
-ident ::= "_" NON_SPACE*
-arg ::= .*
-ignored ::= (SPACE arg)?
-
-# BigInt constructor (ref. https://tc39.es/ecma262/multipage/abstract-operations.html#sec-stringtobigint).
-bigint ::=
-    | WHITESPACE? bigint_integer WHITESPACE?
-    | WHITESPACE? # Empty is 0
-# Note: A 0-prefixed number is decimal not octal, and _ digit separators and
-# non-decimal signs are not supported.
-bigint_integer ::=
+# BigInt constructor, without whitespace (ref. https://tc39.es/ecma262/multipage/abstract-operations.html#sec-stringtobigint).
+BIGINT ::=
     | ("-" | "+") [0-9]+
     | ("0b" | "0B") [01]+
     | ("0o" | "0O") [0-7]+
     | ("0x" | "0X") [0-9 a-f A-F]+
-
-# Whitespace and line terminators in BigInt constructor (ref. https://tc39.es/ecma262/multipage/abstract-operations.html#prod-StrWhiteSpaceChar)
-# and in String.prototype.trim (ref. https://tc39.es/ecma262/multipage/text-processing.html#sec-string.prototype.trim).
-WHITESPACE ::=
-    | <TAB> | <VT> | <FF> | <ZWNBSP> | <USP>
-    | <LF> | <CR> | <LS> | <PS>
-
-SPACE ::= " "
-NON_SPACE ::= [^ ]
 ```
+
+Each line is then parsed as an instruction:
+
+```bnf
+instruction ::=
+    | (?i)"push" integer
+    | (?i)"dup"
+    | (?i)"copy" index
+    | (?i)"swap"
+    | (?i)"pop"
+    | (?i)"slide" index
+    | (?i)"add" integer?
+    | (?i)"sub" integer?
+    | (?i)"mul" integer?
+    | (?i)"div" integer?
+    | (?i)"mod" integer?
+    | (?i)"and" integer?
+    | (?i)"or" integer?
+    | (?i)"not"
+    | (?i)"store" integer?
+    | (?i)"storestr" string
+    | (?i)"retrieve" integer?
+    | (?i)"label" label
+    | (?i)"call" label
+    | (?i)"jump" label
+    | (?i)"jumpz" label
+    | (?i)"jumpn" label
+    | (?i)"jumpp" label
+    | (?i)"jumpnz" label
+    | (?i)"jumppz" label
+    | ((?i)"jumppn" | (?i)"jumpnp") label
+    | (?i)"ret"
+    | (?i)"exit"
+    | (?i)"outn"
+    | (?i)"outc"
+    | (?i)"readn"
+    | (?i)"readc"
+    | (?i)"valuestring" variable string
+    | (?i)"valueinteger" variable integer
+    | (?i)"debugger"
+    | (?i)"include" filename
+
+integer ::= INTEGER | CHAR | VARIABLE
+string ::= STRING | WORD | VARIABLE
+index ::= INTEGER | VARIABLE
+label ::= WORD | VARIABLE
+variable ::= VARIABLE
+filename ::= WORD | VARIABLE | STRING
+```
+
+Mnemonics are compared with effectively ASCII case folding.
 
 ## Generation
 
@@ -112,39 +91,32 @@ NON_SPACE ::= [^ ]
 - `mul n` => `push n / mul`
 - `div n` => `push n / div`
 - `mod n` => `push n / mod`
+- `store n` => `push n / swap / store`
 - `storestr s` => `dup / push c / store / push 1 / add` for each character in
   `s` and 0
+- `retrieve n` => `push n / retrieve`
 - `jumpp l` => `push 0 / swap / sub / jn l`
 - `jumpnz l` => `push 1 / sub / jn l`
 - `jumppz l` => `jn __internal_label_{id} / jmp l / __internal_label_{id}:`
 - `jumppn l` => `jz __internal_label_{id} / jmp l / __internal_label_{id}:`
+- `or n` => `push n / or`
+- `and n` => `push n / and`
 - `or` => Whitespace TSLS
 - `not` => Whitespace TSLT
 - `and` => Whitespace TSLL
 - `debugger` => Whitespace LLS
 
-Where `{id}` is substituted for an integer, globally counting from 0 for every
-internal label constructed, in lexical order. These internal labels are
-displayed in the debugger instruction listing, along with any other assembled
-labels.
-
 Labels are assigned integers by first use (definitions and references), starting
 at 0. Labels are not encoded with a leading S (positive) sign.
 
-Unlike the Burghard dialect, `valueinteger` and `valuestring` use the same
-symbol table.
+Internal labels are displayed with names of the form `__internal_label_{id}`,
+where `{id}` is substituted for an integer, globally counting from 0 for every
+internal label constructed, in lexical order. These names do not conflict with
+user labels of the same form, even though the debugger instruction listing shows
+them as the same.
 
-## Bugs in the assembler
-
-- Arities are not enforced. Required arguments can be omitted and become 0, and
-  instructions that don't take an argument do not check for an extra argument.
-- Mnemonics are compared using String.prototype.toLocaleLowerCase, which has
-  locale-aware case folding. Thus, in Turkish (tr) and Azeri (az) locales, İ
-  (U+0130, LATIN CAPITAL LETTER I WITH DOT ABOVE) compares equal to i (U+0069,
-  LATIN SMALL LETTER I). In all locales, K (U+212A, KELVIN SIGN) compares equal
-  to k (U+006B, LATIN SMALL LETTER K), but no mnemonics use k. The characters
-  used are `[a-eg-jl-pr-z]`.
-- `storestr` with a character literal is invalid. It is converted to a BigInt,
-  then to a string, then to codepoints.
-- Labels with the pattern `__internal_label_{i}` can collide with generated
-  labels.
+Variables can be reassigned. Unlike the Burghard dialect, `valueinteger` and
+`valuestring` use the same symbol table. A variable used as an integer or index
+argument must have an integer value and a variable used as a string argument
+must have a string value. A variable used as a label or filename is interpreted
+as a word.
