@@ -16,6 +16,10 @@ use crate::syntax::{HasError, Opcode, Pretty};
 // - Make mapping from opcode to mnemonics.
 // - Make mnemonics configurable on the fly.
 //   - Make the double-insertion panic an error.
+//   - Add general case folding.
+//   - Find a better name for K and I/K folding for the CLI. Perhaps Unicode and
+//     UnicodeTr, respectively. The ASCII part is only relevant as an
+//     optimization with detection.
 
 /// Instruction mnemonic token.
 #[derive(Clone, DebugCustom, PartialEq, Eq)]
@@ -122,6 +126,12 @@ impl<'a> FoldedStr<'a> {
         FoldedStr { s, fold }
     }
 
+    /// Detects the minimum case folding features needed for this byte string
+    /// and wraps the byte string so it compares with that case folding.
+    pub const fn new_detect(s: &'a [u8], fold: CaseFold) -> Self {
+        FoldedStr::new(s, fold.detect(s))
+    }
+
     /// Wraps the byte string so it compares verbatim, without case folding,
     pub const fn exact(s: &'a [u8]) -> Self {
         FoldedStr::new(s, CaseFold::Exact)
@@ -185,6 +195,44 @@ impl CaseFold {
                 CaseFoldIter::<CaseFoldAsciiIK>::new(a),
                 CaseFoldIter::<CaseFoldAsciiIK>::new(b),
             ),
+        }
+    }
+
+    /// Detects the minimum case folding features needed for this byte string.
+    const fn detect(&self, s: &[u8]) -> CaseFold {
+        if matches!(self, CaseFold::Exact) {
+            return CaseFold::Exact;
+        }
+        let mut has_ascii = false;
+        let mut has_i = false;
+        let mut has_k = false;
+        let mut i = 0;
+        while i < s.len() {
+            const I: &[u8] = "İ".as_bytes();
+            const K: &[u8] = "K".as_bytes();
+            match s[i] {
+                b'i' | b'I' => has_i = true,
+                b'k' | b'K' => has_k = true,
+                b'a'..=b'z' | b'A'..=b'Z' => has_ascii = true,
+                _ if i + 2 < s.len() && s[i] == I[0] && s[i + 1] == I[1] && s[i + 2] == I[2] => {
+                    has_i = true;
+                    i += 2;
+                }
+                _ if i + 2 < s.len() && s[i] == K[0] && s[i + 1] == K[1] && s[i + 2] == K[2] => {
+                    has_k = true;
+                    i += 2;
+                }
+                ..=b'\x7f' => {}
+                _ => panic!("unsupported character"),
+            }
+            i += 1;
+        }
+        has_ascii |= has_i | has_k;
+        match self {
+            CaseFold::AsciiIK if has_i => CaseFold::AsciiIK,
+            CaseFold::AsciiIK | CaseFold::AsciiK if has_k => CaseFold::AsciiK,
+            CaseFold::AsciiIK | CaseFold::AsciiK | CaseFold::Ascii if has_ascii => CaseFold::Ascii,
+            _ => CaseFold::Exact,
         }
     }
 }

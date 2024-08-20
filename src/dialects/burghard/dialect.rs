@@ -3,7 +3,7 @@
 use crate::{
     dialects::burghard::{option::OptionNester, parse::Parser},
     syntax::{Cst, Opcode},
-    tokens::mnemonics::{FoldedStr, MnemonicMap},
+    tokens::mnemonics::{CaseFold, FoldedStr, MnemonicMap},
 };
 
 // TODO:
@@ -16,7 +16,7 @@ pub struct Burghard {
 }
 
 macro_rules! mnemonics[($($mnemonic:literal => [$($opcode:ident),+],)+) => {
-    &[$((FoldedStr::ascii_ik($mnemonic), &[$(Opcode::$opcode),+])),+]
+    &[$((FoldedStr::new_detect($mnemonic, CaseFold::AsciiIK), &[$(Opcode::$opcode),+])),+]
 }];
 static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
     b"push" => [Push],
