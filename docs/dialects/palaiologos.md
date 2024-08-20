@@ -1,47 +1,51 @@
 # Palaiologos Whitespace assembly
 
 - Source: [code](https://github.com/kspalaiologos/asm2ws)
-  (last updated [2022-01-24](https://github.com/kspalaiologos/asm2ws/tree/92e33991c5465ec108206db1f028816d3d1e64d6))
+  (last updated [2024-08-20](https://github.com/kspalaiologos/asm2ws/pull/3)
+  in fork)
 - Corpus: [c/kspalaiologos-asm2ws](https://github.com/wspace/corpus/blob/main/c/kspalaiologos-asm2ws/project.json)
 
 ## Grammar
 
 ```bnf
-program ::= lf* (inst lf | lbl lf*)*
+program ::= (line lf)* line?
+line ::= ((lbl_def slash? | inst slash)* (lbl_def | inst))?
+
 inst ::=
-    | psh arg?
-    | arg
+    | psh numeric?
+    | numeric
     | dup
-    | copy arg
+    | copy numeric
     | xchg
     | drop
-    | slide arg
-    | add arg?
-    | sub arg?
-    | mul arg?
-    | div arg?
-    | mod arg?
-    | sto (arg (comma arg)?)?
-    | rcl arg?
-    | call arg
-    | jmp arg
-    | jz arg
-    | jltz arg
+    | slide numeric
+    | add numeric?
+    | sub numeric?
+    | mul numeric?
+    | div numeric?
+    | mod numeric?
+    | sto (numeric (comma numeric)?)?
+    | rcl numeric?
+    | call lbl_ref
+    | jmp lbl_ref
+    | jz lbl_ref
+    | jltz lbl_ref
     | ret
     | end
-    | putc arg?
-    | putn arg?
-    | getc arg?
-    | getn arg?
-    | rep dup arg
-    | rep drop arg
-    | rep add arg
-    | rep sub arg
-    | rep mul arg
-    | rep div arg
-    | rep mod arg
-    | rep putn arg
-arg ::= number | char | ref
+    | putc numeric?
+    | putn numeric?
+    | getc numeric?
+    | getn numeric?
+    | rep dup numeric
+    | rep drop numeric
+    | rep add numeric
+    | rep sub numeric
+    | rep mul numeric
+    | rep div numeric
+    | rep mod numeric
+    | rep putc numeric
+    | rep putn numeric
+numeric ::= integer | char
 ```
 
 Tokens:
@@ -72,24 +76,29 @@ getc  ::= (?i)"getc"
 getn  ::= (?i)"getn"
 rep   ::= (?i)"rep"
 
-lbl ::= "@" [a-zA-Z_] [a-zA-Z0-9_]*
-ref ::= "%" [a-zA-Z_] [a-zA-Z0-9_]*
-number ::=
+lbl_def ::= "@" [a-zA-Z_] [a-zA-Z0-9_]*
+lbl_ref ::= "%" [a-zA-Z_] [a-zA-Z0-9_]*
+integer ::=
     | "-"? [0-9]+
     | "-"? [01]+ [bB]
+    | "-"? [0-7]+ [oO]
     | "-"? [0-9] [0-9a-fA-F]* [hH]
-char ::= "'" "\\"? . "'"
-string ::= "\"" ([^\\] | \\.)* "\""
+char ::= "'" ([^\\'\n] | \\[^\n]) "'"
+string ::= "\"" ([^\\"\n] | \\[^\n])* "\""
 comma ::= ","
-lf ::= "\n"+ | "/"+
+lf ::= "\n"
+slash ::= "/"
 ```
 
 Ignored:
 
 ```bnf
-comment ::= ";" .+? "\n"
+comment ::= ";" [^\n]*
 space ::= [ \t\r\f]
 ```
+
+Chars can have `\a`, `\b`, `\f`, `\n`, `\r`, `\t`, and `\v` escape sequences as
+in C. All other escapes have the value of the char after the slash.
 
 ## Mnemonics
 
@@ -122,6 +131,7 @@ the AST kind `STOP`.
 - `rep mul` -> `mul` repeated `n` times
 - `rep div` -> `div` repeated `n` times
 - `rep mod` -> `mod` repeated `n` times
+- `rep putc` -> `putc` repeated `n` times
 - `rep putn` -> `putn` repeated `n` times
 
 Instructions prefixed with `rep` are repeated as many times as specified. The
@@ -132,55 +142,19 @@ with `-Os`, `-Of`, or neither, and is the only optimization.
 
 ### Labels
 
-Labels are assigned, starting from 1, in order from the most references. The
-sort algorithm used (`qsort`) is unstable, so the order of labels with equal
-number of references is undefined.
+Labels are assigned, starting from 0, in order from the most references. Ties
+are broken by the earlier first occurrence.
 
 A label defined multiple times is an error. A label defined, but never used, is
-not emitted.
-
-Labels may be used in place of an integer arguments and are resolved just as
-labels used as label arguments. Likewise, integer literals may be used in place
-of label arguments. Since labels can only be defined with label syntax, integers
-cannot usefully reference them. Since labels without a definition yield an
-error, they cannot be easily used as automatically assigned variables.
-
-Label arguments are emitted with no sign, but labels used as integer arguments
-are emitted with a S (positive) sign. Integers used as label arguments are not
-emitted with a sign and negative integers cause an infinite loop.
+not emitted. Label arguments are emitted with no sign.
 
 ## Notes
 
 - The assembler is run with `./wsi --masm <file>`.
 - Byte–oriented.
-- NUL does not truncate the file and is just an invalid char.
-- A binary number takes precedence over a decimal number juxtaposed with `b`.
-- Integers have a precision of `int32_t`. They are parsed without the sign, then
-  negated. Integers between -2147483647 and 2147483647 (2^31-1), inclusive, work
-  correctly; outside that, they wrap with twos complement.
-
-## Bugs in the assembler
-
+- Integers have a precision of `int32_t` and values outside this range yield a
+  parse error.
 - Mnemonics do not need to be followed by spaces, so, e.g., `repdrop5` is valid.
-- Line comments consume a line feed, so an `lf` token is not emitted after.
-  Thus, line comments can appear, e.g., between arguments, and cannot be on the
-  last line if it is not terminated with LF.
-- LF and `/` instruction separators cannot be mixed. The parser should repeat
-  the LF token as LF* and LF+, instead of LF? and LF.
-  - Consecutive LFs are allowed only without tokens between, including spaces or
-    line comments. Thus, blank lines with spaces or line comments produce
-    errors.
-  - Except for the first line, `/` may not start a line, and except for the last
-    line if there is no final LF, `/` may not end a line. Consecutive `/` are
-    allowed only without tokens between, including spaces.
-- Char token `'\'` is parsed as `'\''`.
+- A binary number takes precedence over a decimal number juxtaposed with `b`.
 - String tokens are unused in the parser.
-- Integer, char, and label tokens are interchangeable, but not useful in the
-  incorrect places.
-- Out-of-range integer parse errors are not reported.
-- `push 2147483648` (2^31) and `push -2147483648` (-2^31) both parse as
-  -2147483648, which is its own negation. This causes the first loop in
-  `asm_gen.c:numeral` to loop infinitely, because the sign is extended on right
-  shift.
-- Negative integer literals used as a label argument cause the first loop in
-  `asm_gen.c:unumeral` to similarly loop infinitely.
+- NUL does not truncate the file and is just an invalid char.
