@@ -199,6 +199,9 @@ Duplicate labels are forbidden.
 Variables defined with `valueinteger` and `valuestring` do not conflict and can
 share names. They are visible to any successive instructions.
 
+Imports are resolved relative to the current directory, not to the file
+including it.
+
 An extra `\n\n\n` is appended to the encoded program.
 
 ## Mnemonics
