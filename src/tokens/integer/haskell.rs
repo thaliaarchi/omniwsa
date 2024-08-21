@@ -56,9 +56,9 @@
 use bstr::ByteSlice;
 use enumset::EnumSet;
 
-use crate::tokens::integer::{IntegerError, IntegerSign};
+use crate::tokens::integer::{IntegerError, Sign};
 
-impl IntegerSign {
+impl Sign {
     /// Strips parentheses groupings and a sign for an integer literal with
     /// Haskell `Integer` syntax. See [`IntegerSyntax::haskell`] for the
     /// grammar.
@@ -68,7 +68,7 @@ impl IntegerSign {
         }
 
         let mut errors = EnumSet::new();
-        let mut sign = IntegerSign::None;
+        let mut sign = Sign::None;
         let mut has_sign = false;
         s = s.trim_with(is_whitespace);
         loop {
@@ -78,8 +78,8 @@ impl IntegerSign {
             let (first, last) = (s.as_bytes()[0], s.as_bytes()[s.len() - 1]);
             if first == b'-' {
                 sign = match sign {
-                    IntegerSign::None | IntegerSign::Pos => IntegerSign::Neg,
-                    IntegerSign::Neg => IntegerSign::Pos,
+                    Sign::None | Sign::Pos => Sign::Neg,
+                    Sign::Neg => Sign::Pos,
                 };
                 if has_sign {
                     errors |= IntegerError::InvalidSign;
@@ -87,8 +87,8 @@ impl IntegerSign {
                 has_sign = true;
                 s = s[1..].trim_start_with(is_whitespace);
             } else if first == b'+' {
-                if sign == IntegerSign::None {
-                    sign = IntegerSign::Pos;
+                if sign == Sign::None {
+                    sign = Sign::Pos;
                 }
                 has_sign = true;
                 errors |= IntegerError::InvalidSign;
@@ -121,13 +121,11 @@ mod tests {
 
     use enumset::EnumSet;
 
-    use crate::tokens::integer::{
-        Integer, IntegerBase, IntegerError, IntegerSign, IntegerSyntax, IntegerToken,
-    };
+    use crate::tokens::integer::{Base, Integer, IntegerError, IntegerSyntax, IntegerToken, Sign};
 
-    use IntegerBase::{Binary as Bin, Decimal as Dec, Hexadecimal as Hex, Octal as Oct};
+    use Base::{Binary as Bin, Decimal as Dec, Hexadecimal as Hex, Octal as Oct};
     use IntegerError::*;
-    use IntegerSign::{Neg, None as No, Pos};
+    use Sign::{Neg, None as No, Pos};
 
     const T: bool = true;
     const F: bool = false;
@@ -141,8 +139,8 @@ mod tests {
         fn new<S: Into<String> + Clone>(
             input: S,
             output: &'static str,
-            sign: IntegerSign,
-            base: IntegerBase,
+            sign: Sign,
+            base: Base,
             leading_zeros: usize,
             has_digit_seps: bool,
             errors: EnumSet<IntegerError>,

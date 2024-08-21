@@ -3,8 +3,7 @@
 use std::borrow::Cow;
 
 use crate::tokens::integer::{
-    BaseStyle, IntegerBase, IntegerDigitSep, IntegerError, IntegerSign, IntegerSyntax,
-    IntegerToken, SignStyle,
+    Base, BaseStyle, DigitSep, IntegerError, IntegerSyntax, IntegerToken, Sign, SignStyle,
 };
 
 impl IntegerSyntax {
@@ -14,25 +13,25 @@ impl IntegerSyntax {
         let mut int = IntegerToken::default();
         let (sign, s) = match self.sign_style {
             SignStyle::Neg | SignStyle::NegPos => {
-                let (sign, s) = IntegerSign::strip(&literal);
-                if int.sign == IntegerSign::Pos && self.sign_style == SignStyle::NegPos {
+                let (sign, s) = Sign::strip(&literal);
+                if int.sign == Sign::Pos && self.sign_style == SignStyle::NegPos {
                     int.errors |= IntegerError::InvalidSign;
                 }
                 (sign, s)
             }
             SignStyle::Haskell => {
-                let (sign, s, errors) = IntegerSign::strip_haskell(&literal);
+                let (sign, s, errors) = Sign::strip_haskell(&literal);
                 int.errors |= errors;
                 (sign, s)
             }
         };
         int.sign = sign;
         let (base, s) = match self.base_style {
-            BaseStyle::C => IntegerBase::strip_c(s),
-            BaseStyle::Rust => IntegerBase::strip_rust(s),
+            BaseStyle::C => Base::strip_c(s),
+            BaseStyle::Rust => Base::strip_rust(s),
             BaseStyle::Palaiologos => {
-                let (base, s) = IntegerBase::strip_palaiologos(s);
-                if base == IntegerBase::Hexadecimal
+                let (base, s) = Base::strip_palaiologos(s);
+                if base == Base::Hexadecimal
                     && s.first()
                         .is_some_and(|b| matches!(b, b'a'..=b'f' | b'A'..=b'F'))
                 {
@@ -47,7 +46,7 @@ impl IntegerSyntax {
         }
         int.parse_digits(s, digits);
         int.literal = literal;
-        if int.has_digit_seps && self.digit_sep == IntegerDigitSep::None {
+        if int.has_digit_seps && self.digit_sep == DigitSep::None {
             int.errors |= IntegerError::InvalidDigitSep;
         }
         if self.min_value.as_ref().is_some_and(|min| min > &int.value)
@@ -71,7 +70,7 @@ impl IntegerToken<'_> {
         if !s.is_empty() {
             digits.reserve(s.len());
             match self.base {
-                IntegerBase::Decimal => {
+                Base::Decimal => {
                     for &b in s {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 10 {
@@ -85,7 +84,7 @@ impl IntegerToken<'_> {
                         digits.push(digit);
                     }
                 }
-                IntegerBase::Hexadecimal => {
+                Base::Hexadecimal => {
                     for &b in s {
                         let digit = match b {
                             b'0'..=b'9' => b - b'0',
@@ -103,7 +102,7 @@ impl IntegerToken<'_> {
                         digits.push(digit);
                     }
                 }
-                IntegerBase::Octal => {
+                Base::Octal => {
                     for &b in s {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 8 {
@@ -117,7 +116,7 @@ impl IntegerToken<'_> {
                         digits.push(digit);
                     }
                 }
-                IntegerBase::Binary => {
+                Base::Binary => {
                     for &b in s {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 2 {
@@ -137,7 +136,7 @@ impl IntegerToken<'_> {
                 self.value.assign_bytes_radix_unchecked(
                     digits,
                     self.base as i32,
-                    self.sign == IntegerSign::Neg,
+                    self.sign == Sign::Neg,
                 );
             }
         } else if self.leading_zeros == 0 {
@@ -146,27 +145,27 @@ impl IntegerToken<'_> {
     }
 }
 
-impl IntegerSign {
+impl Sign {
     /// Strips an optional sign from an integer literal.
     fn strip(s: &[u8]) -> (Self, &[u8]) {
         match s.split_first() {
-            Some((b'-', s)) => (IntegerSign::Neg, s),
-            Some((b'+', s)) => (IntegerSign::Pos, s),
-            _ => (IntegerSign::None, s),
+            Some((b'-', s)) => (Sign::Neg, s),
+            Some((b'+', s)) => (Sign::Pos, s),
+            _ => (Sign::None, s),
         }
     }
 }
 
-impl IntegerBase {
+impl Base {
     /// Strips a base prefix from an integer literal with C-like syntax,
     /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
     /// binary, `0` for octal, and otherwise for decimal.
     fn strip_c(s: &[u8]) -> (Self, &[u8]) {
         match s {
-            [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
-            [b'0', b'b' | b'B', s @ ..] => (IntegerBase::Binary, s),
-            [b'0', s @ ..] => (IntegerBase::Octal, s),
-            s => (IntegerBase::Decimal, s),
+            [b'0', b'x' | b'X', s @ ..] => (Base::Hexadecimal, s),
+            [b'0', b'b' | b'B', s @ ..] => (Base::Binary, s),
+            [b'0', s @ ..] => (Base::Octal, s),
+            s => (Base::Decimal, s),
         }
     }
 
@@ -175,10 +174,10 @@ impl IntegerBase {
     /// binary, `0o`/`0O` for octal, and otherwise for decimal.
     fn strip_rust(s: &[u8]) -> (Self, &[u8]) {
         match s {
-            [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
-            [b'0', b'b' | b'B', s @ ..] => (IntegerBase::Binary, s),
-            [b'0', b'o' | b'O', s @ ..] => (IntegerBase::Octal, s),
-            s => (IntegerBase::Decimal, s),
+            [b'0', b'x' | b'X', s @ ..] => (Base::Hexadecimal, s),
+            [b'0', b'b' | b'B', s @ ..] => (Base::Binary, s),
+            [b'0', b'o' | b'O', s @ ..] => (Base::Octal, s),
+            s => (Base::Decimal, s),
         }
     }
 
@@ -187,10 +186,10 @@ impl IntegerBase {
     /// binary, `o`/`O` for octal, and otherwise for decimal.
     fn strip_palaiologos(s: &[u8]) -> (Self, &[u8]) {
         match s.split_last() {
-            Some((b'h' | b'H', s)) => (IntegerBase::Hexadecimal, s),
-            Some((b'b' | b'B', s)) => (IntegerBase::Binary, s),
-            Some((b'o' | b'O', s)) => (IntegerBase::Octal, s),
-            _ => (IntegerBase::Decimal, s),
+            Some((b'h' | b'H', s)) => (Base::Hexadecimal, s),
+            Some((b'b' | b'B', s)) => (Base::Binary, s),
+            Some((b'o' | b'O', s)) => (Base::Octal, s),
+            _ => (Base::Decimal, s),
         }
     }
 }

@@ -23,9 +23,9 @@ pub struct IntegerToken<'s> {
     /// The parsed value represented by the integer literal.
     pub value: Integer,
     /// The sign of the integer literal.
-    pub sign: IntegerSign,
+    pub sign: Sign,
     /// The base of the integer literal.
-    pub base: IntegerBase,
+    pub base: Base,
     /// The number of leading zeros, excluding a base prefix, written in the
     /// integer literal.
     pub leading_zeros: usize,
@@ -38,7 +38,7 @@ pub struct IntegerToken<'s> {
 
 /// The sign of an integer literal.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum IntegerSign {
+pub enum Sign {
     /// Implicit positive sign.
     #[default]
     None,
@@ -50,7 +50,7 @@ pub enum IntegerSign {
 
 /// The base (radix) of an integer literal.
 #[derive(Debug, Default, EnumSetType, PartialOrd, Ord)]
-pub enum IntegerBase {
+pub enum Base {
     /// Base 2.
     Binary = 2,
     /// Base 8.
@@ -92,9 +92,9 @@ pub struct IntegerSyntax {
     /// The style of the base.
     pub base_style: BaseStyle,
     /// The supported bases.
-    pub bases: EnumSet<IntegerBase>,
+    pub bases: EnumSet<Base>,
     /// The supported digit separator.
-    pub digit_sep: IntegerDigitSep,
+    pub digit_sep: DigitSep,
     /// The minimum allowed integer value.
     pub min_value: Option<Integer>,
     /// The maximum allowed integer value.
@@ -128,7 +128,7 @@ pub enum BaseStyle {
 
 /// A style of digit separator in an integer literal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum IntegerDigitSep {
+pub enum DigitSep {
     /// No digit separators.
     None,
     /// `_` digit separators.
@@ -200,8 +200,8 @@ impl IntegerSyntax {
         IntegerSyntax {
             sign_style: SignStyle::Haskell,
             base_style: BaseStyle::Rust,
-            bases: enum_set!(IntegerBase::Decimal | IntegerBase::Octal | IntegerBase::Hexadecimal),
-            digit_sep: IntegerDigitSep::None,
+            bases: enum_set!(Base::Decimal | Base::Octal | Base::Hexadecimal),
+            digit_sep: DigitSep::None,
             min_value: None,
             max_value: None,
         }
@@ -233,21 +233,21 @@ impl IntegerSyntax {
         IntegerSyntax {
             sign_style: SignStyle::Neg,
             base_style: BaseStyle::Palaiologos,
-            bases: IntegerBase::Decimal | IntegerBase::Binary | IntegerBase::Hexadecimal,
-            digit_sep: IntegerDigitSep::None,
+            bases: Base::Decimal | Base::Binary | Base::Hexadecimal,
+            digit_sep: DigitSep::None,
             min_value: Some(Integer::from(i32::MIN + 1)),
             max_value: Some(Integer::from(i32::MAX)),
         }
     }
 }
 
-impl IntegerSign {
+impl Sign {
     /// The string representation of this sign.
     pub fn as_str(&self) -> &'static str {
         match self {
-            IntegerSign::None => "",
-            IntegerSign::Pos => "+",
-            IntegerSign::Neg => "-",
+            Sign::None => "",
+            Sign::Pos => "+",
+            Sign::Neg => "-",
         }
     }
 }
