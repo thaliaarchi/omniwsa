@@ -53,18 +53,16 @@
 //!   - [`GHC.Err.errorWithoutStackTrace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Err.hs#L42-47)
 //!     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
 
+use bstr::ByteSlice;
 use enumset::EnumSet;
 
 use crate::tokens::integer::{IntegerError, IntegerSign, IntegerSyntax};
-
-// TODO:
-// - Use conventionally UTF-8 strings.
 
 impl IntegerSyntax {
     /// Strips parentheses groupings and a sign for an integer literal with
     /// Haskell `Integer` syntax. See [`IntegerSyntax::haskell`] for the
     /// grammar.
-    pub(super) fn strip_haskell_sign(mut s: &str) -> (IntegerSign, &str, EnumSet<IntegerError>) {
+    pub(super) fn strip_haskell_sign(mut s: &[u8]) -> (IntegerSign, &[u8], EnumSet<IntegerError>) {
         fn is_whitespace(ch: char) -> bool {
             ch.is_whitespace() && ch != '\u{0085}' && ch != '\u{2028}' && ch != '\u{2029}'
         }
@@ -72,7 +70,7 @@ impl IntegerSyntax {
         let mut errors = EnumSet::new();
         let mut sign = IntegerSign::None;
         let mut has_sign = false;
-        s = s.trim_matches(is_whitespace);
+        s = s.trim_with(is_whitespace);
         loop {
             if s.is_empty() {
                 break;
@@ -87,28 +85,28 @@ impl IntegerSyntax {
                     errors |= IntegerError::InvalidSign;
                 }
                 has_sign = true;
-                s = s[1..].trim_start_matches(is_whitespace);
+                s = s[1..].trim_start_with(is_whitespace);
             } else if first == b'+' {
                 if sign == IntegerSign::None {
                     sign = IntegerSign::Pos;
                 }
                 has_sign = true;
                 errors |= IntegerError::InvalidSign;
-                s = s[1..].trim_start_matches(is_whitespace);
+                s = s[1..].trim_start_with(is_whitespace);
             } else if first == b'(' && last == b')' {
                 if has_sign {
                     errors |= IntegerError::InvalidSign;
                 }
-                s = s[1..s.len() - 1].trim_matches(is_whitespace);
+                s = s[1..s.len() - 1].trim_with(is_whitespace);
             } else if first == b'(' {
                 if has_sign {
                     errors |= IntegerError::InvalidSign;
                 }
                 errors |= IntegerError::UnpairedParen;
-                s = s[1..].trim_start_matches(is_whitespace);
+                s = s[1..].trim_start_with(is_whitespace);
             } else if last == b')' {
                 errors |= IntegerError::UnpairedParen;
-                s = s[..s.len() - 1].trim_end_matches(is_whitespace);
+                s = s[..s.len() - 1].trim_end_with(is_whitespace);
             } else {
                 break;
             }

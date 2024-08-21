@@ -1,6 +1,6 @@
 //! Integer literal parsing.
 
-use std::{borrow::Cow, str};
+use std::borrow::Cow;
 
 use crate::tokens::integer::{
     IntegerBase, IntegerDigitSep, IntegerError, IntegerSign, IntegerStyle, IntegerSyntax,
@@ -15,9 +15,8 @@ impl IntegerSyntax {
         let s = match self.style {
             IntegerStyle::Haskell => {
                 debug_assert!(!self.explicit_pos);
-                let s = str::from_utf8(&literal).unwrap();
-                let (sign, s, sign_errors) = Self::strip_haskell_sign(s);
-                let (base, s) = Self::strip_base_rust(s.as_bytes());
+                let (sign, s, sign_errors) = Self::strip_haskell_sign(&literal);
+                let (base, s) = Self::strip_base_rust(s);
                 int.sign = sign;
                 int.base = base;
                 int.errors |= sign_errors;
