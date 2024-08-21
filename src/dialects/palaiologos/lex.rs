@@ -82,15 +82,16 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     })
                 }
             }
-            b @ (b'0'..=b'9' | b'-') => {
-                if b == b'-' && !scan.bump_if(|b| matches!(b, b'0'..=b'9')) {
+            b @ (b'0'..=b'9' | b'-' | b'+') => {
+                // Extend the syntax to handle '+', starting with a hex letter,
+                // '_' digit separators, and octal, just for errors.
+                scan.bump_while(|b| b.is_ascii_hexdigit() || b == b'_');
+                scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
+                if (b == b'-' || b == b'+') && scan.text().len() == 1 {
                     Token::from(ErrorToken::UnrecognizedChar {
                         text: scan.text().into(),
                     })
                 } else {
-                    scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
-                    // Extend the syntax to handle octal, just for errors.
-                    scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
                     self.dialect
                         .integers()
                         .parse(scan.text().into(), &mut self.digit_buf)

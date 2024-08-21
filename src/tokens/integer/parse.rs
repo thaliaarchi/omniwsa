@@ -14,6 +14,7 @@ impl IntegerSyntax {
         let mut int = IntegerToken::default();
         let s = match self.style {
             IntegerStyle::Haskell => {
+                debug_assert!(!self.explicit_pos);
                 let s = str::from_utf8(&literal).unwrap();
                 let (sign, s, sign_errors) = Self::strip_haskell_sign(s);
                 let (base, s) = Self::strip_base_rust(s.as_bytes());
@@ -23,11 +24,14 @@ impl IntegerSyntax {
                 s
             }
             IntegerStyle::Palaiologos => {
-                let (sign, s) = match literal.split_first() {
-                    Some((b'-', s)) => (IntegerSign::Neg, s),
-                    _ => (IntegerSign::None, &*literal),
-                };
+                let (sign, s) = Self::strip_sign(&literal);
                 let (base, s) = Self::strip_base_palaiologos(s);
+                if base == IntegerBase::Hexadecimal
+                    && s.first()
+                        .is_some_and(|b| matches!(b, b'a'..=b'f' | b'A'..=b'F'))
+                {
+                    int.errors |= IntegerError::StartsWithHex;
+                }
                 int.sign = sign;
                 int.base = base;
                 s
@@ -35,6 +39,9 @@ impl IntegerSyntax {
         };
         int.parse_digits(s, digits);
         int.literal = literal;
+        if int.sign == IntegerSign::Pos && !self.explicit_pos {
+            int.errors |= IntegerError::InvalidSign;
+        }
         if !self.bases.contains(int.base) {
             int.errors |= IntegerError::InvalidBase;
         }
@@ -138,6 +145,15 @@ impl IntegerToken<'_> {
 }
 
 impl IntegerSyntax {
+    /// Strips an optional sign from an integer literal.
+    fn strip_sign(s: &[u8]) -> (IntegerSign, &[u8]) {
+        match s.split_first() {
+            Some((b'-', s)) => (IntegerSign::Neg, s),
+            Some((b'+', s)) => (IntegerSign::Pos, s),
+            _ => (IntegerSign::None, s),
+        }
+    }
+
     /// Strips a base prefix from an integer literal with C-like syntax,
     /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
     /// binary, `0` for octal, and otherwise for decimal.

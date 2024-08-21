@@ -76,13 +76,13 @@ getc  ::= (?i)"getc"
 getn  ::= (?i)"getn"
 rep   ::= (?i)"rep"
 
-lbl_def ::= "@" [a-zA-Z_] [a-zA-Z0-9_]*
-lbl_ref ::= "%" [a-zA-Z_] [a-zA-Z0-9_]*
+lbl_def ::= "@" [a-z A-Z _] [a-z A-Z 0-9 _]*
+lbl_ref ::= "%" [a-z A-Z _] [a-z A-Z 0-9 _]*
 integer ::=
     | "-"? [0-9]+
     | "-"? [01]+ [bB]
     | "-"? [0-7]+ [oO]
-    | "-"? [0-9] [0-9a-fA-F]* [hH]
+    | "-"? [0-9] [0-9 a-f A-F]* [hH]
 char ::= "'" ([^\\'\n] | \\[^\n]) "'"
 string ::= "\"" ([^\\"\n] | \\[^\n])* "\""
 comma ::= ","
