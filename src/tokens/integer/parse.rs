@@ -147,7 +147,7 @@ impl IntegerToken<'_> {
 
 impl Sign {
     /// Strips an optional sign from an integer literal.
-    fn strip(s: &[u8]) -> (Self, &[u8]) {
+    pub(super) fn strip(s: &[u8]) -> (Self, &[u8]) {
         match s.split_first() {
             Some((b'-', s)) => (Sign::Neg, s),
             Some((b'+', s)) => (Sign::Pos, s),
@@ -155,12 +155,12 @@ impl Sign {
         }
     }
 }
-
 impl Base {
     /// Strips a base prefix from an integer literal with C-like syntax,
     /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
     /// binary, `0` for octal, and otherwise for decimal.
-    fn strip_c(s: &[u8]) -> (Self, &[u8]) {
+    #[inline]
+    pub(super) fn strip_c(s: &[u8]) -> (Self, &[u8]) {
         match s {
             [b'0', b'x' | b'X', s @ ..] => (Base::Hexadecimal, s),
             [b'0', b'b' | b'B', s @ ..] => (Base::Binary, s),
@@ -172,7 +172,8 @@ impl Base {
     /// Strips a base prefix from an integer literal with Rust-like syntax,
     /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
     /// binary, `0o`/`0O` for octal, and otherwise for decimal.
-    fn strip_rust(s: &[u8]) -> (Self, &[u8]) {
+    #[inline]
+    pub(super) fn strip_rust(s: &[u8]) -> (Self, &[u8]) {
         match s {
             [b'0', b'x' | b'X', s @ ..] => (Base::Hexadecimal, s),
             [b'0', b'b' | b'B', s @ ..] => (Base::Binary, s),
@@ -184,7 +185,8 @@ impl Base {
     /// Strips a base suffix from an integer literal with Palaiologos-like
     /// syntax, specifically a suffix of `h`/`H` for hexadecimal, `b`/`B` for
     /// binary, `o`/`O` for octal, and otherwise for decimal.
-    fn strip_palaiologos(s: &[u8]) -> (Self, &[u8]) {
+    #[inline]
+    pub(super) fn strip_palaiologos(s: &[u8]) -> (Self, &[u8]) {
         match s.split_last() {
             Some((b'h' | b'H', s)) => (Base::Hexadecimal, s),
             Some((b'b' | b'B', s)) => (Base::Binary, s),

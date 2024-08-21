@@ -11,9 +11,6 @@ use crate::{
     tokens::integer::Integer,
 };
 
-// TODO:
-// - Convert between syntaxes.
-
 /// An integer literal token.
 #[derive(Clone, DebugCustom, Default, PartialEq, Eq)]
 pub struct IntegerToken<'s> {
@@ -116,13 +113,13 @@ pub enum SignStyle {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BaseStyle {
     /// C-like base prefix: `0x`/`0X` for hexadecimal, `0b`/`0B` for binary, `0`
-    /// for octal, and otherwise for decimal.
+    /// for octal, and none for decimal.
     C,
     /// Rust-like base prefix: `0x`/`0X` for hexadecimal, `0b`/`0B` for binary,
-    /// `0o`/`0O` for octal, and otherwise for decimal.
+    /// `0o`/`0O` for octal, and none for decimal.
     Rust,
     /// Palaiologos-like base suffix: `h`/`H` for hexadecimal, `b`/`B` for
-    /// binary, `o`/`O` for octal, and otherwise for decimal.
+    /// binary, `o`/`O` for octal, and none for decimal.
     Palaiologos,
 }
 
