@@ -1,176 +1,63 @@
-//! Integer literal parsing and token.
+//! Haskell-style integer parsing with the syntax of
+//! [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html).
+//!
+//! # Compliance
+//!
+//! It has been tested to match the behavior of at least GHC 8.8.4 and 9.4.4
+//! and matches the source of GHC 9.8.1 by inspection.
+//!
+//! # GHC definitions
+//!
+//! See [`Text.Read.Lex.lexNumber`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L418-447)
+//! for the number grammar and [`GHC.Read.readNumber`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L557-568)
+//! for the handling of spaces, parens, and negative.
+//!
+//! - [`Text.Read.read`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read.hs#L102-113)
+//!   ([docs](https://hackage.haskell.org/package/base/docs/Text-Read.html#v:read))
+//!   - [`Text.Read.readEither`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read.hs#L64-85)
+//!     ([docs](https://hackage.haskell.org/package/base/docs/Text-Read.html#v:readEither))
+//!     - `readPrec` in instance [`Read Integer`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L616-619)
+//!       ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Read.html#v:readPrec))
+//!       - [`GHC.Read.readNumber`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L557-568)
+//!         ([docs](https://hackage.haskell.org/package/base/docs/GHC-Read.html#v:readNumber))
+//!         - [`GHC.Read.parens`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L323-330)
+//!         - [`GHC.Read.lexP`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L291-293)
+//!           ([docs](https://hackage.haskell.org/package/base/docs/GHC-Read.html#v:lexP))
+//!           - [`Text.Read.Lex.lex`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L170-171)
+//!             ([docs](https://hackage.haskell.org/package/base/docs/Text-Read.html#v:lex))
+//!             - [`Text.ParserCombinators.ReadP.skipSpaces`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadP.hs#L311-318)
+//!               - [`GHC.Unicode.isSpace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Unicode.hs#L222-235)
+//!             - [`Text.Read.Lex.lexToken`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L185-192)
+//!               - [`Text.Read.Lex.lexNumber`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L418-447)
+//!                 - …
+//!               - …
+//!       - [`GHC.Read.convertInt`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L571-574)
+//!         - [`Text.Read.Lex.numberToInteger`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L87-90)
+//!           ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-Read-Lex.html#v:numberToInteger))
+//!           - [`Text.Read.Lex.val`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L484-525)
+//!         - `Num.fromInteger` in `GHC.Num`
+//!           ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Num.html#v:fromInteger))
+//!         - [`Text.ParserCombinators.ReadP.pfail`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadP.hs#L219-221)
+//!           ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadP.html#v:pfail))
+//!     - [`Text.ParserCombinators.ReadPrec.minPrec`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadPrec.hs#L105-106)
+//!       ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadPrec.html#v:minPrec))
+//!     - `Text.ParserCombinators.ReadP.skipSpaces` (see above)
+//!     - [`Text.ParserCombinators.ReadPrec.lift`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadPrec.hs#L111-113)
+//!       ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadPrec.html#v:lift))
+//!     - [`Text.ParserCombinators.ReadPrec.readPrec_to_S`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadPrec.hs#L172-173)
+//!       ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadPrec.html#v:readPrec_to_S))
+//!       - [`Text.ParserCombinators.ReadP.readP_to_S`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadP.hs#L418-423)
+//!         ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadP.html#v:readP_to_S))
+//!   - [`GHC.Err.errorWithoutStackTrace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Err.hs#L42-47)
+//!     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
 
 use std::borrow::Cow;
 
-use bstr::ByteSlice;
-use derive_more::Debug as DebugCustom;
-use enumset::{EnumSet, EnumSetType};
-pub use rug::Integer;
+use enumset::EnumSet;
 
-use crate::syntax::{HasError, Pretty};
-
-// TODO:
-// - Create a integer syntax description struct for dialects to construct, to
-//   make parsing and conversions modular.
-
-/// An integer literal token.
-#[derive(Clone, DebugCustom, Default, PartialEq, Eq)]
-pub struct IntegerToken<'s> {
-    /// The literal integer including formatting.
-    #[debug("{:?}", literal.as_bstr())]
-    pub literal: Cow<'s, [u8]>,
-    /// The parsed value represented by the integer literal.
-    pub value: Integer,
-    /// The sign of the integer literal.
-    pub sign: IntegerSign,
-    /// The base of the integer literal.
-    pub base: IntegerBase,
-    /// The number of leading zeros, excluding a base prefix, written in the
-    /// integer literal.
-    pub leading_zeros: usize,
-    /// Whether the integer literal has any `_` digit separators.
-    pub has_digit_sep: bool,
-    /// All errors from parsing this integer literal. When any errors are
-    /// present, the other fields are best-effort.
-    pub errors: EnumSet<IntegerError>,
-}
-
-/// The sign of an integer literal.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum IntegerSign {
-    /// Implicit positive sign.
-    #[default]
-    None,
-    /// Positive sign.
-    Pos,
-    /// Negative sign.
-    Neg,
-}
-
-/// The base (radix) of an integer literal.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub enum IntegerBase {
-    /// Base 2.
-    Binary = 2,
-    /// Base 8.
-    Octal = 8,
-    /// Base 10.
-    #[default]
-    Decimal = 10,
-    /// Base 16.
-    Hexadecimal = 16,
-}
-
-/// A parse error for an integer literal.
-#[derive(EnumSetType, Debug)]
-pub enum IntegerError {
-    /// An invalid digit.
-    InvalidDigit,
-    /// No digits, excluding a possible base prefix.
-    NoDigits,
-    /// Value out of range.
-    Range,
-    /// Has a sign that is invalid or not supported.
-    InvalidSign,
-    /// Has a base that is not supported.
-    InvalidBase,
-    /// Uses digit separators, which are not supported.
-    InvalidDigitSep,
-    /// An unpaired parenthesis (Burghard via Haskell `Integer`).
-    UnpairedParen,
-}
+use crate::tokens::integer::{IntegerBase, IntegerError, IntegerSign, IntegerToken};
 
 impl<'s> IntegerToken<'s> {
-    /// Constructs a new, empty integer token.
-    pub fn new() -> Self {
-        IntegerToken::default()
-    }
-
-    /// Parses the byte string as digits in the given base with optional `_`
-    /// digit separators.
-    pub fn parse_digits(&mut self, s: &[u8], digits: &mut Vec<u8>) {
-        digits.clear();
-
-        self.leading_zeros = s.iter().take_while(|&&ch| ch == b'0').count();
-        let s = &s[self.leading_zeros..];
-
-        if !s.is_empty() {
-            digits.reserve(s.len());
-            match self.base {
-                IntegerBase::Decimal => {
-                    for &b in s {
-                        let digit = b.wrapping_sub(b'0');
-                        if digit >= 10 {
-                            if digit == b'_' - b'0' {
-                                self.has_digit_sep = true;
-                                continue;
-                            }
-                            self.errors |= IntegerError::InvalidDigit;
-                            break;
-                        }
-                        digits.push(digit);
-                    }
-                }
-                IntegerBase::Hexadecimal => {
-                    for &b in s {
-                        let digit = match b {
-                            b'0'..=b'9' => b - b'0',
-                            b'a'..=b'f' => b - b'a' + 10,
-                            b'A'..=b'F' => b - b'A' + 10,
-                            _ => {
-                                if b == b'_' {
-                                    self.has_digit_sep = true;
-                                    continue;
-                                }
-                                self.errors |= IntegerError::InvalidDigit;
-                                break;
-                            }
-                        };
-                        digits.push(digit);
-                    }
-                }
-                IntegerBase::Octal => {
-                    for &b in s {
-                        let digit = b.wrapping_sub(b'0');
-                        if digit >= 8 {
-                            if digit == b'_' - b'0' {
-                                self.has_digit_sep = true;
-                                continue;
-                            }
-                            self.errors |= IntegerError::InvalidDigit;
-                            break;
-                        }
-                        digits.push(digit);
-                    }
-                }
-                IntegerBase::Binary => {
-                    for &b in s {
-                        let digit = b.wrapping_sub(b'0');
-                        if digit >= 2 {
-                            if digit == b'_' - b'0' {
-                                self.has_digit_sep = true;
-                                continue;
-                            }
-                            self.errors |= IntegerError::InvalidDigit;
-                            break;
-                        }
-                        digits.push(digit);
-                    }
-                }
-            }
-            // SAFETY: Digits are constructed to be in range for the base.
-            unsafe {
-                self.value.assign_bytes_radix_unchecked(
-                    digits,
-                    self.base as i32,
-                    self.sign == IntegerSign::Neg,
-                );
-            }
-        } else if self.leading_zeros == 0 {
-            self.errors |= IntegerError::NoDigits;
-        }
-    }
-
     /// Parses an integer with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
     /// in Haskell, given a buffer of digits to reuse allocations.
     ///
@@ -196,56 +83,6 @@ impl<'s> IntegerToken<'s> {
     /// hex_integer ::= "0" [xX] [0-9 a-f A-F]+
     /// space       ::= \p{White_Space} NOT (U+0085 | U+2028 | U+2029)
     /// ```
-    ///
-    /// # Compliance
-    ///
-    /// It has been tested to match the behavior of at least GHC 8.8.4 and 9.4.4
-    /// and matches the source of GHC 9.8.1 by inspection.
-    ///
-    /// # GHC definitions
-    ///
-    /// See [`Text.Read.Lex.lexNumber`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L418-447)
-    /// for the number grammar and [`GHC.Read.readNumber`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L557-568)
-    /// for the handling of spaces, parens, and negative.
-    ///
-    /// - [`Text.Read.read`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read.hs#L102-113)
-    ///   ([docs](https://hackage.haskell.org/package/base/docs/Text-Read.html#v:read))
-    ///   - [`Text.Read.readEither`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read.hs#L64-85)
-    ///     ([docs](https://hackage.haskell.org/package/base/docs/Text-Read.html#v:readEither))
-    ///     - `readPrec` in instance [`Read Integer`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L616-619)
-    ///       ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Read.html#v:readPrec))
-    ///       - [`GHC.Read.readNumber`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L557-568)
-    ///         ([docs](https://hackage.haskell.org/package/base/docs/GHC-Read.html#v:readNumber))
-    ///         - [`GHC.Read.parens`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L323-330)
-    ///         - [`GHC.Read.lexP`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L291-293)
-    ///           ([docs](https://hackage.haskell.org/package/base/docs/GHC-Read.html#v:lexP))
-    ///           - [`Text.Read.Lex.lex`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L170-171)
-    ///             ([docs](https://hackage.haskell.org/package/base/docs/Text-Read.html#v:lex))
-    ///             - [`Text.ParserCombinators.ReadP.skipSpaces`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadP.hs#L311-318)
-    ///               - [`GHC.Unicode.isSpace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Unicode.hs#L222-235)
-    ///             - [`Text.Read.Lex.lexToken`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L185-192)
-    ///               - [`Text.Read.Lex.lexNumber`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L418-447)
-    ///                 - …
-    ///               - …
-    ///       - [`GHC.Read.convertInt`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Read.hs#L571-574)
-    ///         - [`Text.Read.Lex.numberToInteger`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L87-90)
-    ///           ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-Read-Lex.html#v:numberToInteger))
-    ///           - [`Text.Read.Lex.val`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/Read/Lex.hs#L484-525)
-    ///         - `Num.fromInteger` in `GHC.Num`
-    ///           ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Num.html#v:fromInteger))
-    ///         - [`Text.ParserCombinators.ReadP.pfail`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadP.hs#L219-221)
-    ///           ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadP.html#v:pfail))
-    ///     - [`Text.ParserCombinators.ReadPrec.minPrec`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadPrec.hs#L105-106)
-    ///       ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadPrec.html#v:minPrec))
-    ///     - `Text.ParserCombinators.ReadP.skipSpaces` (see above)
-    ///     - [`Text.ParserCombinators.ReadPrec.lift`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadPrec.hs#L111-113)
-    ///       ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadPrec.html#v:lift))
-    ///     - [`Text.ParserCombinators.ReadPrec.readPrec_to_S`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadPrec.hs#L172-173)
-    ///       ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadPrec.html#v:readPrec_to_S))
-    ///       - [`Text.ParserCombinators.ReadP.readP_to_S`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/Text/ParserCombinators/ReadP.hs#L418-423)
-    ///         ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/Text-ParserCombinators-ReadP.html#v:readP_to_S))
-    ///   - [`GHC.Err.errorWithoutStackTrace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Err.hs#L42-47)
-    ///     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
     pub fn parse_haskell(literal: Cow<'s, str>, digits: &mut Vec<u8>) -> Self {
         let mut int = IntegerToken::new();
         let (sign, s, sign_errors) = IntegerToken::strip_haskell_sign(&literal);
@@ -264,30 +101,6 @@ impl<'s> IntegerToken<'s> {
             Cow::Borrowed(s) => Cow::Borrowed(s.as_bytes()),
             Cow::Owned(s) => Cow::Owned(s.into_bytes()),
         };
-        int
-    }
-
-    /// Parses an integer with Palaiologos syntax, given a buffer of digits to
-    /// reuse allocations.
-    pub fn parse_palaiologos(literal: Cow<'s, [u8]>, digits: &mut Vec<u8>) -> Self {
-        let mut int = IntegerToken::new();
-        let (sign, s) = match literal.split_first() {
-            Some((b'-', s)) => (IntegerSign::Neg, s),
-            _ => (IntegerSign::None, &*literal),
-        };
-        int.sign = sign;
-        let (base, s) = IntegerToken::strip_base_palaiologos(s);
-        int.base = base;
-        if base == IntegerBase::Octal {
-            int.errors |= IntegerError::InvalidBase;
-        }
-        int.parse_digits(s, digits);
-        if int.has_digit_sep {
-            int.errors |= IntegerError::InvalidDigitSep;
-        }
-        if !int.value.to_i32().is_some_and(|v| v != -2147483648) {
-            int.errors |= IntegerError::Range;
-        }
         int
     }
 
@@ -344,54 +157,6 @@ impl<'s> IntegerToken<'s> {
             }
         }
         (sign, s, errors)
-    }
-
-    /// Strips a base prefix from an integer literal with C-like syntax,
-    /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
-    /// binary, `0` for octal, and otherwise for decimal.
-    pub fn strip_base_c(s: &[u8]) -> (IntegerBase, &[u8]) {
-        match s {
-            [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
-            [b'0', b'b' | b'B', s @ ..] => (IntegerBase::Binary, s),
-            [b'0', s @ ..] => (IntegerBase::Octal, s),
-            s => (IntegerBase::Decimal, s),
-        }
-    }
-
-    /// Strips a base prefix from an integer literal with Rust-like syntax,
-    /// specifically a prefix of `0x`/`0X` for hexadecimal, `0o`/`0O` for octal,
-    /// `0b`/`0B` for binary, and otherwise for decimal.
-    pub fn strip_base_rust(s: &[u8]) -> (IntegerBase, &[u8]) {
-        match s {
-            [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
-            [b'0', b'o' | b'O', s @ ..] => (IntegerBase::Octal, s),
-            [b'0', b'b' | b'B', s @ ..] => (IntegerBase::Binary, s),
-            s => (IntegerBase::Decimal, s),
-        }
-    }
-
-    /// Strips a base suffix from an integer literal with Palaiologos-like
-    /// syntax, specifically a suffix of `h`/`H` for hexadecimal, `b`/`B` for
-    /// binary, `o`/`O` for octal, and otherwise for decimal.
-    pub fn strip_base_palaiologos(s: &[u8]) -> (IntegerBase, &[u8]) {
-        match s.split_last() {
-            Some((b'h' | b'H', s)) => (IntegerBase::Hexadecimal, s),
-            Some((b'b' | b'B', s)) => (IntegerBase::Binary, s),
-            Some((b'o' | b'O', s)) => (IntegerBase::Octal, s),
-            _ => (IntegerBase::Decimal, s),
-        }
-    }
-}
-
-impl HasError for IntegerToken<'_> {
-    fn has_error(&self) -> bool {
-        !self.errors.is_empty()
-    }
-}
-
-impl Pretty for IntegerToken<'_> {
-    fn pretty(&self, buf: &mut Vec<u8>) {
-        self.literal.pretty(buf);
     }
 }
 
