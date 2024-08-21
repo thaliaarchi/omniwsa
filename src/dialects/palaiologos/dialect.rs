@@ -3,13 +3,17 @@
 use crate::{
     dialects::palaiologos::parse::Parser,
     syntax::{Cst, Opcode},
-    tokens::mnemonics::{FoldedStr, MnemonicMap},
+    tokens::{
+        integer::IntegerSyntax,
+        mnemonics::{FoldedStr, MnemonicMap},
+    },
 };
 
 /// State for parsing the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Palaiologos {
     mnemonics: MnemonicMap,
+    integers: IntegerSyntax,
 }
 
 macro_rules! mnemonics[($($mnemonic:literal => [$($opcode:ident),+],)+) => {
@@ -62,6 +66,7 @@ impl Palaiologos {
     pub fn new() -> Self {
         Palaiologos {
             mnemonics: MnemonicMap::from(MNEMONICS),
+            integers: IntegerSyntax::palaiologos(),
         }
     }
 
@@ -70,8 +75,13 @@ impl Palaiologos {
         Parser::new(src, &Palaiologos::new()).parse()
     }
 
-    /// Returns the mnemonic map for this dialect.
+    /// Gets the mnemonic map for this dialect.
     pub(super) fn mnemonics(&self) -> &MnemonicMap {
         &self.mnemonics
+    }
+
+    /// Gets the integer syntax description for this dialect.
+    pub(super) fn integers(&self) -> &IntegerSyntax {
+        &self.integers
     }
 }

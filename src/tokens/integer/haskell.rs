@@ -1,6 +1,8 @@
 //! Haskell-style integer parsing with the syntax of
 //! [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html).
 //!
+//! See [`IntegerSyntax::haskell`] for the grammar.
+//!
 //! # Compliance
 //!
 //! It has been tested to match the behavior of at least GHC 8.8.4 and 9.4.4
@@ -51,63 +53,18 @@
 //!   - [`GHC.Err.errorWithoutStackTrace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.8.1-release/libraries/base/GHC/Err.hs#L42-47)
 //!     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
 
-use std::borrow::Cow;
-
 use enumset::EnumSet;
 
-use crate::tokens::integer::{IntegerBase, IntegerError, IntegerSign, IntegerToken};
+use crate::tokens::integer::{IntegerError, IntegerSign, IntegerSyntax};
 
-impl<'s> IntegerToken<'s> {
-    /// Parses an integer with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
-    /// in Haskell, given a buffer of digits to reuse allocations.
-    ///
-    /// # Syntax
-    ///
-    /// Octal literals are prefixed with `0o` or `0O` and hexadecimal literals
-    /// with `0x` or `0X`. Binary literals with `0b` or `0B` are not supported.
-    /// A leading zero is interpreted as decimal, not octal. It may have a
-    /// negative sign. It may be surrounded by any number of parentheses.
-    /// Unicode whitespace characters may occur around the digits, sign, or
-    /// parentheses. Positive signs, underscore digit separators, and exponents
-    /// are not allowed.
-    ///
-    /// Haskell's `String` must be UTF-8 and excludes surrogate halves, so it is
-    /// equivalent to Rust strings and validation happens outside of `read`.
-    ///
-    /// ```bnf
-    /// read        ::= space* "(" read ")" space*
-    ///               | space* integer space*
-    /// integer     ::= "-"? space* (dec_integer | oct_integer | hex_integer)
-    /// dec_integer ::= [0-9]+
-    /// oct_integer ::= "0" [oO] [0-7]+
-    /// hex_integer ::= "0" [xX] [0-9 a-f A-F]+
-    /// space       ::= \p{White_Space} NOT (U+0085 | U+2028 | U+2029)
-    /// ```
-    pub fn parse_haskell(literal: Cow<'s, str>, digits: &mut Vec<u8>) -> Self {
-        let mut int = IntegerToken::new();
-        let (sign, s, sign_errors) = IntegerToken::strip_haskell_sign(&literal);
-        int.sign = sign;
-        int.errors |= sign_errors;
-        let (base, s) = IntegerToken::strip_base_rust(s.as_bytes());
-        int.base = base;
-        if base == IntegerBase::Binary {
-            int.errors |= IntegerError::InvalidBase;
-        }
-        int.parse_digits(s, digits);
-        if int.has_digit_sep {
-            int.errors |= IntegerError::InvalidDigitSep;
-        }
-        int.literal = match literal {
-            Cow::Borrowed(s) => Cow::Borrowed(s.as_bytes()),
-            Cow::Owned(s) => Cow::Owned(s.into_bytes()),
-        };
-        int
-    }
+// TODO:
+// - Use conventionally UTF-8 strings.
 
+impl IntegerSyntax {
     /// Strips parentheses groupings and a sign for an integer literal with
-    /// Haskell `Integer` syntax. See [`IntegerToken::parse_haskell`] for the
+    /// Haskell `Integer` syntax. See [`IntegerSyntax::haskell`] for the
     /// grammar.
-    pub fn strip_haskell_sign(mut s: &str) -> (IntegerSign, &str, EnumSet<IntegerError>) {
+    pub(super) fn strip_haskell_sign(mut s: &str) -> (IntegerSign, &str, EnumSet<IntegerError>) {
         fn is_whitespace(ch: char) -> bool {
             ch.is_whitespace() && ch != '\u{0085}' && ch != '\u{2028}' && ch != '\u{2029}'
         }
@@ -166,7 +123,9 @@ mod tests {
 
     use enumset::EnumSet;
 
-    use crate::tokens::integer::{Integer, IntegerBase, IntegerError, IntegerSign, IntegerToken};
+    use crate::tokens::integer::{
+        Integer, IntegerBase, IntegerError, IntegerSign, IntegerSyntax, IntegerToken,
+    };
 
     use IntegerBase::{Binary as Bin, Decimal as Dec, Hexadecimal as Hex, Octal as Oct};
     use IntegerError::*;
@@ -187,7 +146,7 @@ mod tests {
             sign: IntegerSign,
             base: IntegerBase,
             leading_zeros: usize,
-            has_digit_sep: bool,
+            has_digit_seps: bool,
             errors: EnumSet<IntegerError>,
         ) -> Self {
             Test {
@@ -198,7 +157,7 @@ mod tests {
                     sign,
                     base,
                     leading_zeros,
-                    has_digit_sep,
+                    has_digit_seps,
                     errors,
                 },
             }
@@ -206,11 +165,11 @@ mod tests {
     }
 
     macro_rules! test(
-        ($input:expr $(,)? => $output:expr, $sign:expr, $base:expr, $leading_zeros:expr, $has_digit_sep:expr $(,)?) => {
-            Test::new($input, $output, $sign, $base, $leading_zeros, $has_digit_sep, EnumSet::new())
+        ($input:expr $(,)? => $output:expr, $sign:expr, $base:expr, $leading_zeros:expr, $has_digit_seps:expr $(,)?) => {
+            Test::new($input, $output, $sign, $base, $leading_zeros, $has_digit_seps, EnumSet::new())
         };
-        ($input:expr $(,)? => $output:expr, $sign:expr, $base:expr, $leading_zeros:expr, $has_digit_sep:expr; $err:expr $(,)?) => {
-            Test::new($input, $output, $sign, $base, $leading_zeros, $has_digit_sep, EnumSet::from($err))
+        ($input:expr $(,)? => $output:expr, $sign:expr, $base:expr, $leading_zeros:expr, $has_digit_seps:expr; $err:expr $(,)?) => {
+            Test::new($input, $output, $sign, $base, $leading_zeros, $has_digit_seps, EnumSet::from($err))
         };
     );
 
@@ -352,12 +311,13 @@ mod tests {
             tests.push(test!(format!("-42{space}") => "-42", Neg, Dec, 0, F; InvalidDigit));
         }
 
+        let haskell = IntegerSyntax::haskell();
         let mut digits = Vec::new();
         for test in tests {
             assert_eq!(
-                IntegerToken::parse_haskell(test.input.clone().into(), &mut digits),
+                haskell.parse(test.input.as_bytes().into(), &mut digits),
                 test.output,
-                "IntegerToken::parse_haskell({:?})",
+                "haskell.parse({:?})",
                 test.input,
             );
         }

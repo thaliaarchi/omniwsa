@@ -1,6 +1,6 @@
 //! Parser for the Burghard Whitespace assembly dialect.
 
-use std::{borrow::Cow, mem, str};
+use std::{borrow::Cow, mem};
 
 use enumset::EnumSet;
 
@@ -9,7 +9,7 @@ use crate::{
     lex::TokenStream,
     syntax::{ArgType, HasError, Inst, InstError, Opcode},
     tokens::{
-        integer::IntegerToken,
+        integer::IntegerSyntax,
         label::{LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::Spaces,
@@ -182,11 +182,7 @@ impl<'s> Parser<'s, '_> {
 
         // Try to parse it as an integer.
         if ty == ArgType::Integer || ty == ArgType::Variable && !quoted {
-            let text = match inner_word.word.clone() {
-                Cow::Borrowed(text) => str::from_utf8(text).unwrap().into(),
-                Cow::Owned(text) => String::from_utf8(text).unwrap().into(),
-            };
-            let int = IntegerToken::parse_haskell(text, &mut self.digit_buf);
+            let int = IntegerSyntax::haskell().parse(inner_word.word.clone(), &mut self.digit_buf);
             if ty == ArgType::Integer || !int.has_error() {
                 *inner = Token::from(int);
                 return ty == ArgType::Integer;

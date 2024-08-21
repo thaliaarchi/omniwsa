@@ -1,13 +1,59 @@
 //! Integer literal parsing.
 
-use std::borrow::Cow;
+use std::{borrow::Cow, str};
 
-use crate::tokens::integer::{IntegerBase, IntegerError, IntegerSign, IntegerToken};
+use crate::tokens::integer::{
+    IntegerBase, IntegerDigitSep, IntegerError, IntegerSign, IntegerStyle, IntegerSyntax,
+    IntegerToken,
+};
 
-impl<'s> IntegerToken<'s> {
+impl IntegerSyntax {
+    /// Parses an integer with the described syntax, using a scratch buffer of
+    /// digits to reuse allocations.
+    pub fn parse<'s>(&self, literal: Cow<'s, [u8]>, digits: &mut Vec<u8>) -> IntegerToken<'s> {
+        let mut int = IntegerToken::default();
+        let s = match self.style {
+            IntegerStyle::Haskell => {
+                let s = str::from_utf8(&literal).unwrap();
+                let (sign, s, sign_errors) = Self::strip_haskell_sign(s);
+                let (base, s) = Self::strip_base_rust(s.as_bytes());
+                int.sign = sign;
+                int.base = base;
+                int.errors |= sign_errors;
+                s
+            }
+            IntegerStyle::Palaiologos => {
+                let (sign, s) = match literal.split_first() {
+                    Some((b'-', s)) => (IntegerSign::Neg, s),
+                    _ => (IntegerSign::None, &*literal),
+                };
+                let (base, s) = Self::strip_base_palaiologos(s);
+                int.sign = sign;
+                int.base = base;
+                s
+            }
+        };
+        int.parse_digits(s, digits);
+        int.literal = literal;
+        if !self.bases.contains(int.base) {
+            int.errors |= IntegerError::InvalidBase;
+        }
+        if int.has_digit_seps && self.digit_sep == IntegerDigitSep::None {
+            int.errors |= IntegerError::InvalidDigitSep;
+        }
+        if self.min_value.as_ref().is_some_and(|min| min > &int.value)
+            || self.max_value.as_ref().is_some_and(|max| max < &int.value)
+        {
+            int.errors |= IntegerError::Range;
+        }
+        int
+    }
+}
+
+impl IntegerToken<'_> {
     /// Parses the byte string as digits in the given base with optional `_`
     /// digit separators.
-    pub fn parse_digits(&mut self, s: &[u8], digits: &mut Vec<u8>) {
+    fn parse_digits(&mut self, s: &[u8], digits: &mut Vec<u8>) {
         digits.clear();
 
         self.leading_zeros = s.iter().take_while(|&&ch| ch == b'0').count();
@@ -21,7 +67,7 @@ impl<'s> IntegerToken<'s> {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 10 {
                             if digit == b'_' - b'0' {
-                                self.has_digit_sep = true;
+                                self.has_digit_seps = true;
                                 continue;
                             }
                             self.errors |= IntegerError::InvalidDigit;
@@ -38,7 +84,7 @@ impl<'s> IntegerToken<'s> {
                             b'A'..=b'F' => b - b'A' + 10,
                             _ => {
                                 if b == b'_' {
-                                    self.has_digit_sep = true;
+                                    self.has_digit_seps = true;
                                     continue;
                                 }
                                 self.errors |= IntegerError::InvalidDigit;
@@ -53,7 +99,7 @@ impl<'s> IntegerToken<'s> {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 8 {
                             if digit == b'_' - b'0' {
-                                self.has_digit_sep = true;
+                                self.has_digit_seps = true;
                                 continue;
                             }
                             self.errors |= IntegerError::InvalidDigit;
@@ -67,7 +113,7 @@ impl<'s> IntegerToken<'s> {
                         let digit = b.wrapping_sub(b'0');
                         if digit >= 2 {
                             if digit == b'_' - b'0' {
-                                self.has_digit_sep = true;
+                                self.has_digit_seps = true;
                                 continue;
                             }
                             self.errors |= IntegerError::InvalidDigit;
@@ -89,35 +135,14 @@ impl<'s> IntegerToken<'s> {
             self.errors |= IntegerError::NoDigits;
         }
     }
+}
 
-    /// Parses an integer with Palaiologos syntax, given a buffer of digits to
-    /// reuse allocations.
-    pub fn parse_palaiologos(literal: Cow<'s, [u8]>, digits: &mut Vec<u8>) -> Self {
-        let mut int = IntegerToken::new();
-        let (sign, s) = match literal.split_first() {
-            Some((b'-', s)) => (IntegerSign::Neg, s),
-            _ => (IntegerSign::None, &*literal),
-        };
-        int.sign = sign;
-        let (base, s) = IntegerToken::strip_base_palaiologos(s);
-        int.base = base;
-        if base == IntegerBase::Octal {
-            int.errors |= IntegerError::InvalidBase;
-        }
-        int.parse_digits(s, digits);
-        if int.has_digit_sep {
-            int.errors |= IntegerError::InvalidDigitSep;
-        }
-        if !int.value.to_i32().is_some_and(|v| v != -2147483648) {
-            int.errors |= IntegerError::Range;
-        }
-        int
-    }
-
+impl IntegerSyntax {
     /// Strips a base prefix from an integer literal with C-like syntax,
     /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
     /// binary, `0` for octal, and otherwise for decimal.
-    pub fn strip_base_c(s: &[u8]) -> (IntegerBase, &[u8]) {
+    #[allow(dead_code)]
+    fn strip_base_c(s: &[u8]) -> (IntegerBase, &[u8]) {
         match s {
             [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
             [b'0', b'b' | b'B', s @ ..] => (IntegerBase::Binary, s),
@@ -129,7 +154,7 @@ impl<'s> IntegerToken<'s> {
     /// Strips a base prefix from an integer literal with Rust-like syntax,
     /// specifically a prefix of `0x`/`0X` for hexadecimal, `0o`/`0O` for octal,
     /// `0b`/`0B` for binary, and otherwise for decimal.
-    pub fn strip_base_rust(s: &[u8]) -> (IntegerBase, &[u8]) {
+    fn strip_base_rust(s: &[u8]) -> (IntegerBase, &[u8]) {
         match s {
             [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
             [b'0', b'o' | b'O', s @ ..] => (IntegerBase::Octal, s),
@@ -141,7 +166,7 @@ impl<'s> IntegerToken<'s> {
     /// Strips a base suffix from an integer literal with Palaiologos-like
     /// syntax, specifically a suffix of `h`/`H` for hexadecimal, `b`/`B` for
     /// binary, `o`/`O` for octal, and otherwise for decimal.
-    pub fn strip_base_palaiologos(s: &[u8]) -> (IntegerBase, &[u8]) {
+    fn strip_base_palaiologos(s: &[u8]) -> (IntegerBase, &[u8]) {
         match s.split_last() {
             Some((b'h' | b'H', s)) => (IntegerBase::Hexadecimal, s),
             Some((b'b' | b'B', s)) => (IntegerBase::Binary, s),

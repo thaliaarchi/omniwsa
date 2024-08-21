@@ -11,7 +11,6 @@ use crate::{
     syntax::Opcode,
     tokens::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
-        integer::IntegerToken,
         label::{LabelError, LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::{
@@ -92,7 +91,10 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     scan.bump_while(|b| matches!(b, b'0'..=b'9' | b'A'..=b'F' | b'a'..=b'f'));
                     // Extend the syntax to handle octal, just for errors.
                     scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
-                    IntegerToken::parse_palaiologos(scan.text().into(), &mut self.digit_buf).into()
+                    self.dialect
+                        .integers()
+                        .parse(scan.text().into(), &mut self.digit_buf)
+                        .into()
                 }
             }
             sigil @ (b'@' | b'%') => {

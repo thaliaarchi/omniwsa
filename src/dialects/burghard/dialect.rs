@@ -74,7 +74,7 @@ impl Burghard {
         OptionNester::new().nest(&mut Parser::new(src, self))
     }
 
-    /// Returns the mnemonic map for this dialect.
+    /// Gets the mnemonic map for this dialect.
     pub(super) fn mnemonics(&self) -> &MnemonicMap {
         &self.mnemonics
     }
