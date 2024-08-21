@@ -57,30 +57,41 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
         }
 
         match scan.next_byte() {
-            b'A'..=b'Z' | b'a'..=b'z' | b'_' => {
+            b @ (b'A'..=b'Z' | b'a'..=b'z' | b'_') => {
                 let rest = &scan.src()[scan.start_offset()..];
                 if let Some((mnemonic, opcodes)) = scan_mnemonic(rest, self.dialect) {
                     scan.bump_bytes_no_lf(mnemonic.len() - 1);
-                    Token::from(MnemonicToken {
+                    return Token::from(MnemonicToken {
                         mnemonic: mnemonic.into(),
                         opcode: opcodes[0],
-                    })
-                } else {
-                    // Consume as much as possible for an error, until a valid
-                    // mnemonic.
-                    while !scan.eof()
-                        && matches!(scan.peek_byte(), b'A'..=b'Z' | b'a'..=b'z' | b'_')
-                    {
-                        if scan_mnemonic(scan.rest(), self.dialect).is_some() {
-                            break;
-                        }
-                        scan.next_byte();
-                    }
-                    Token::from(MnemonicToken {
-                        mnemonic: scan.text().into(),
-                        opcode: Opcode::Invalid,
-                    })
+                    });
                 }
+                // Try to scan a hex literal, even though the first digit is not
+                // allowed to be a letter. This does not conflict with any
+                // mnemonics.
+                let pos = scan.end();
+                if matches!(b, b'A'..=b'F' | b'a'..=b'f') {
+                    scan.bump_while(|b| b.is_ascii_hexdigit() || b == b'_');
+                    if scan.bump_if(|b| b == b'h' || b == b'H') {
+                        return self
+                            .dialect
+                            .integers()
+                            .parse(scan.text().into(), &mut self.digit_buf)
+                            .into();
+                    }
+                }
+                scan.revert(pos);
+                // Consume as much as possible, until a valid mnemonic.
+                while !scan.eof() && matches!(scan.peek_byte(), b'A'..=b'Z' | b'a'..=b'z' | b'_') {
+                    if scan_mnemonic(scan.rest(), self.dialect).is_some() {
+                        break;
+                    }
+                    scan.next_byte();
+                }
+                Token::from(MnemonicToken {
+                    mnemonic: scan.text().into(),
+                    opcode: Opcode::Invalid,
+                })
             }
             b @ (b'0'..=b'9' | b'-' | b'+') => {
                 // Extend the syntax to handle '+', starting with a hex letter,

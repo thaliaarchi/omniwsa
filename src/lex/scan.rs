@@ -184,6 +184,17 @@ impl<'s> Utf8Scanner<'s> {
         self.start = self.end;
     }
 
+    /// Reverts to an earlier position in the source.
+    #[inline]
+    pub fn revert(&mut self, end: Pos) {
+        debug_assert!(
+            self.start.offset <= end.offset
+                && self.start.line <= end.line
+                && (self.start.line != end.line || self.start.col <= end.col),
+        );
+        self.end = end;
+    }
+
     /// Returns the full source text.
     #[inline]
     pub fn src(&self) -> &'s str {
@@ -397,6 +408,17 @@ impl<'s> ByteScanner<'s> {
     #[inline]
     pub fn reset(&mut self) {
         self.start = self.end;
+    }
+
+    /// Reverts to an earlier position in the source.
+    #[inline]
+    pub fn revert(&mut self, end: Pos) {
+        debug_assert!(
+            self.start.offset <= end.offset
+                && self.start.line <= end.line
+                && (self.start.line != end.line || self.start.col <= end.col),
+        );
+        self.end = end;
     }
 
     /// Returns the full source text.
