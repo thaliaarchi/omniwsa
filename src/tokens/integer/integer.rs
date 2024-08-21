@@ -87,10 +87,10 @@ pub enum IntegerError {
 /// convert between styles.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IntegerSyntax {
-    /// The syntactic style family.
-    pub style: IntegerStyle,
-    /// Whether explicit positive sign is supported.
-    pub explicit_pos: bool,
+    /// The style of the sign.
+    pub sign_style: SignStyle,
+    /// The style of the base.
+    pub base_style: BaseStyle,
     /// The supported bases.
     pub bases: EnumSet<IntegerBase>,
     /// The supported digit separator.
@@ -101,14 +101,28 @@ pub struct IntegerSyntax {
     pub max_value: Option<Integer>,
 }
 
-/// A family of syntactically related integer styles.
+/// The lexical style of an integer sign.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum IntegerStyle {
-    /// Haskell-style integers. See the extended syntax under
-    /// [`IntegerSyntax::haskell`].
+pub enum SignStyle {
+    /// Implicit positive and '-' negative.
+    Neg,
+    /// Implicit positive, '-' negative, and '+' positive.
+    NegPos,
+    /// Implicit positive and '-' negative, with optional grouping parentheses.
     Haskell,
-    /// Palaiologos-style integers. See the extended syntax under
-    /// [`IntegerSyntax::palaiologos`].
+}
+
+/// The lexical style of an integer base.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BaseStyle {
+    /// C-like base prefix: `0x`/`0X` for hexadecimal, `0b`/`0B` for binary, `0`
+    /// for octal, and otherwise for decimal.
+    C,
+    /// Rust-like base prefix: `0x`/`0X` for hexadecimal, `0b`/`0B` for binary,
+    /// `0o`/`0O` for octal, and otherwise for decimal.
+    Rust,
+    /// Palaiologos-like base suffix: `h`/`H` for hexadecimal, `b`/`B` for
+    /// binary, `o`/`O` for octal, and otherwise for decimal.
     Palaiologos,
 }
 
@@ -184,8 +198,8 @@ impl IntegerSyntax {
     /// and matches the source of GHC 9.8.1 by inspection.
     pub const fn haskell() -> Self {
         IntegerSyntax {
-            style: IntegerStyle::Haskell,
-            explicit_pos: false,
+            sign_style: SignStyle::Haskell,
+            base_style: BaseStyle::Rust,
             bases: enum_set!(IntegerBase::Decimal | IntegerBase::Octal | IntegerBase::Hexadecimal),
             digit_sep: IntegerDigitSep::None,
             min_value: None,
@@ -217,12 +231,23 @@ impl IntegerSyntax {
     /// ```
     pub fn palaiologos() -> Self {
         IntegerSyntax {
-            style: IntegerStyle::Palaiologos,
-            explicit_pos: false,
+            sign_style: SignStyle::Neg,
+            base_style: BaseStyle::Palaiologos,
             bases: IntegerBase::Decimal | IntegerBase::Binary | IntegerBase::Hexadecimal,
             digit_sep: IntegerDigitSep::None,
             min_value: Some(Integer::from(i32::MIN + 1)),
             max_value: Some(Integer::from(i32::MAX)),
+        }
+    }
+}
+
+impl IntegerSign {
+    /// The string representation of this sign.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            IntegerSign::None => "",
+            IntegerSign::Pos => "+",
+            IntegerSign::Neg => "-",
         }
     }
 }

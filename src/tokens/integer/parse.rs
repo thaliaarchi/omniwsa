@@ -3,8 +3,8 @@
 use std::borrow::Cow;
 
 use crate::tokens::integer::{
-    IntegerBase, IntegerDigitSep, IntegerError, IntegerSign, IntegerStyle, IntegerSyntax,
-    IntegerToken,
+    BaseStyle, IntegerBase, IntegerDigitSep, IntegerError, IntegerSign, IntegerSyntax,
+    IntegerToken, SignStyle,
 };
 
 impl IntegerSyntax {
@@ -12,38 +12,41 @@ impl IntegerSyntax {
     /// digits to reuse allocations.
     pub fn parse<'s>(&self, literal: Cow<'s, [u8]>, digits: &mut Vec<u8>) -> IntegerToken<'s> {
         let mut int = IntegerToken::default();
-        let s = match self.style {
-            IntegerStyle::Haskell => {
-                debug_assert!(!self.explicit_pos);
-                let (sign, s, sign_errors) = Self::strip_haskell_sign(&literal);
-                let (base, s) = Self::strip_base_rust(s);
-                int.sign = sign;
-                int.base = base;
-                int.errors |= sign_errors;
-                s
+        let (sign, s) = match self.sign_style {
+            SignStyle::Neg | SignStyle::NegPos => {
+                let (sign, s) = IntegerSign::strip(&literal);
+                if int.sign == IntegerSign::Pos && self.sign_style == SignStyle::NegPos {
+                    int.errors |= IntegerError::InvalidSign;
+                }
+                (sign, s)
             }
-            IntegerStyle::Palaiologos => {
-                let (sign, s) = Self::strip_sign(&literal);
-                let (base, s) = Self::strip_base_palaiologos(s);
+            SignStyle::Haskell => {
+                let (sign, s, errors) = IntegerSign::strip_haskell(&literal);
+                int.errors |= errors;
+                (sign, s)
+            }
+        };
+        int.sign = sign;
+        let (base, s) = match self.base_style {
+            BaseStyle::C => IntegerBase::strip_c(s),
+            BaseStyle::Rust => IntegerBase::strip_rust(s),
+            BaseStyle::Palaiologos => {
+                let (base, s) = IntegerBase::strip_palaiologos(s);
                 if base == IntegerBase::Hexadecimal
                     && s.first()
                         .is_some_and(|b| matches!(b, b'a'..=b'f' | b'A'..=b'F'))
                 {
                     int.errors |= IntegerError::StartsWithHex;
                 }
-                int.sign = sign;
-                int.base = base;
-                s
+                (base, s)
             }
         };
-        int.parse_digits(s, digits);
-        int.literal = literal;
-        if int.sign == IntegerSign::Pos && !self.explicit_pos {
-            int.errors |= IntegerError::InvalidSign;
-        }
-        if !self.bases.contains(int.base) {
+        int.base = base;
+        if !self.bases.contains(base) {
             int.errors |= IntegerError::InvalidBase;
         }
+        int.parse_digits(s, digits);
+        int.literal = literal;
         if int.has_digit_seps && self.digit_sep == IntegerDigitSep::None {
             int.errors |= IntegerError::InvalidDigitSep;
         }
@@ -143,21 +146,22 @@ impl IntegerToken<'_> {
     }
 }
 
-impl IntegerSyntax {
+impl IntegerSign {
     /// Strips an optional sign from an integer literal.
-    fn strip_sign(s: &[u8]) -> (IntegerSign, &[u8]) {
+    fn strip(s: &[u8]) -> (Self, &[u8]) {
         match s.split_first() {
             Some((b'-', s)) => (IntegerSign::Neg, s),
             Some((b'+', s)) => (IntegerSign::Pos, s),
             _ => (IntegerSign::None, s),
         }
     }
+}
 
+impl IntegerBase {
     /// Strips a base prefix from an integer literal with C-like syntax,
     /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
     /// binary, `0` for octal, and otherwise for decimal.
-    #[allow(dead_code)]
-    fn strip_base_c(s: &[u8]) -> (IntegerBase, &[u8]) {
+    fn strip_c(s: &[u8]) -> (Self, &[u8]) {
         match s {
             [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
             [b'0', b'b' | b'B', s @ ..] => (IntegerBase::Binary, s),
@@ -167,13 +171,13 @@ impl IntegerSyntax {
     }
 
     /// Strips a base prefix from an integer literal with Rust-like syntax,
-    /// specifically a prefix of `0x`/`0X` for hexadecimal, `0o`/`0O` for octal,
-    /// `0b`/`0B` for binary, and otherwise for decimal.
-    fn strip_base_rust(s: &[u8]) -> (IntegerBase, &[u8]) {
+    /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
+    /// binary, `0o`/`0O` for octal, and otherwise for decimal.
+    fn strip_rust(s: &[u8]) -> (Self, &[u8]) {
         match s {
             [b'0', b'x' | b'X', s @ ..] => (IntegerBase::Hexadecimal, s),
-            [b'0', b'o' | b'O', s @ ..] => (IntegerBase::Octal, s),
             [b'0', b'b' | b'B', s @ ..] => (IntegerBase::Binary, s),
+            [b'0', b'o' | b'O', s @ ..] => (IntegerBase::Octal, s),
             s => (IntegerBase::Decimal, s),
         }
     }
@@ -181,7 +185,7 @@ impl IntegerSyntax {
     /// Strips a base suffix from an integer literal with Palaiologos-like
     /// syntax, specifically a suffix of `h`/`H` for hexadecimal, `b`/`B` for
     /// binary, `o`/`O` for octal, and otherwise for decimal.
-    fn strip_base_palaiologos(s: &[u8]) -> (IntegerBase, &[u8]) {
+    fn strip_palaiologos(s: &[u8]) -> (Self, &[u8]) {
         match s.split_last() {
             Some((b'h' | b'H', s)) => (IntegerBase::Hexadecimal, s),
             Some((b'b' | b'B', s)) => (IntegerBase::Binary, s),

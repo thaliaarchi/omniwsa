@@ -56,13 +56,13 @@
 use bstr::ByteSlice;
 use enumset::EnumSet;
 
-use crate::tokens::integer::{IntegerError, IntegerSign, IntegerSyntax};
+use crate::tokens::integer::{IntegerError, IntegerSign};
 
-impl IntegerSyntax {
+impl IntegerSign {
     /// Strips parentheses groupings and a sign for an integer literal with
     /// Haskell `Integer` syntax. See [`IntegerSyntax::haskell`] for the
     /// grammar.
-    pub(super) fn strip_haskell_sign(mut s: &[u8]) -> (IntegerSign, &[u8], EnumSet<IntegerError>) {
+    pub(super) fn strip_haskell(mut s: &[u8]) -> (Self, &[u8], EnumSet<IntegerError>) {
         fn is_whitespace(ch: char) -> bool {
             ch.is_whitespace() && ch != '\u{0085}' && ch != '\u{2028}' && ch != '\u{2029}'
         }
