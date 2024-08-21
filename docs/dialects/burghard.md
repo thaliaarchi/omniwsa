@@ -5,9 +5,10 @@
   (last updated [2023-02-20](https://github.com/wspace/burghard-wsa/tree/9f463d027f9e59238382adb69a1af9bc294c1f6a))
 - Corpus: [haskell/burghard-wsa](https://github.com/wspace/corpus/blob/main/haskell/burghard-wsa/project.json)
 
-The Whitespace assembly dialect of wsa by Oliver Burghard, the second assembler
-for Whitespace. It was originally published on [his site](https://web.archive.org/web/20110911114338/http://www.burghard.info/Code/Whitespace/)
-and linked from the official [Whitespace site](https://web.archive.org/web/20150717140342/http://compsoc.dur.ac.uk:80/whitespace/download.php).
+Oliver Burghard's assembler is the second assembler for Whitespace. It was
+originally published on [his site](https://web.archive.org/web/20110911114338/http://www.burghard.info/Code/Whitespace/),
+along with wsinterws and wsintercpp, and linked from the official
+[Whitespace page](https://web.archive.org/web/20150717140342/http://compsoc.dur.ac.uk:80/whitespace/download.php).
 It is now maintained on GitHub in repos for [wsa](https://github.com/wspace/burghard-wsa),
 [wsinterws](https://github.com/wspace/burghard-wsinterws), and [wsintercpp](https://github.com/wspace/burghard-wsintercpp).
 
