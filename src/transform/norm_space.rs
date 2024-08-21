@@ -85,7 +85,6 @@ mod tests {
                         Token::from(LineCommentToken {
                             text: b" start",
                             style: LineCommentStyle::Semi,
-                            errors: EnumSet::empty(),
                         }),
                         Token::from(LineTermToken::from(LineTermStyle::Lf)),
                     ]))),
@@ -154,7 +153,6 @@ mod tests {
                         Token::from(LineCommentToken {
                             text: b" 2",
                             style: LineCommentStyle::Semi,
-                            errors: EnumSet::empty(),
                         }),
                         Token::from(LineTermToken::from(LineTermStyle::Lf)),
                     ]))),

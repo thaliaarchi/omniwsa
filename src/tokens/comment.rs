@@ -14,8 +14,6 @@ pub struct LineCommentToken<'s> {
     pub text: &'s [u8],
     /// The style of this line comment.
     pub style: LineCommentStyle,
-    /// All errors from parsing this line comment.
-    pub errors: EnumSet<LineCommentError>,
 }
 
 /// The style of a line comment.
@@ -29,13 +27,6 @@ pub enum LineCommentStyle {
     SlashSlash,
     /// `--` line comment (Burghard, Whitelips).
     DashDash,
-}
-
-/// A parse error for a line comment.
-#[derive(EnumSetType, Debug)]
-pub enum LineCommentError {
-    /// The line comment is not terminated by a line feed (Palaiologos).
-    MissingLf,
 }
 
 /// Block comment token (e.g., `{- -}` or `/* */`).
@@ -123,7 +114,7 @@ impl BlockCommentStyle {
 
 impl HasError for LineCommentToken<'_> {
     fn has_error(&self) -> bool {
-        !self.errors.is_empty()
+        false
     }
 }
 

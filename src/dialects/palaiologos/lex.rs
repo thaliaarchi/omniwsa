@@ -10,7 +10,7 @@ use crate::{
     lex::{ByteScanner, Lex},
     syntax::Opcode,
     tokens::{
-        comment::{LineCommentError, LineCommentStyle, LineCommentToken},
+        comment::{LineCommentStyle, LineCommentToken},
         label::{LabelError, LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::{
@@ -84,7 +84,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             }
             b @ (b'0'..=b'9' | b'-' | b'+') => {
                 // Extend the syntax to handle '+', starting with a hex letter,
-                // '_' digit separators, and octal, just for errors.
+                // and '_' digit separators, just for errors.
                 scan.bump_while(|b| b.is_ascii_hexdigit() || b == b'_');
                 scan.bump_if(|b| matches!(b, b'h' | b'H' | b'o' | b'O'));
                 if (b == b'-' || b == b'+') && scan.text().len() == 1 {
@@ -119,21 +119,35 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             }
             b'\'' => {
                 let (unescaped, errors, len) = match *scan.rest() {
-                    [b'\\', b, b'\'', ..] => (CharData::Byte(b), EnumSet::empty(), 3),
-                    // A buggy escape, that is parsed as `'\''`.
-                    [b'\\', b'\'', ..] => (CharData::Byte(b'\''), EnumSet::empty(), 2),
-                    [b, b'\'', ..] => (CharData::Byte(b), EnumSet::empty(), 2),
-                    [b'\'', ..] => (CharData::Byte(0), CharError::Empty.into(), 1),
-                    [b'\\', b, ..] => (CharData::Byte(b), CharError::Unterminated.into(), 2),
-                    [b'\\', ..] => (CharData::Byte(0), CharError::Unterminated.into(), 1),
-                    _ => (CharData::Byte(0), CharError::Unterminated.into(), 0),
+                    [b'\\', b'\n', ..] | [b'\\'] => (0, CharError::Unterminated.into(), 1),
+                    [b'\\', b, ref rest @ ..] => {
+                        let b = match b {
+                            b'a' => b'\x07',
+                            b'b' => b'\x08',
+                            b'f' => b'\x0c',
+                            b'n' => b'\n',
+                            b'r' => b'\r',
+                            b't' => b'\t',
+                            b'v' => b'\x0b',
+                            _ => b,
+                        };
+                        if rest.starts_with(b"'") {
+                            (b, EnumSet::empty(), 3)
+                        } else {
+                            (b, CharError::Unterminated.into(), 2)
+                        }
+                    }
+                    [b'\'', ..] => (0, CharError::Empty.into(), 1),
+                    [b'\n', ..] => (0, CharError::Unterminated.into(), 0),
+                    [b, b'\'', ..] => (b, EnumSet::empty(), 2),
+                    _ => (0, CharError::Unterminated.into(), 0),
                 };
                 let literal =
                     &scan.rest()[..len - !errors.contains(CharError::Unterminated) as usize];
                 scan.bump_bytes(len);
                 Token::from(CharToken {
                     literal: literal.into(),
-                    unescaped,
+                    unescaped: CharData::Byte(unescaped),
                     quotes: QuoteStyle::Single,
                     errors,
                 })
@@ -152,19 +166,12 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             }
             b';' => {
                 scan.bump_while(|b| b != b'\n');
-                let errors = if scan.bump_if(|b| b == b'\n') {
-                    EnumSet::empty()
-                } else {
-                    LineCommentError::MissingLf.into()
-                };
                 Token::from(LineCommentToken {
                     text: &scan.text()[1..],
                     style: LineCommentStyle::Semi,
-                    errors,
                 })
             }
             b',' => ArgSepToken::from(ArgSepStyle::Comma).into(),
-            // Handle instruction separator and LF repetitions in the parser.
             b'/' => InstSepToken::from(InstSepStyle::Slash).into(),
             b'\n' => LineTermToken::from(LineTermStyle::Lf).into(),
             b' ' | b'\t' | b'\r' | b'\x0c' => {
@@ -221,11 +228,13 @@ fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], &'
 /// unescaped string, and the number of bytes consumed. The string must start at
 /// the byte after the open `"`.
 fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, EnumSet<StringError>, usize) {
-    let Some(mut j) = s.find_byteset(b"\"\\") else {
+    let Some(mut j) = s.find_byteset(b"\"\\\n") else {
         return (s.into(), StringError::Unterminated.into(), s.len());
     };
     if s[j] == b'"' {
         return (s[..j].into(), EnumSet::empty(), j + 1);
+    } else if s[j] == b'\n' {
+        return (s[..j].into(), StringError::Unterminated.into(), j + 1);
     }
     let mut unquoted = Vec::new();
     let mut i = 0;
@@ -242,10 +251,13 @@ fn scan_string(s: &[u8]) -> (Cow<'_, [u8]>, EnumSet<StringError>, usize) {
                 }
                 unquoted.push(s[j]);
             }
+            b'\n' => {
+                return (unquoted.into(), StringError::Unterminated.into(), j);
+            }
             _ => unreachable!(),
         }
         i = j + 1;
-        let Some(j2) = s[i..].find_byteset(b"\"\\") else {
+        let Some(j2) = s[i..].find_byteset(b"\"\\\n") else {
             break;
         };
         j = j2;

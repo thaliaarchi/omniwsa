@@ -112,7 +112,6 @@ impl<'s> Utf8Scanner<'s> {
         LineCommentToken {
             text: &src[text_start..self.offset()],
             style,
-            errors: EnumSet::empty(),
         }
     }
 
@@ -328,7 +327,6 @@ impl<'s> ByteScanner<'s> {
         LineCommentToken {
             text: &self.src[text_start..self.offset()],
             style,
-            errors: EnumSet::empty(),
         }
     }
 

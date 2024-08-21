@@ -212,12 +212,13 @@ impl IntegerSyntax {
     /// integer ::=
     ///     | "-"? [0-9]+
     ///     | "-"? [01]+ [bB]
+    ///     | "-"? [0-7]+ [oO]
     ///     | "-"? [0-9] [0-9 a-f A-F]* [hH]
     /// ```
     ///
-    /// In addition, `IntegerSyntax` recognizes positive signs, octal literals,
-    /// hex literals starting with letters, and `_` digit separators, matching
-    /// the following grammar. Any extensions are marked as errors.
+    /// In addition, `IntegerSyntax` recognizes positive signs, hex literals
+    /// starting with letters, and `_` digit separators, matching the following
+    /// grammar. Any extensions are marked as errors.
     ///
     /// ```bnf
     /// integer ::=
@@ -230,9 +231,9 @@ impl IntegerSyntax {
         IntegerSyntax {
             sign_style: SignStyle::Neg,
             base_style: BaseStyle::Palaiologos,
-            bases: Base::Decimal | Base::Binary | Base::Hexadecimal,
+            bases: Base::Decimal | Base::Binary | Base::Octal | Base::Hexadecimal,
             digit_sep: DigitSep::None,
-            min_value: Some(Integer::from(i32::MIN + 1)),
+            min_value: Some(Integer::from(i32::MIN)),
             max_value: Some(Integer::from(i32::MAX)),
         }
     }
