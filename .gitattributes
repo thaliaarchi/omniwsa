@@ -1,2 +1,3 @@
 # Disable diffs for generated files
+tests/third_party/**/generated/** -diff
 *.svg -diff

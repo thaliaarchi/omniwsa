@@ -14,4 +14,7 @@ They are now maintained on GitHub in repos for [wsa](https://github.com/wspace/b
   - wsinterws.ws
   - wsinterws.wsa
 
+The libs/ and examples/ directories have been collapsed here, because wsa
+resolves imports relative to the current directory.
+
 License: [GPL](https://web.archive.org/web/20090123074209/http://burghard.info:80/Code/index.html)
