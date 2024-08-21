@@ -10,6 +10,7 @@
 - [rdebath](dialects/rdebath.md) (c/rdebath)
 - [Respace](dialects/respace.md) (cpp/thaliaarchi-respace)
 - [voliva](dialects/voliva.md) (typescript/voliva-wsa)
+- [wconrad](dialects/wconrad.md) (ruby/wconrad)
 - [Whitelips](dialects/whitelips.md) (javascript/vii5ard-whitelips)
 - [Others](dialects/others.md)
 
