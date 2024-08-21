@@ -86,7 +86,7 @@ mod tests {
 
     use crate::{
         dialects::Burghard,
-        syntax::{Cst, Dialect, Inst, Opcode, OptionBlock},
+        syntax::{Cst, Dialect, Inst, InstError, Opcode, OptionBlock},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{Integer, IntegerToken},
@@ -134,6 +134,7 @@ mod tests {
         let src = b" {-c1-}hello{-splice-}world{-c2-}\t!";
         let cst = Burghard::new().parse(src);
         let expect = root![Cst::Inst(Inst {
+            opcode: Opcode::Invalid,
             words: Words {
                 space_before: Spaces::from(vec![
                     Token::from(SpaceToken::from(b" ")),
@@ -169,8 +170,7 @@ mod tests {
                     ),
                 ],
             },
-            valid_arity: true,
-            valid_types: true,
+            errors: EnumSet::empty(),
         })];
         assert_eq!(cst, expect);
     }
@@ -179,6 +179,7 @@ mod tests {
     fn mnemonic_utf8_folding() {
         let cst = Burghard::new().parse("\"Debug_PrİntStacK".as_bytes());
         let expect = root![Cst::Inst(Inst {
+            opcode: Opcode::BurghardPrintStack,
             words: Words {
                 space_before: Spaces::new(),
                 words: vec![(
@@ -193,8 +194,7 @@ mod tests {
                     eof!(),
                 )],
             },
-            valid_arity: true,
-            valid_types: true,
+            errors: EnumSet::empty(),
         })];
         assert_eq!(cst, expect);
     }
@@ -203,6 +203,7 @@ mod tests {
     fn bad_args() {
         let cst = Burghard::new().parse(b"valueinteger \"1\" \"2\"");
         let expect = root![Cst::Inst(Inst {
+            opcode: Opcode::BurghardValueInteger,
             words: Words {
                 space_before: Spaces::new(),
                 words: vec![
@@ -233,8 +234,7 @@ mod tests {
                     ),
                 ],
             },
-            valid_arity: true,
-            valid_types: false,
+            errors: InstError::InvalidTypes.into(),
         })];
         assert_eq!(cst, expect);
     }
@@ -243,16 +243,17 @@ mod tests {
     fn option_blocks() {
         macro_rules! letter(($letter:literal) => {
             Cst::Inst(Inst {
+                opcode: Opcode::Invalid,
                 words: Words {
                     space_before: Spaces::new(),
                     words: vec![(mnemonic!($letter, Opcode::Invalid), lf!())],
                 },
-                valid_arity: true,
-                valid_types: true,
+                errors: EnumSet::empty(),
             })
         });
         macro_rules! ifoption(($option:literal) => {
             Inst {
+                opcode: Opcode::IfOption,
                 words: Words {
                     space_before: Spaces::new(),
                     words: vec![
@@ -260,12 +261,12 @@ mod tests {
                         (Token::from(WordToken { word: $option.into() }), lf!()),
                     ],
                 },
-                valid_arity: true,
-                valid_types: true,
+                errors: EnumSet::empty(),
             }
         });
         macro_rules! elseifoption(($option:literal) => {
             Inst {
+                opcode: Opcode::ElseIfOption,
                 words: Words {
                     space_before: Spaces::new(),
                     words: vec![
@@ -273,28 +274,27 @@ mod tests {
                         (Token::from(WordToken { word: $option.into() }), lf!()),
                     ],
                 },
-                valid_arity: true,
-                valid_types: true,
+                errors: EnumSet::empty(),
             }
         });
         macro_rules! elseoption(() => {
             Inst {
+                opcode: Opcode::ElseOption,
                 words: Words {
                     space_before: Spaces::new(),
                     words: vec![(mnemonic!(b"elseoption", Opcode::ElseOption), lf!())],
                 },
-                valid_arity: true,
-                valid_types: true,
+                errors: EnumSet::empty(),
             }
         });
         macro_rules! endoption(() => {
             Inst {
+                opcode: Opcode::EndOption,
                 words: Words {
                     space_before: Spaces::new(),
                     words: vec![(mnemonic!(b"endoption", Opcode::EndOption), lf!())],
                 },
-                valid_arity: true,
-                valid_types: true,
+                errors: EnumSet::empty(),
             }
         });
         let src = b"a

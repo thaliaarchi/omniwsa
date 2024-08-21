@@ -24,45 +24,39 @@ impl<'s> OptionNester<'s> {
     }
 
     /// Nests instructions into structured option blocks.
-    pub fn nest(&mut self, lines: &mut Parser<'s, '_>) -> Cst<'s> {
-        while let Some(line) = lines.next() {
-            if let Cst::Inst(inst) = line {
-                match inst.opcode() {
-                    Opcode::IfOption => {
+    pub fn nest(&mut self, parser: &mut Parser<'s, '_>) -> Cst<'s> {
+        while let Some(inst) = parser.next() {
+            match inst.opcode {
+                Opcode::IfOption => {
+                    self.option_stack.push(OptionBlock {
+                        options: vec![(inst, Vec::new())],
+                        end: None,
+                    });
+                }
+                Opcode::ElseIfOption | Opcode::ElseOption => match self.option_stack.last_mut() {
+                    Some(block) => {
+                        block.options.push((inst, Vec::new()));
+                    }
+                    None => {
                         self.option_stack.push(OptionBlock {
                             options: vec![(inst, Vec::new())],
                             end: None,
                         });
                     }
-                    Opcode::ElseIfOption | Opcode::ElseOption => {
-                        match self.option_stack.last_mut() {
-                            Some(block) => {
-                                block.options.push((inst, Vec::new()));
-                            }
-                            None => {
-                                self.option_stack.push(OptionBlock {
-                                    options: vec![(inst, Vec::new())],
-                                    end: None,
-                                });
-                            }
-                        }
+                },
+                Opcode::EndOption => match self.option_stack.pop() {
+                    Some(mut block) => {
+                        block.end = Some(inst);
+                        self.curr_block().push(Cst::OptionBlock(block));
                     }
-                    Opcode::EndOption => match self.option_stack.pop() {
-                        Some(mut block) => {
-                            block.end = Some(inst);
-                            self.curr_block().push(Cst::OptionBlock(block));
-                        }
-                        None => {
-                            self.root.push(Cst::OptionBlock(OptionBlock {
-                                options: Vec::new(),
-                                end: Some(inst),
-                            }));
-                        }
-                    },
-                    _ => self.curr_block().push(Cst::Inst(inst)),
-                }
-            } else {
-                self.curr_block().push(line);
+                    None => {
+                        self.root.push(Cst::OptionBlock(OptionBlock {
+                            options: Vec::new(),
+                            end: Some(inst),
+                        }));
+                    }
+                },
+                _ => self.curr_block().push(Cst::Inst(inst)),
             }
         }
         let mut parent = &mut self.root;

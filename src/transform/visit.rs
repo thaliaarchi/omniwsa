@@ -1,9 +1,6 @@
 //! A visitor for traversing CST nodes.
 
-use crate::{
-    syntax::{Cst, Inst},
-    tokens::spaces::Spaces,
-};
+use crate::syntax::{Cst, Inst};
 
 // TODO:
 // - Create pass that transforms instructions equivalent to a macro expansion
@@ -15,9 +12,6 @@ use crate::{
 pub trait Visitor<'s> {
     /// Called when an instruction is visited.
     fn visit_inst(&mut self, _inst: &mut Inst<'s>) {}
-
-    /// Called when an instruction separator is visited.
-    fn visit_empty(&mut self, _empty: &mut Spaces<'s>) {}
 }
 
 impl<'s> Cst<'s> {
@@ -26,7 +20,6 @@ impl<'s> Cst<'s> {
     pub fn visit<V: Visitor<'s>>(&mut self, visitor: &mut V) {
         match self {
             Cst::Inst(inst) => visitor.visit_inst(inst),
-            Cst::Empty(empty) => visitor.visit_empty(empty),
             Cst::Block { nodes } => {
                 nodes.iter_mut().for_each(|node| node.visit(visitor));
             }

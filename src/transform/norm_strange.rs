@@ -4,7 +4,7 @@ use std::mem;
 
 use crate::{
     syntax::{Cst, Inst},
-    tokens::{spaces::Spaces, Token},
+    tokens::Token,
     transform::Visitor,
 };
 
@@ -47,8 +47,6 @@ impl<'s> Visitor<'s> for StrangeVisitor {
             }
         }
     }
-
-    fn visit_empty(&mut self, _empty: &mut Spaces<'s>) {}
 }
 
 #[cfg(test)]
@@ -85,6 +83,7 @@ mod tests {
             dialect: Dialect::Burghard,
             inner: Box::new(Cst::Block {
                 nodes: vec![Cst::Inst(Inst {
+                    opcode: Opcode::Push,
                     words: Words {
                         space_before: Spaces::from(vec![
                             Token::from(SpaceToken::from(b" ")),
@@ -115,8 +114,7 @@ mod tests {
                             ),
                         ],
                     },
-                    valid_arity: true,
-                    valid_types: true,
+                    errors: EnumSet::empty(),
                 })],
             }),
         };

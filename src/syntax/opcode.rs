@@ -278,6 +278,9 @@ opcodes! {
     /// Voliva `valuestring`.
     VolivaValueString(Variable, String),
 
+    /// No operation, e.g., an empty line.
+    Nop,
+
     /// An invalid mnemonic.
     Invalid,
 }

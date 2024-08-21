@@ -1,8 +1,10 @@
 //! Instruction syntax tree nodes.
 
+use enumset::{EnumSet, EnumSetType};
+
 use crate::{
     syntax::{HasError, Opcode},
-    tokens::{words::Words, Token},
+    tokens::{spaces::Spaces, words::Words},
 };
 
 // TODO:
@@ -13,29 +15,38 @@ use crate::{
 /// An instruction.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inst<'s> {
+    /// The resolved opcode of this instruction.
+    pub opcode: Opcode,
     /// The mnemonic and arguments in this instruction, separated and surrounded
     /// by optional spaces. Words may possibly be wrapped in `Quoted` or
     /// `Spliced`, if from the Burghard dialect.
     pub words: Words<'s>,
-    /// Whether it has the correct number of arguments for the opcode.
-    pub valid_arity: bool,
-    /// Whether the arguments have valid types for the opcode.
-    pub valid_types: bool,
+    /// Errors from parsing this instruction.
+    pub errors: EnumSet<InstError>,
+}
+
+/// A parse error for an instruction.
+#[derive(EnumSetType, Debug)]
+pub enum InstError {
+    /// The is not the correct number of arguments for the opcode.
+    InvalidArity,
+    /// The arguments do not have valid types for this opcode.
+    InvalidTypes,
 }
 
 impl<'s> Inst<'s> {
-    /// Returns the opcode for this instruction. Panics if `self.opcode` is not
-    /// an opcode token.
-    pub fn opcode(&self) -> Opcode {
-        match self.words[0].ungroup() {
-            Token::Mnemonic(m) => m.opcode,
-            _ => panic!("not a mnemonic"),
+    /// Constructs an instruction with no operation.
+    pub fn nop(spaces: Spaces<'s>) -> Self {
+        Inst {
+            opcode: Opcode::Nop,
+            words: Words::new(spaces),
+            errors: EnumSet::empty(),
         }
     }
 }
 
 impl HasError for Inst<'_> {
     fn has_error(&self) -> bool {
-        self.words.has_error() || !self.valid_arity || !self.valid_types
+        self.words.has_error() || !self.errors.is_empty()
     }
 }

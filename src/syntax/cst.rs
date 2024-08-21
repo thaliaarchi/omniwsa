@@ -1,9 +1,8 @@
 //! Concrete syntax tree for interoperable Whitespace assembly.
 
-use crate::{
-    syntax::{Inst, Opcode},
-    tokens::spaces::Spaces,
-};
+use std::fmt::{self, Debug, Formatter};
+
+use crate::syntax::{Inst, Opcode};
 
 // TODO:
 // - Macro definitions and invocations.
@@ -16,12 +15,10 @@ use crate::{
 //   where `Empty` is `Nop`.
 
 /// A node in a concrete syntax tree for interoperable Whitespace assembly.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Cst<'s> {
     /// Instruction.
     Inst(Inst<'s>),
-    /// A line with no instructions.
-    Empty(Spaces<'s>),
     /// Sequence of nodes.
     Block {
         /// The nodes in this block.
@@ -111,7 +108,6 @@ impl HasError for Cst<'_> {
     fn has_error(&self) -> bool {
         match self {
             Cst::Inst(inst) => inst.has_error(),
-            Cst::Empty(sep) => sep.has_error(),
             Cst::Block { nodes } => nodes.has_error(),
             Cst::OptionBlock(block) => block.has_error(),
             Cst::Dialect { dialect: _, inner } => inner.has_error(),
@@ -122,7 +118,7 @@ impl HasError for Cst<'_> {
 impl HasError for OptionBlock<'_> {
     fn has_error(&self) -> bool {
         self.options.is_empty()
-            || self.options.first().unwrap().0.opcode() != Opcode::IfOption
+            || self.options.first().unwrap().0.opcode != Opcode::IfOption
             || self
                 .options
                 .iter()
@@ -141,5 +137,23 @@ impl<T: HasError> HasError for Option<T> {
 impl<T: HasError> HasError for Vec<T> {
     fn has_error(&self) -> bool {
         self.iter().any(T::has_error)
+    }
+}
+
+impl Debug for Cst<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Cst::Inst(inst) => Debug::fmt(inst, f),
+            Cst::Block { nodes } => {
+                write!(f, "Block ")?;
+                f.debug_list().entries(nodes).finish()
+            }
+            Cst::OptionBlock(block) => Debug::fmt(block, f),
+            Cst::Dialect { dialect, inner } => f
+                .debug_struct("Dialect")
+                .field("dialect", dialect)
+                .field("inner", inner)
+                .finish(),
+        }
     }
 }

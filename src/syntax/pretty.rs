@@ -44,7 +44,6 @@ impl Pretty for Cst<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         match self {
             Cst::Inst(inst) => inst.pretty(buf),
-            Cst::Empty(sep) => sep.pretty(buf),
             Cst::Block { nodes } => nodes.iter().for_each(|node| node.pretty(buf)),
             Cst::OptionBlock(block) => block.pretty(buf),
             Cst::Dialect { dialect: _, inner } => inner.pretty(buf),

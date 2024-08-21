@@ -1,9 +1,11 @@
 //! Parser for the Palaiologos Whitespace assembly dialect.
 
+use enumset::EnumSet;
+
 use crate::{
     dialects::{palaiologos::lex::Lexer, Palaiologos},
     lex::TokenStream,
-    syntax::{Cst, Dialect, Inst},
+    syntax::{Cst, Dialect, Inst, Opcode},
     tokens::{
         spaces::{ArgSepError, Spaces},
         words::Words,
@@ -53,26 +55,26 @@ impl<'s, 'd> Parser<'s, 'd> {
                     _ => break,
                 }
             }
-            if self.toks.eof() {
-                nodes.push(Cst::Empty(space_before));
-                break;
-            }
-
             let mut words = Words::new(space_before);
-            while !matches!(
-                self.toks.curr(),
-                Token::LineTerm(_)
-                    | Token::Eof(_)
-                    | Token::InstSep(_)
-                    | Token::Error(ErrorToken::InvalidUtf8 { .. })
-            ) {
-                words.push_token(self.toks.advance());
-            }
-            words.push_space(self.toks.advance());
+            let opcode = if self.toks.eof() {
+                Opcode::Nop
+            } else {
+                while !matches!(
+                    self.toks.curr(),
+                    Token::LineTerm(_)
+                        | Token::Eof(_)
+                        | Token::InstSep(_)
+                        | Token::Error(ErrorToken::InvalidUtf8 { .. })
+                ) {
+                    words.push_token(self.toks.advance());
+                }
+                words.push_space(self.toks.advance());
+                Opcode::Invalid
+            };
             nodes.push(Cst::Inst(Inst {
+                opcode,
                 words,
-                valid_arity: false,
-                valid_types: false,
+                errors: EnumSet::empty(),
             }));
         }
         Cst::Dialect {

@@ -7,7 +7,7 @@ use enumset::EnumSet;
 use crate::{
     dialects::{burghard::lex::Lexer, Burghard},
     lex::TokenStream,
-    syntax::{ArgType, Cst, HasError, Inst, Opcode},
+    syntax::{ArgType, HasError, Inst, InstError, Opcode},
     tokens::{
         integer::IntegerToken,
         label::{LabelStyle, LabelToken},
@@ -44,7 +44,7 @@ impl<'s, 'd> Parser<'s, 'd> {
 }
 
 impl<'s> Iterator for Parser<'s, '_> {
-    type Item = Cst<'s>;
+    type Item = Inst<'s>;
 
     /// Parses the next line.
     fn next(&mut self) -> Option<Self::Item> {
@@ -77,16 +77,13 @@ impl<'s> Iterator for Parser<'s, '_> {
         ));
         space_after.push(self.toks.advance());
 
-        if words.is_empty() {
-            return Some(Cst::Empty(words.space_before));
-        }
         let mut inst = Inst {
+            opcode: Opcode::Invalid,
             words,
-            valid_arity: false,
-            valid_types: false,
+            errors: EnumSet::empty(),
         };
         self.parse_inst(&mut inst);
-        Some(Cst::Inst(inst))
+        Some(inst)
     }
 }
 
@@ -102,6 +99,10 @@ impl<'s> Parser<'s, '_> {
 
     /// Parses the mnemonic and arguments of an instruction.
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
+        if inst.words.is_empty() {
+            inst.opcode = Opcode::Nop;
+            return;
+        }
         let ((mnemonic, _), args) = inst.words.words.split_first_mut().unwrap();
         let mnemonic = mnemonic.ungroup_mut();
         let Token::Word(mnemonic_word) = mnemonic else {
@@ -122,8 +123,13 @@ impl<'s> Parser<'s, '_> {
                 valid &= self.parse_arg(arg, ty);
             }
             if args.len() >= types.len() || i == 0 {
-                inst.valid_arity = args.len() == types.len() || opcode == Opcode::Invalid;
-                inst.valid_types = valid;
+                inst.opcode = opcode;
+                if args.len() != types.len() && opcode != Opcode::Invalid {
+                    inst.errors |= InstError::InvalidArity;
+                }
+                if !valid {
+                    inst.errors |= InstError::InvalidTypes;
+                }
                 *mnemonic = Token::from(MnemonicToken {
                     mnemonic: mem::take(&mut mnemonic_word.word),
                     opcode,

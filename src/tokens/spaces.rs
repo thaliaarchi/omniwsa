@@ -27,14 +27,15 @@ pub struct Spaces<'s> {
 
 /// Horizontal whitespace token.
 #[derive(Clone, DebugCustom, PartialEq, Eq)]
+#[debug("SpaceToken({:?})", space.as_bstr())]
 pub struct SpaceToken<'s> {
     /// The text of this whitespace.
-    #[debug("{:?}", space.as_bstr())]
     pub space: Cow<'s, [u8]>,
 }
 
 /// Line terminator token.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
+#[debug("LineTermToken({:?})", style)]
 pub struct LineTermToken {
     /// The style of this line terminator.
     pub style: LineTermStyle,
@@ -56,7 +57,8 @@ pub enum LineTermStyle {
 pub struct EofToken;
 
 /// Instruction separator token (e.g., Respace `;` or Palaiologos `/`).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
+#[debug("InstSepToken({:?})", style)]
 pub struct InstSepToken {
     /// The style of this instruction separator.
     pub style: InstSepStyle,

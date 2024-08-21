@@ -4,10 +4,7 @@ use std::borrow::Cow;
 
 use crate::{
     syntax::{Cst, Inst, Opcode},
-    tokens::{
-        spaces::{SpaceToken, Spaces},
-        Token,
-    },
+    tokens::{spaces::SpaceToken, Token},
     transform::Visitor,
 };
 
@@ -35,27 +32,24 @@ struct SpaceVisitor<'s> {
 
 impl<'s> Visitor<'s> for SpaceVisitor<'s> {
     fn visit_inst(&mut self, inst: &mut Inst<'s>) {
-        inst.words.leading_spaces_mut().trim_leading();
-        if inst.opcode() != Opcode::Label {
-            let indent = Token::from(SpaceToken::from(self.indent.clone()));
-            inst.words.leading_spaces_mut().push_front(indent);
+        let leading = inst.words.leading_spaces_mut();
+        let len_before = leading.len();
+        leading.trim_leading();
+        let mut should_indent = inst.opcode != Opcode::Label;
+        if let Some(Token::LineComment(comment)) = leading.tokens_mut().first_mut() {
+            comment.trim_trailing();
+            should_indent = leading.len() != len_before;
         }
+
         let trailing = inst.words.trailing_spaces_mut();
         trailing.trim_trailing();
-        if let Some(Token::LineComment(c)) = trailing.tokens_mut().last_mut() {
-            c.trim_trailing();
+        if let Some(Token::LineComment(comment)) = trailing.tokens_mut().last_mut() {
+            comment.trim_trailing();
         }
-    }
 
-    fn visit_empty(&mut self, empty: &mut Spaces<'s>) {
-        let len_before = empty.len();
-        empty.trim_leading();
-        if let Some(Token::LineComment(c)) = empty.tokens_mut().first_mut() {
-            c.trim_trailing();
-            if empty.len() != len_before {
-                let indent = Token::from(SpaceToken::from(self.indent.clone()));
-                empty.push_front(indent);
-            }
+        if should_indent {
+            let indent = Token::from(SpaceToken::from(self.indent.clone()));
+            inst.words.leading_spaces_mut().push_front(indent);
         }
     }
 }
@@ -87,15 +81,16 @@ mod tests {
             dialect: Dialect::Burghard,
             inner: Box::new(Cst::Block {
                 nodes: vec![
-                    Cst::Empty(Spaces::from(vec![
+                    Cst::Inst(Inst::nop(Spaces::from(vec![
                         Token::from(LineCommentToken {
                             text: b" start",
                             style: LineCommentStyle::Semi,
                             errors: EnumSet::empty(),
                         }),
                         Token::from(LineTermToken::from(LineTermStyle::Lf)),
-                    ])),
+                    ]))),
                     Cst::Inst(Inst {
+                        opcode: Opcode::Label,
                         words: Words {
                             space_before: Spaces::new(),
                             words: vec![
@@ -118,10 +113,10 @@ mod tests {
                                 ),
                             ],
                         },
-                        valid_arity: true,
-                        valid_types: true,
+                        errors: EnumSet::empty(),
                     }),
                     Cst::Inst(Inst {
+                        opcode: Opcode::Push,
                         words: Words {
                             space_before: Spaces::from(vec![
                                 Token::from(SpaceToken::from(b"    ")),
@@ -152,10 +147,9 @@ mod tests {
                                 ),
                             ],
                         },
-                        valid_arity: true,
-                        valid_types: true,
+                        errors: EnumSet::empty(),
                     }),
-                    Cst::Empty(Spaces::from(vec![
+                    Cst::Inst(Inst::nop(Spaces::from(vec![
                         Token::from(SpaceToken::from(b"    ")),
                         Token::from(LineCommentToken {
                             text: b" 2",
@@ -163,8 +157,9 @@ mod tests {
                             errors: EnumSet::empty(),
                         }),
                         Token::from(LineTermToken::from(LineTermStyle::Lf)),
-                    ])),
+                    ]))),
                     Cst::Inst(Inst {
+                        opcode: Opcode::Push,
                         words: Words {
                             space_before: Spaces::from(Token::from(SpaceToken::from(b"    "))),
                             words: vec![
@@ -192,8 +187,7 @@ mod tests {
                                 ),
                             ],
                         },
-                        valid_arity: true,
-                        valid_types: true,
+                        errors: EnumSet::empty(),
                     }),
                 ],
             }),
