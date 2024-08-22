@@ -7,15 +7,25 @@ use crate::{
     lex::TokenStream,
     syntax::{Cst, Dialect, Inst, Opcode},
     tokens::{
-        spaces::{ArgSepError, Spaces},
+        label::{LabelStyle, LabelToken},
+        spaces::Spaces,
         words::Words,
         ErrorToken, Token,
     },
 };
 
 // TODO:
-// - Parse instruction separators and LF more precisely.
-// - Parse label definitions to a separate Inst.
+// - Check for argument and space errors.
+// - Add `enum ArgStyle { Mnemonic, Bare, WsfWord }`.
+// - Error recovery:
+//   - Allow interchanging label defs and refs in both positions, e.g., `%l call
+//     @l / %l` => `@l call %l / @l` with errors on respective tokens. This
+//     should be handled after parsing. Switch % => @ for labels that are not
+//     already @-defined. Next, switch @ => % for labels that are defined and
+//     not already switched.
+//   - Allow using invalid mnemonics as label defs and refs.
+//   - Allow adjacent instructions without slashes. At every misplaced mnemonic,
+//     unless the previous was `rep` or it's used as a label, start a new token.
 
 /// A parser for the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -34,52 +44,100 @@ impl<'s, 'd> Parser<'s, 'd> {
     /// Parses the CST.
     pub fn parse(&mut self) -> Cst<'s> {
         let mut nodes = Vec::new();
+        let mut next_spaces = Spaces::new();
         while !self.toks.eof() {
-            let mut space_before = Spaces::new();
+            let mut words = Words::new(next_spaces);
+            next_spaces = Spaces::new();
+            let mut separated = false;
             loop {
                 match self.toks.curr() {
-                    Token::Space(_) | Token::LineTerm(_) | Token::InstSep(_) => {
-                        space_before.push(self.toks.advance())
+                    Token::Mnemonic(_)
+                    | Token::Integer(_)
+                    | Token::Char(_)
+                    | Token::String(_)
+                    | Token::Label(LabelToken {
+                        style: LabelStyle::PercentSigil,
+                        ..
+                    })
+                    | Token::Error(ErrorToken::UnrecognizedChar { .. }) => {
+                        if separated && !words.is_empty() {
+                            // Split off trailing spaces into the next
+                            // instruction.
+                            let trailing = &mut words.trailing_spaces_mut().tokens;
+                            let i = trailing
+                                .iter()
+                                .rposition(|tok| !matches!(tok, Token::Space(_) | Token::ArgSep(_)))
+                                .map(|i| i + 1)
+                                .unwrap_or(0);
+                            next_spaces.tokens.extend(trailing.drain(i..));
+                            break;
+                        }
+                        words.push_word(self.toks.advance());
                     }
-                    Token::Eof(_) => {
-                        space_before.push(self.toks.advance());
+                    Token::Label(LabelToken {
+                        style: LabelStyle::AtSigil,
+                        ..
+                    }) => {
+                        if words.is_empty() {
+                            separated = true;
+                        }
+                        words.push_word(self.toks.advance());
+                    }
+                    Token::Space(_) | Token::ArgSep(_) => {
+                        words.push_space(self.toks.advance());
+                    }
+                    Token::InstSep(_) => {
+                        words.push_space(self.toks.advance());
+                        separated = true;
+                    }
+                    Token::LineComment(_) => {
+                        words.push_space(self.toks.advance());
+                        words.push_space(self.toks.advance());
                         break;
                     }
-                    Token::ArgSep(_) => {
-                        let Token::ArgSep(mut tok) = self.toks.advance() else {
-                            unreachable!();
-                        };
-                        tok.errors |= ArgSepError::NotBetweenArguments;
-                        space_before.push(Token::from(tok));
+                    Token::LineTerm(_) | Token::Eof(_) => {
+                        words.push_space(self.toks.advance());
+                        break;
                     }
-                    _ => break,
+                    _ => panic!("unhandled token"),
                 }
             }
-            let mut words = Words::new(space_before);
-            let opcode = if self.toks.eof() {
-                Opcode::Nop
-            } else {
-                while !matches!(
-                    self.toks.curr(),
-                    Token::LineTerm(_)
-                        | Token::Eof(_)
-                        | Token::InstSep(_)
-                        | Token::Error(ErrorToken::InvalidUtf8 { .. })
-                ) {
-                    words.push_token(self.toks.advance());
-                }
-                words.push_space(self.toks.advance());
-                Opcode::Invalid
-            };
-            nodes.push(Cst::Inst(Inst {
-                opcode,
-                words,
-                errors: EnumSet::empty(),
-            }));
+            nodes.push(Cst::from(parse_inst(words)));
         }
         Cst::Dialect {
             dialect: Dialect::Palaiologos,
             inner: Box::new(Cst::Block { nodes }),
         }
+    }
+}
+
+/// Parses the opcode and arguments of an instruction.
+fn parse_inst<'s>(words: Words<'s>) -> Inst<'s> {
+    if words.is_empty() {
+        return Inst {
+            opcode: Opcode::Nop,
+            words,
+            errors: EnumSet::empty(),
+        };
+    }
+    let opcode = match &words[0] {
+        Token::Mnemonic(m) => m.opcode,
+        Token::Label(LabelToken {
+            style: LabelStyle::AtSigil,
+            ..
+        }) => Opcode::Label,
+        Token::Integer(_) | Token::Char(_) => Opcode::Push,
+        Token::Label(LabelToken {
+            style: LabelStyle::PercentSigil,
+            ..
+        })
+        | Token::String(_)
+        | Token::Error(ErrorToken::UnrecognizedChar { .. }) => Opcode::Invalid,
+        _ => panic!("unhandled token"),
+    };
+    Inst {
+        opcode,
+        words,
+        errors: EnumSet::empty(),
     }
 }

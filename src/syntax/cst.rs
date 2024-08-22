@@ -140,6 +140,12 @@ impl<T: HasError> HasError for Vec<T> {
     }
 }
 
+impl<'s> From<Inst<'s>> for Cst<'s> {
+    fn from(inst: Inst<'s>) -> Self {
+        Cst::Inst(inst)
+    }
+}
+
 impl Debug for Cst<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
