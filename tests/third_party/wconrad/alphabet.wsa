@@ -1,0 +1,15 @@
+# Print the alphabet
+
+        push    65
+1:
+        dup
+        outchar
+        push    1
+        add
+        dup
+        push    91
+        sub
+        jn      1
+        push    10
+        outchar
+        exit
