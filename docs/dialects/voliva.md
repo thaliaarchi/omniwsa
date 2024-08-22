@@ -2,7 +2,7 @@
 
 - Source: [code](https://github.com/voliva/wsa)
   (last updated [2024-08-19](https://github.com/voliva/wsa/pull/1) in fork)
-- Corpus: [typescript/voliva-wsa](https://github.com/wspace/corpus/blob/main/typescript/voliva-wsa/project.json)
+- Corpus: [typescript/voliva-wsa](https://github.com/wspace/corpus/tree/main/typescript/voliva-wsa)
 
 ## Grammar
 

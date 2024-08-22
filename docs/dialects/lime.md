@@ -3,7 +3,7 @@
 - Source: [code](https://github.com/ManaRice/whitespace/blob/master/wsa.c),
   [docs](https://github.com/ManaRice/whitespace/blob/master/ws/wsa/README.md)
   (last updated [2022-05-30](https://github.com/ManaRice/whitespace/tree/e8db8719e170c12875dac571c39ac811c7d0ec52))
-- Corpus: [c/manarice-lime](https://github.com/wspace/corpus/blob/main/c/manarice-lime/project.json)
+- Corpus: [c/manarice-lime](https://github.com/wspace/corpus/tree/main/c/manarice-lime)
 
 ## Grammar
 
