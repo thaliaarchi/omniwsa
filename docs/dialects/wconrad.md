@@ -48,13 +48,25 @@ inst :=
 signed ::= space [-+]? [0-9]+
 unsigned ::= space [0-9]+
 label := [0-9]+ ":"
-
 line_comment ::= "#" [^\n]*
-# ref. https://docs.ruby-lang.org/en/master/Regexp.html#class-Regexp-label-Shorthand+Character+Classes
-space ::= " " | "\t" | "\r" | "\n" | "\f" | "\v"
-# ref. https://docs.ruby-lang.org/en/master/String.html#class-String-label-Whitespace+in+Strings
+
+# Regexp \s
+space ::= " " | "\t" | "\n" | "\v" | "\f" | "\r"
+# String#strip
 strip_space ::= space | "\0"
 ```
+
+`Regexp` [`\s`](https://docs.ruby-lang.org/en/master/Regexp.html#class-Regexp-label-Shorthand+Character+Classes)
+does not include NUL. Before [PR#4164](https://github.com/ruby/ruby/pull/4164)
+(Make String#{strip,lstrip}{,!} strip leading NUL bytes, 2021-02-19),
+`String#strip` only stripped NUL bytes on the right, even though [documentation](https://docs.ruby-lang.org/en/master/String.html#class-String-label-Whitespace+in+Strings)
+indicated that it trimmed NUL on both ends.
+
+## Generation
+
+Integers, including labels, have arbitrary precision.
+
+Labels are encoded as the given unsigned integers without leading zeros.
 
 ## Bugs in the assembler
 
