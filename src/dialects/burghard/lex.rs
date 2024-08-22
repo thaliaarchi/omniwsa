@@ -7,7 +7,7 @@ use enumset::EnumSet;
 use crate::{
     lex::{Lex, Utf8Scanner},
     tokens::{
-        comment::{BlockCommentStyle, LineCommentStyle},
+        comment::{BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentStyle},
         spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken},
         string::{QuoteStyle, QuotedError, QuotedToken},
         ErrorToken, Token, WordToken,
@@ -67,6 +67,11 @@ impl<'s> Lex<'s> for Lexer<'s> {
             '{' if scan.bump_if(|c| c == '-') => scan
                 .nested_block_comment(*b"{-", *b"-}", BlockCommentStyle::Haskell)
                 .into(),
+            '-' if scan.bump_if(|c| c == '}') => Token::from(BlockCommentToken {
+                text: b""[..].into(),
+                style: BlockCommentStyle::Haskell,
+                errors: BlockCommentError::Unopened.into(),
+            }),
             ' ' | '\t' => {
                 scan.bump_while(|c| c == ' ' || c == '\t');
                 Token::from(SpaceToken::from(scan.text()))
@@ -89,10 +94,11 @@ impl<'s> Lex<'s> for Lexer<'s> {
             }
             _ => {
                 while !scan.eof() {
-                    let rest = scan.rest().as_bytes();
-                    match rest[0] {
-                        b';' | b' ' | b'\t' | b'\n' => break,
-                        b'-' | b'{' if rest.get(1) == Some(&b'-') => break,
+                    match scan.rest().as_bytes() {
+                        [b'"' | b';' | b' ' | b'\t' | b'\n', ..]
+                        | [b'-', b'-', ..]
+                        | [b'{', b'-', ..]
+                        | [b'-', b'}', ..] => break,
                         _ => {}
                     }
                     scan.next_char();

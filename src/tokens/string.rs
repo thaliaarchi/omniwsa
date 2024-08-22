@@ -164,6 +164,14 @@ impl<'s> From<Cow<'s, [u8]>> for StringData<'s> {
     }
 }
 
+impl From<QuotedError> for StringError {
+    fn from(err: QuotedError) -> Self {
+        match err {
+            QuotedError::Unterminated => StringError::Unterminated,
+        }
+    }
+}
+
 impl HasError for StringToken<'_> {
     fn has_error(&self) -> bool {
         !self.errors.is_empty()
