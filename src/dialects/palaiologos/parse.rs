@@ -5,7 +5,7 @@ use enumset::EnumSet;
 use crate::{
     dialects::{palaiologos::lex::Lexer, Palaiologos},
     lex::TokenStream,
-    syntax::{Cst, Dialect, Inst, Opcode},
+    syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
     tokens::{
         label::{LabelStyle, LabelToken},
         spaces::Spaces,
@@ -16,7 +16,6 @@ use crate::{
 
 // TODO:
 // - Check for argument and space errors.
-// - Add `enum ArgStyle { Mnemonic, Bare, WsfWord }`.
 // - Error recovery:
 //   - Allow interchanging label defs and refs in both positions, e.g., `%l call
 //     @l / %l` => `@l call %l / @l` with errors on respective tokens. This
@@ -117,27 +116,29 @@ fn parse_inst<'s>(words: Words<'s>) -> Inst<'s> {
         return Inst {
             opcode: Opcode::Nop,
             words,
+            arg_layout: ArgLayout::Bare,
             errors: EnumSet::empty(),
         };
     }
-    let opcode = match &words[0] {
-        Token::Mnemonic(m) => m.opcode,
+    let (opcode, arg_style) = match &words[0] {
+        Token::Mnemonic(m) => (m.opcode, ArgLayout::Mnemonic),
         Token::Label(LabelToken {
             style: LabelStyle::AtSigil,
             ..
-        }) => Opcode::Label,
-        Token::Integer(_) | Token::Char(_) => Opcode::Push,
+        }) => (Opcode::Label, ArgLayout::Bare),
+        Token::Integer(_) | Token::Char(_) => (Opcode::Push, ArgLayout::Bare),
         Token::Label(LabelToken {
             style: LabelStyle::PercentSigil,
             ..
         })
         | Token::String(_)
-        | Token::Error(ErrorToken::UnrecognizedChar { .. }) => Opcode::Invalid,
+        | Token::Error(ErrorToken::UnrecognizedChar { .. }) => (Opcode::Invalid, ArgLayout::Bare),
         _ => panic!("unhandled token"),
     };
     Inst {
         opcode,
         words,
+        arg_layout: arg_style,
         errors: EnumSet::empty(),
     }
 }

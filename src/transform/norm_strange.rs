@@ -55,7 +55,7 @@ mod tests {
 
     use crate::{
         dialects::Burghard,
-        syntax::{Cst, Dialect, Inst, Opcode},
+        syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{Integer, IntegerToken},
@@ -114,6 +114,7 @@ mod tests {
                             ),
                         ],
                     },
+                    arg_layout: ArgLayout::Mnemonic,
                     errors: EnumSet::empty(),
                 })],
             }),

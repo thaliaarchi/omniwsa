@@ -8,7 +8,6 @@ use crate::{
 };
 
 // TODO:
-// - Make an `enum ArgShape` for Palaiologos mnemonic-less `push` and `label`.
 // - How to represent nonsensical sequences of tokens, that can't be structured
 //   into an instruction? A Cst variant for a token list with an error?
 
@@ -21,8 +20,20 @@ pub struct Inst<'s> {
     /// by optional spaces. Words may possibly be wrapped in `Quoted` or
     /// `Spliced`, if from the Burghard dialect.
     pub words: Words<'s>,
+    /// The layout that its arguments are syntactically arranged in.
+    pub arg_layout: ArgLayout,
     /// Errors from parsing this instruction.
     pub errors: EnumSet<InstError>,
+}
+
+/// A layout that arguments are syntactically arranged in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArgLayout {
+    /// A mnemonic followed by arguments.
+    Mnemonic,
+    /// Arguments alone, without a mnemonic (e.g., label definitions and
+    /// Palaiologos mnemonic-less `push`).
+    Bare,
 }
 
 /// A parse error for an instruction.
@@ -40,6 +51,7 @@ impl<'s> Inst<'s> {
         Inst {
             opcode: Opcode::Nop,
             words: Words::new(spaces),
+            arg_layout: ArgLayout::Bare,
             errors: EnumSet::empty(),
         }
     }

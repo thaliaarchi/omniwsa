@@ -7,7 +7,7 @@ use enumset::EnumSet;
 use crate::{
     dialects::{burghard::lex::Lexer, Burghard},
     lex::TokenStream,
-    syntax::{ArgType, HasError, Inst, InstError, Opcode},
+    syntax::{ArgLayout, ArgType, HasError, Inst, InstError, Opcode},
     tokens::{
         integer::IntegerSyntax,
         label::{LabelStyle, LabelToken},
@@ -81,6 +81,7 @@ impl<'s> Iterator for Parser<'s, '_> {
         let mut inst = Inst {
             opcode: Opcode::Invalid,
             words,
+            arg_layout: ArgLayout::Mnemonic,
             errors: EnumSet::empty(),
         };
         self.parse_inst(&mut inst);
@@ -102,6 +103,7 @@ impl<'s> Parser<'s, '_> {
     fn parse_inst(&mut self, inst: &mut Inst<'s>) {
         if inst.words.is_empty() {
             inst.opcode = Opcode::Nop;
+            inst.arg_layout = ArgLayout::Bare;
             return;
         }
         let ((mnemonic, _), args) = inst.words.words.split_first_mut().unwrap();
