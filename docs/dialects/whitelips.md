@@ -3,7 +3,7 @@
 - Source: [code](https://github.com/vii5ard/whitespace/blob/master/ws_asm.js),
   [docs](https://vii5ard.github.io/whitespace/help.html#assembly)
   (last updated [2023-07-14](https://github.com/vii5ard/whitespace/tree/3745b952b731f0bc7d60c0eabe99210ff5bc72ab))
-- Corpus: [javascript/vii5ard-whitelips](https://github.com/wspace/corpus/blob/main/javascript/vii5ard-whitelips/project.json)
+- Corpus: [javascript/vii5ard-whitelips](https://github.com/wspace/corpus/tree/main/javascript/vii5ard-whitelips)
 
 ## Grammar
 
