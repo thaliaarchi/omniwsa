@@ -165,7 +165,10 @@ impl IntegerToken<'_> {
         // Handle the obligatory leading zero when the number starts with a hex
         // digit.
         let mut new_leading_zeros = self.leading_zeros;
-        if from.base_style == BaseStyle::Palaiologos
+        if to.base_style == BaseStyle::C && new_base == Base::Decimal {
+            debug_assert!(s.len() >= self.leading_zeros);
+            new_leading_zeros = 0;
+        } else if from.base_style == BaseStyle::Palaiologos
             && to.base_style != BaseStyle::Palaiologos
             && self.base == Base::Hexadecimal
             && self.leading_zeros == 1
