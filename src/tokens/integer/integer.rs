@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use bstr::ByteSlice;
 use derive_more::Debug as DebugCustom;
-use enumset::{enum_set, EnumSet, EnumSetType};
+use enumset::{EnumSet, EnumSetType};
 
 use crate::{
     syntax::{HasError, Pretty},
@@ -141,101 +141,6 @@ impl HasError for IntegerToken<'_> {
 impl Pretty for IntegerToken<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         self.literal.pretty(buf);
-    }
-}
-
-impl IntegerSyntax {
-    /// Integers with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
-    /// in Haskell.
-    ///
-    /// # Syntax
-    ///
-    /// Octal literals are prefixed with `0o` or `0O` and hexadecimal literals
-    /// with `0x` or `0X`. Binary literals with `0b` or `0B` are not supported.
-    /// A leading zero is interpreted as decimal, not octal. It may have a
-    /// negative sign. It may be surrounded by any number of parentheses.
-    /// Unicode whitespace characters may occur around the digits, sign, or
-    /// parentheses. Positive signs, underscore digit separators, and exponents
-    /// are not allowed.
-    ///
-    /// Haskell's `String` must be UTF-8 and excludes surrogate halves, so it is
-    /// equivalent to Rust strings and validation happens outside of `read`.
-    ///
-    /// ```bnf
-    /// read ::=
-    ///     | space* "(" read ")" space*
-    ///     | space* "-"? space* integer space*
-    /// integer ::=
-    ///     | [0-9]+
-    ///     | "0" [oO] [0-7]+
-    ///     | "0" [xX] [0-9 a-f A-F]+
-    /// space ::= \p{White_Space} NOT (U+0085 | U+2028 | U+2029)
-    /// ```
-    ///
-    /// In addition, `IntegerSyntax` recognizes positive signs, signs before
-    /// parentheses, binary literals, and `_` digit separators, matching the
-    /// following grammar. Any extensions are marked as errors.
-    ///
-    /// ```bnf
-    /// read ::=
-    ///     | space* sign* "(" read ")" space*
-    ///     | space* sign* integer space*
-    /// sign ::= ("-" | "+") space*
-    /// integer ::=
-    ///     | [0-9 _]*
-    ///     | "0" [bB] [01 _]*
-    ///     | "0" [oO] [0-7 _]*
-    ///     | "0" [xX] [0-9 a-f A-F _]*
-    /// space ::= \p{White_Space} NOT (U+0085 | U+2028 | U+2029)
-    /// ```
-    ///
-    /// # Compliance
-    ///
-    /// It has been tested to match the behavior of at least GHC 8.8.4 and 9.4.4
-    /// and matches the source of GHC 9.8.1 by inspection.
-    pub const fn haskell() -> Self {
-        IntegerSyntax {
-            sign_style: SignStyle::Haskell,
-            base_style: BaseStyle::Rust,
-            bases: enum_set!(Base::Decimal | Base::Octal | Base::Hexadecimal),
-            digit_sep: DigitSep::None,
-            min_value: None,
-            max_value: None,
-        }
-    }
-
-    /// Integers with the syntax of the Palaiologos Whitespace assembly dialect.
-    ///
-    /// # Syntax
-    ///
-    /// ```bnf
-    /// integer ::=
-    ///     | "-"? [0-9]+
-    ///     | "-"? [01]+ [bB]
-    ///     | "-"? [0-7]+ [oO]
-    ///     | "-"? [0-9] [0-9 a-f A-F]* [hH]
-    /// ```
-    ///
-    /// In addition, `IntegerSyntax` recognizes positive signs, hex literals
-    /// starting with letters, and `_` digit separators, matching the following
-    /// grammar. Any extensions are marked as errors.
-    ///
-    /// ```bnf
-    /// integer ::=
-    ///     | [-+]? [0-9 _]*
-    ///     | [-+]? [01 _]* [bB]
-    ///     | [-+]? [0-7 _]* [oO]
-    ///     | [-+]? [0-9 a-f A-F _]* [hH]
-    /// ```
-    pub fn palaiologos() -> Self {
-        IntegerSyntax {
-            sign_style: SignStyle::Neg,
-            base_style: BaseStyle::Palaiologos,
-            bases: Base::Decimal | Base::Binary | Base::Octal | Base::Hexadecimal,
-            digit_sep: DigitSep::None,
-            min_value: Some(Integer::from(i32::MIN)),
-            max_value: Some(Integer::from(i32::MAX)),
-        }
     }
 }
 
