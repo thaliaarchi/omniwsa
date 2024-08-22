@@ -60,7 +60,7 @@ mod tests {
 
     use crate::{
         dialects::Burghard,
-        syntax::{Cst, Dialect, Inst, Opcode},
+        syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
             integer::{Integer, IntegerToken},
@@ -112,6 +112,7 @@ mod tests {
                                 ),
                             ],
                         },
+                        arg_layout: ArgLayout::Mnemonic,
                         errors: EnumSet::empty(),
                     }),
                     Cst::Inst(Inst {
@@ -146,6 +147,7 @@ mod tests {
                                 ),
                             ],
                         },
+                        arg_layout: ArgLayout::Mnemonic,
                         errors: EnumSet::empty(),
                     }),
                     Cst::Inst(Inst::nop(Spaces::from(vec![
@@ -185,6 +187,7 @@ mod tests {
                                 ),
                             ],
                         },
+                        arg_layout: ArgLayout::Mnemonic,
                         errors: EnumSet::empty(),
                     }),
                 ],

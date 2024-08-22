@@ -86,7 +86,7 @@ mod tests {
 
     use crate::{
         dialects::Burghard,
-        syntax::{Cst, Dialect, Inst, InstError, Opcode, OptionBlock},
+        syntax::{ArgLayout, Cst, Dialect, Inst, InstError, Opcode, OptionBlock},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{Integer, IntegerToken},
@@ -170,6 +170,7 @@ mod tests {
                     ),
                 ],
             },
+            arg_layout: ArgLayout::Mnemonic,
             errors: EnumSet::empty(),
         })];
         assert_eq!(cst, expect);
@@ -194,6 +195,7 @@ mod tests {
                     eof!(),
                 )],
             },
+            arg_layout: ArgLayout::Mnemonic,
             errors: EnumSet::empty(),
         })];
         assert_eq!(cst, expect);
@@ -234,6 +236,7 @@ mod tests {
                     ),
                 ],
             },
+            arg_layout: ArgLayout::Mnemonic,
             errors: InstError::InvalidTypes.into(),
         })];
         assert_eq!(cst, expect);
@@ -248,6 +251,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![(mnemonic!($letter, Opcode::Invalid), lf!())],
                 },
+                arg_layout: ArgLayout::Mnemonic,
                 errors: EnumSet::empty(),
             })
         });
@@ -261,6 +265,7 @@ mod tests {
                         (Token::from(WordToken { word: $option.into() }), lf!()),
                     ],
                 },
+                arg_layout: ArgLayout::Mnemonic,
                 errors: EnumSet::empty(),
             }
         });
@@ -274,6 +279,7 @@ mod tests {
                         (Token::from(WordToken { word: $option.into() }), lf!()),
                     ],
                 },
+                arg_layout: ArgLayout::Mnemonic,
                 errors: EnumSet::empty(),
             }
         });
@@ -284,6 +290,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![(mnemonic!(b"elseoption", Opcode::ElseOption), lf!())],
                 },
+                arg_layout: ArgLayout::Mnemonic,
                 errors: EnumSet::empty(),
             }
         });
@@ -294,6 +301,7 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![(mnemonic!(b"endoption", Opcode::EndOption), lf!())],
                 },
+                arg_layout: ArgLayout::Mnemonic,
                 errors: EnumSet::empty(),
             }
         });
