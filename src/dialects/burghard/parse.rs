@@ -13,7 +13,7 @@ use crate::{
         label::{LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::Spaces,
-        string::{QuoteStyle, StringData, StringToken},
+        string::{QuoteStyle, StringData, StringError, StringToken},
         words::Words,
         ErrorToken, SplicedToken, Token, VariableStyle, VariableToken,
     },
@@ -23,6 +23,7 @@ use crate::{
 // - Transform strings to lowercase.
 // - Clean up UTF-8 decoding in parse_arg, since tokens are already validated as
 //   UTF-8.
+// - BUG: InvalidUtf8 is considered space here, but not by Spaces.
 
 /// A parser for the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -205,11 +206,15 @@ impl<'s> Parser<'s, '_> {
                 let Token::Word(w) = *q.inner else {
                     panic!("unhandled token");
                 };
+                let mut errors = EnumSet::empty();
+                for err in q.errors {
+                    errors |= StringError::from(err);
+                }
                 Token::from(StringToken {
                     literal: w.word.clone(),
                     unescaped: StringData::from_utf8(w.word).unwrap(),
                     quotes: q.quotes,
-                    errors: EnumSet::empty(),
+                    errors,
                 })
             }
             _ => panic!("unhandled token"),

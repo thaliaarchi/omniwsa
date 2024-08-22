@@ -58,6 +58,8 @@ pub enum BlockCommentStyle {
 pub enum BlockCommentError {
     /// The block comment is not terminated by a closing marker.
     Unterminated,
+    /// A closing marker has no paired opening marker.
+    Unopened,
 }
 
 impl LineCommentStyle {
@@ -133,7 +135,9 @@ impl Pretty for LineCommentToken<'_> {
 
 impl Pretty for BlockCommentToken<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
-        self.style.open().pretty(buf);
+        if !self.errors.contains(BlockCommentError::Unopened) {
+            self.style.open().pretty(buf);
+        }
         self.text.pretty(buf);
         if !self.errors.contains(BlockCommentError::Unterminated) {
             self.style.close().pretty(buf);
