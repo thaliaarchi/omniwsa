@@ -54,9 +54,72 @@
 //!     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
 
 use bstr::ByteSlice;
-use enumset::EnumSet;
+use enumset::{enum_set, EnumSet};
 
-use crate::tokens::integer::{IntegerError, Sign};
+use crate::tokens::integer::{
+    Base, BaseStyle, DigitSep, IntegerError, IntegerSyntax, Sign, SignStyle,
+};
+
+impl IntegerSyntax {
+    /// Integers with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
+    /// in Haskell.
+    ///
+    /// # Syntax
+    ///
+    /// Octal literals are prefixed with `0o` or `0O` and hexadecimal literals
+    /// with `0x` or `0X`. Binary literals with `0b` or `0B` are not supported.
+    /// A leading zero is interpreted as decimal, not octal. It may have a
+    /// negative sign. It may be surrounded by any number of parentheses.
+    /// Unicode whitespace characters may occur around the digits, sign, or
+    /// parentheses. Positive signs, underscore digit separators, and exponents
+    /// are not allowed.
+    ///
+    /// Haskell's `String` must be UTF-8 and excludes surrogate halves, so it is
+    /// equivalent to Rust strings and validation happens outside of `read`.
+    ///
+    /// ```bnf
+    /// read ::=
+    ///     | space* "(" read ")" space*
+    ///     | space* "-"? space* integer space*
+    /// integer ::=
+    ///     | [0-9]+
+    ///     | "0" [oO] [0-7]+
+    ///     | "0" [xX] [0-9 a-f A-F]+
+    /// space ::= \p{White_Space} NOT (U+0085 | U+2028 | U+2029)
+    /// ```
+    ///
+    /// In addition, `omniwsa` recognizes positive signs, signs before
+    /// parentheses, binary literals, and `_` digit separators, matching the
+    /// following grammar. Any extensions are marked as errors.
+    ///
+    /// ```bnf
+    /// read ::=
+    ///     | space* sign* "(" read ")" space*
+    ///     | space* sign* integer space*
+    /// sign ::= ("-" | "+") space*
+    /// integer ::=
+    ///     | [0-9 _]*
+    ///     | "0" [bB] [01 _]*
+    ///     | "0" [oO] [0-7 _]*
+    ///     | "0" [xX] [0-9 a-f A-F _]*
+    /// space ::= \p{White_Space} NOT (U+0085 | U+2028 | U+2029)
+    /// ```
+    ///
+    /// # Compliance
+    ///
+    /// It has been tested to match the behavior of at least GHC 8.8.4 and 9.4.4
+    /// and matches the source of GHC 9.8.1 by inspection.
+    pub(crate) const fn haskell() -> Self {
+        IntegerSyntax {
+            sign_style: SignStyle::Haskell,
+            base_style: BaseStyle::Rust,
+            bases: enum_set!(Base::Decimal | Base::Octal | Base::Hexadecimal),
+            digit_sep: DigitSep::None,
+            min_value: None,
+            max_value: None,
+        }
+    }
+}
 
 impl Sign {
     /// Strips parentheses groupings and a sign for an integer literal with

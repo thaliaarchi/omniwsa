@@ -4,7 +4,7 @@ use crate::{
     dialects::palaiologos::parse::Parser,
     syntax::{Cst, Opcode},
     tokens::{
-        integer::IntegerSyntax,
+        integer::{Base, BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
         mnemonics::{FoldedStr, MnemonicMap},
     },
 };
@@ -66,7 +66,7 @@ impl Palaiologos {
     pub fn new() -> Self {
         Palaiologos {
             mnemonics: MnemonicMap::from(MNEMONICS),
-            integers: IntegerSyntax::palaiologos(),
+            integers: Self::new_integers(),
         }
     }
 
@@ -81,7 +81,43 @@ impl Palaiologos {
     }
 
     /// Gets the integer syntax description for this dialect.
-    pub(super) fn integers(&self) -> &IntegerSyntax {
+    ///
+    /// See [`Palaiologos::new_integers`] for the grammar.
+    pub fn integers(&self) -> &IntegerSyntax {
         &self.integers
+    }
+
+    /// Constructs an integer syntax description for this dialect.
+    ///
+    /// # Syntax
+    ///
+    /// ```bnf
+    /// integer ::=
+    ///     | "-"? [0-9]+
+    ///     | "-"? [01]+ [bB]
+    ///     | "-"? [0-7]+ [oO]
+    ///     | "-"? [0-9] [0-9 a-f A-F]* [hH]
+    /// ```
+    ///
+    /// In addition, `omniwsa` recognizes positive signs, hex literals starting
+    /// with letters, and `_` digit separators, matching the following grammar.
+    /// Any extensions are marked as errors.
+    ///
+    /// ```bnf
+    /// integer ::=
+    ///     | [-+]? [0-9 _]*
+    ///     | [-+]? [01 _]* [bB]
+    ///     | [-+]? [0-7 _]* [oO]
+    ///     | [-+]? [0-9 a-f A-F _]* [hH]
+    /// ```
+    pub fn new_integers() -> IntegerSyntax {
+        IntegerSyntax {
+            sign_style: SignStyle::Neg,
+            base_style: BaseStyle::Palaiologos,
+            bases: Base::Decimal | Base::Binary | Base::Octal | Base::Hexadecimal,
+            digit_sep: DigitSep::None,
+            min_value: Some(Integer::from(i32::MIN)),
+            max_value: Some(Integer::from(i32::MAX)),
+        }
     }
 }
