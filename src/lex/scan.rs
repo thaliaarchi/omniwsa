@@ -7,7 +7,8 @@ use crate::tokens::comment::{
 };
 
 // TODO:
-// - Abstract common functionality between scanners to trait.
+// - Unify Utf8Scanner and ByteScanner into one concrete type scanning
+//   conventionally UTF-8 inputs.
 
 /// A scanner for generically reading tokens from UTF-8 text.
 #[derive(Clone, Debug)]

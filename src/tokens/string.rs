@@ -12,7 +12,7 @@ use crate::{
 };
 
 // TODO:
-// - How to represent escapes in strings and chars?
+// - Create StringSyntax to describe escapes.
 // - How to represent char literals with buggy delimiters, like those allowed
 //   with littleBugHunter's `'..` pattern? Maybe QuoteStyle::Custom with open
 //   and close.

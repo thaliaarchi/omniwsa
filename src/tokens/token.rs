@@ -23,11 +23,12 @@ use crate::{
 // TODO:
 // - Whitelips, Lime, and Respace macro definitions.
 // - Respace `@define`.
-// - Store byte string uniformly, instead of a mix of &[u8] and Cow.
+// - Store spans in tokens.
+// - Store byte string uniformly (named Text?), instead of a mix of &[u8] and
+//   Cow.
 //   - Create utilities for slicing and manipulating easier than Cow.
 //   - Display it as conventionally UTF-8.
 // - Make UTF-8 error a first-class token.
-// - Add LineTerm kind (i.e., LF, CRLF, CR).
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
