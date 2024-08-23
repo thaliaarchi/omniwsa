@@ -57,11 +57,12 @@ pub enum LineTermStyle {
 pub struct EofToken;
 
 /// Instruction separator token (e.g., Respace `;` or Palaiologos `/`).
-#[derive(Clone, DebugCustom, PartialEq, Eq)]
-#[debug("InstSepToken({:?})", style)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstSepToken {
     /// The style of this instruction separator.
     pub style: InstSepStyle,
+    /// All errors from parsing this instruction separator.
+    pub errors: EnumSet<InstSepError>,
 }
 
 /// The style of an argument separator.
@@ -71,6 +72,17 @@ pub enum InstSepStyle {
     Semi,
     /// `/` argument separator (Palaiologos).
     Slash,
+}
+
+/// A parse error for an instruction separator.
+#[derive(EnumSetType, Debug)]
+pub enum InstSepError {
+    /// Multiple adjacent instruction separators.
+    Multiple,
+    /// It is at the start of the line.
+    StartOfLine,
+    /// It is at the end of the line.
+    EndOfLine,
 }
 
 /// Argument separator token (e.g., Palaiologos `,`).
@@ -94,6 +106,8 @@ pub enum ArgSepStyle {
 pub enum ArgSepError {
     /// This argument separator is not between arguments.
     NotBetweenArguments,
+    /// Multiple adjacent argument separators.
+    Multiple,
 }
 
 impl<'s> Spaces<'s> {
@@ -257,7 +271,10 @@ impl From<LineTermStyle> for LineTermToken {
 
 impl From<InstSepStyle> for InstSepToken {
     fn from(style: InstSepStyle) -> Self {
-        InstSepToken { style }
+        InstSepToken {
+            style,
+            errors: EnumSet::empty(),
+        }
     }
 }
 
@@ -290,7 +307,7 @@ impl HasError for EofToken {
 
 impl HasError for InstSepToken {
     fn has_error(&self) -> bool {
-        false
+        !self.errors.is_empty()
     }
 }
 
