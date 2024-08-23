@@ -1,7 +1,7 @@
 # wsf dialect
 
 - Source: [code](https://github.com/thaliaarchi/wslib)
-  (last updated [2023-10-21](https://github.com/thaliaarchi/wslib/commit/810a0e042e682645f6a14c2be5187166badce6c3)
+  (last updated [2024-08-23](https://github.com/thaliaarchi/wslib/commit/8c52c8e307085c755a8c847882041cb788d4661c)
 - Corpus: [whitespace/thaliaarchi-wslib](https://github.com/wspace/corpus/tree/main/whitespace/thaliaarchi-wslib)
 
 wsf (“Whitespace Forth”) is a Whitespace assembly dialect by Thalia Archibald,
@@ -169,7 +169,7 @@ TODO: Expand section.
 ## Bugs in the assembler
 
 - Non-space whitespace characters in strings and chars are replaced with space.
-- The character before a comment is dropped and `#` cannot appear in strings.
+- `#` cannot appear in strings.
 - Strings are limited to 40 characters.
 - Many features are limited to a fixed number of occurrences per line.
 - Separation between tokens is suspect.
