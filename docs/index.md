@@ -12,6 +12,7 @@
 - [voliva](dialects/voliva.md) (typescript/voliva-wsa)
 - [wconrad](dialects/wconrad.md) (ruby/wconrad)
 - [Whitelips](dialects/whitelips.md) (javascript/vii5ard-whitelips)
+- [wsf](dialects/wsf.md) (whitespace/thaliaarchi-wslib)
 - [Others](dialects/others.md)
 
 ## Design drafts
