@@ -4,7 +4,7 @@ use enumset::{EnumSet, EnumSetType};
 
 use crate::{
     syntax::{HasError, Opcode},
-    tokens::{spaces::Spaces, words::Words},
+    tokens::{spaces::Spaces, words::Words, Token},
 };
 
 // TODO:
@@ -54,6 +54,24 @@ impl<'s> Inst<'s> {
             arg_layout: ArgLayout::Bare,
             errors: EnumSet::empty(),
         }
+    }
+
+    /// Gets the argument at the given index. Panics if out of range.
+    pub fn arg(&self, index: usize) -> &Token<'s> {
+        &self.words[index + (self.arg_layout == ArgLayout::Mnemonic) as usize]
+    }
+
+    /// Gets a mutable reference to the argument at the given index. Panics if
+    /// out of range.
+    pub fn arg_mut(&mut self, index: usize) -> &Token<'s> {
+        &mut self.words[index + (self.arg_layout == ArgLayout::Mnemonic) as usize]
+    }
+
+    /// Returns the number of arguments.
+    pub fn len_args(&self) -> usize {
+        self.words
+            .len()
+            .saturating_sub((self.arg_layout == ArgLayout::Mnemonic) as usize)
     }
 }
 
