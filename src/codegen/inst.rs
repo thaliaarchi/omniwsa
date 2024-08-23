@@ -8,29 +8,21 @@ use crate::tokens::integer::Sign;
 // - Distinction between Haskell Integer for `push` and Int for `copy` and
 //   `slide`. Perhaps issue a warning when the index would wrap.
 
-/// A Whitespace instruction for code generation. It is constructed via
-/// [`Opcode`].
+/// A Whitespace instruction for code generation.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Inst<'a> {
-    pub(super) opcode: Opcode,
-    pub(super) arg: Option<ArgBits<'a>>,
-}
-
-/// A Whitespace instruction opcode.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Opcode {
+pub enum Inst<'a> {
     /// Whitespace `push` (SS).
-    Push,
+    Push(IntegerBits<'a>),
     /// Whitespace `dup` (SLS).
     Dup,
     /// Whitespace `copy` (STS).
-    Copy,
+    Copy(IntegerBits<'a>),
     /// Whitespace `swap` (SLT).
     Swap,
     /// Whitespace `drop` (SLL).
     Drop,
     /// Whitespace `slide` (STL).
-    Slide,
+    Slide(IntegerBits<'a>),
     /// Whitespace `add` (TSSS).
     Add,
     /// Whitespace `sub` (TSST).
@@ -46,15 +38,15 @@ pub enum Opcode {
     /// Whitespace `retrieve` (TTT).
     Retrieve,
     /// Whitespace `label` (LSS).
-    Label,
+    Label(LabelBits<'a>),
     /// Whitespace `call` (LST).
-    Call,
+    Call(LabelBits<'a>),
     /// Whitespace `jmp` (LSL).
-    Jmp,
+    Jmp(LabelBits<'a>),
     /// Whitespace `jz` (LTS).
-    Jz,
+    Jz(LabelBits<'a>),
     /// Whitespace `jn` (LTT).
-    Jn,
+    Jn(LabelBits<'a>),
     /// Whitespace `ret` (LTL).
     Ret,
     /// Whitespace `end` (LLL).
@@ -84,17 +76,6 @@ pub enum Opcode {
     VolivaBreakpointAlt,
 }
 
-/// The argument signature of a Whitespace instruction.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Signature {
-    /// No arguments.
-    None,
-    /// An single integer argument.
-    Integer,
-    /// A single label argument.
-    Label,
-}
-
 /// A signed integer value for code generation, encoded with explicit leading
 /// zeros.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -111,47 +92,6 @@ pub(super) struct ArgBits<'a> {
     pub(super) value: &'a Integer,
     pub(super) sign: Sign,
     pub(super) leading_zeros: usize,
-}
-
-impl<'a> From<Opcode> for Inst<'a> {
-    #[inline]
-    fn from(opcode: Opcode) -> Self {
-        debug_assert_eq!(opcode.signature(), Signature::None);
-        Inst { opcode, arg: None }
-    }
-}
-
-impl Opcode {
-    /// Attaches an integer argument to this opcode to make an instruction.
-    #[inline]
-    pub fn integer<'a, T: Into<IntegerBits<'a>>>(self, int: T) -> Inst<'a> {
-        debug_assert_eq!(self.signature(), Signature::Integer);
-        Inst {
-            opcode: self,
-            arg: Some(int.into().0),
-        }
-    }
-
-    /// Attaches a label argument to this opcode to make an instruction.
-    #[inline]
-    pub fn label<'a, T: Into<LabelBits<'a>>>(self, label: T) -> Inst<'a> {
-        debug_assert_eq!(self.signature(), Signature::Label);
-        Inst {
-            opcode: self,
-            arg: Some(label.into().0),
-        }
-    }
-
-    /// Returns the argument signature for this argument.
-    fn signature(&self) -> Signature {
-        match self {
-            Opcode::Push | Opcode::Copy | Opcode::Slide => Signature::Integer,
-            Opcode::Label | Opcode::Call | Opcode::Jmp | Opcode::Jz | Opcode::Jn => {
-                Signature::Label
-            }
-            _ => Signature::None,
-        }
-    }
 }
 
 impl<'a> IntegerBits<'a> {
