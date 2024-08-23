@@ -230,15 +230,14 @@ fn slice_subtract<'a, T>(a: &'a [T], b: &'a [T]) -> (&'a [T], &'a [T]) {
 
 /// Gets the most-significant byte from the integer.
 fn most_significant_byte(int: &Integer) -> u8 {
-    let limbs: &[u64] = int.as_limbs();
+    // Avoid dependency on `gmp_mpfr_sys::gmp::limb_t`.
+    #[inline]
+    unsafe fn as_bytes<T>(s: &[T]) -> &[u8] {
+        slice::from_raw_parts(s.as_ptr() as *const u8, s.len() * mem::size_of::<T>())
+    }
     // SAFETY: The pointer and length are valid and the alignment of u8 is less
     // than u64.
-    let bytes = unsafe {
-        slice::from_raw_parts(
-            limbs.as_ptr() as *const u8,
-            limbs.len() * mem::size_of::<u64>(),
-        )
-    };
+    let bytes = unsafe { as_bytes(int.as_limbs()) };
     bytes.iter().find(|&&b| b != 0).copied().unwrap_or(0)
 }
 
