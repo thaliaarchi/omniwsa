@@ -12,8 +12,8 @@ use crate::tokens::integer::Sign;
 /// [`Opcode`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inst<'a> {
-    opcode: Opcode,
-    arg: Option<ArgBits<'a>>,
+    pub(super) opcode: Opcode,
+    pub(super) arg: Option<ArgBits<'a>>,
 }
 
 /// A Whitespace instruction opcode.
@@ -98,19 +98,19 @@ enum Signature {
 /// A signed integer value for code generation, encoded with explicit leading
 /// zeros.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct IntegerBits<'a>(ArgBits<'a>);
+pub struct IntegerBits<'a>(pub(super) ArgBits<'a>);
 
 /// An unsigned label value for code generation, encoded with explicit leading
 /// zeros.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LabelBits<'a>(ArgBits<'a>);
+pub struct LabelBits<'a>(pub(super) ArgBits<'a>);
 
 /// An integer or label for code generation.
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct ArgBits<'a> {
-    value: &'a Integer,
-    sign: Sign,
-    leading_zeros: usize,
+pub(super) struct ArgBits<'a> {
+    pub(super) value: &'a Integer,
+    pub(super) sign: Sign,
+    pub(super) leading_zeros: usize,
 }
 
 impl<'a> From<Opcode> for Inst<'a> {
@@ -179,6 +179,24 @@ impl<'a> IntegerBits<'a> {
             leading_zeros: 0,
         })
     }
+
+    /// Gets the value of this integer.
+    #[inline]
+    pub const fn value(&self) -> &'a Integer {
+        self.0.value
+    }
+
+    /// Gets the sign of this integer.
+    #[inline]
+    pub const fn sign(&self) -> Sign {
+        self.0.sign
+    }
+
+    /// Gets the number of leading zeros this integer has.
+    #[inline]
+    pub const fn leading_zeros(&self) -> usize {
+        self.0.leading_zeros
+    }
 }
 
 /// Creates a signed integer, encoded with no leading zeros.
@@ -200,6 +218,18 @@ impl<'a> LabelBits<'a> {
             sign: Sign::None,
             leading_zeros,
         })
+    }
+
+    /// Gets the value of this label.
+    #[inline]
+    pub const fn value(&self) -> &'a Integer {
+        self.0.value
+    }
+
+    /// Gets the number of leading zeros this label has.
+    #[inline]
+    pub const fn leading_zeros(&self) -> usize {
+        self.0.leading_zeros
     }
 }
 
