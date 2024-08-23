@@ -5,7 +5,6 @@
 - java/jbanana
 - java/matou-whasm
 - java/vyo-kairos
-- whitespace/thaliaarchi-wslib
 
 ## Other assemblers
 
