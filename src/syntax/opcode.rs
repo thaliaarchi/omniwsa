@@ -7,7 +7,9 @@ macro_rules! opcodes[
             $opcode:ident $( ( $($arg:ident),+ ) )?
         ),* $(,)?
     ) => {
-        /// Instruction or predefined macro opcode.
+        /// An opcode for a Whitespace assembly instruction or predefined macro.
+        /// Overloaded opcodes are resolved to different variants with distinct
+        /// Whitespace code generation.
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
         pub enum Opcode {
             $($(#[doc = $doc])* $opcode),*
@@ -80,12 +82,12 @@ opcodes! {
     BurghardPrintStack,
     /// Burghard `debug_printheap`.
     BurghardPrintHeap,
-    /// voliva `and`.
-    VolivaAnd,
     /// voliva `or`.
     VolivaOr,
     /// voliva `not`.
     VolivaNot,
+    /// voliva `and`.
+    VolivaAnd,
     /// voliva `debugger`.
     VolivaBreakpoint,
 
