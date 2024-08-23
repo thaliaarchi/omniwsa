@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 
+pub mod codegen;
 pub mod dialects;
 mod lex;
 pub mod syntax;
