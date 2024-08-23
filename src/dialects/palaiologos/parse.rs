@@ -1,5 +1,7 @@
 //! Parser for the Palaiologos Whitespace assembly dialect.
 
+use std::collections::HashSet;
+
 use enumset::EnumSet;
 
 use crate::{
@@ -7,15 +9,15 @@ use crate::{
     lex::TokenStream,
     syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
     tokens::{
-        label::{LabelStyle, LabelToken},
-        spaces::Spaces,
+        label::{LabelError, LabelStyle, LabelToken},
+        spaces::{ArgSepError, InstSepError, Spaces},
         words::Words,
         ErrorToken, Token,
     },
 };
 
 // TODO:
-// - Check for argument and space errors.
+// - Check for argument errors.
 // - Error recovery:
 //   - Allow interchanging label defs and refs in both positions, e.g., `%l call
 //     @l / %l` => `@l call %l / @l` with errors on respective tokens. This
@@ -42,6 +44,7 @@ impl<'s, 'd> Parser<'s, 'd> {
 
     /// Parses the CST.
     pub fn parse(&mut self) -> Cst<'s> {
+        let mut label_defs = HashSet::new();
         let mut nodes = Vec::new();
         let mut next_spaces = Spaces::new();
         while !self.toks.eof() {
@@ -75,12 +78,21 @@ impl<'s, 'd> Parser<'s, 'd> {
                     }
                     Token::Label(LabelToken {
                         style: LabelStyle::AtSigil,
+                        label,
                         ..
                     }) => {
                         if words.is_empty() {
                             separated = true;
                         }
-                        words.push_word(self.toks.advance());
+                        let ident = label.clone();
+                        let mut label = self.toks.advance();
+                        if !label_defs.insert(ident) {
+                            let Token::Label(l) = &mut label else {
+                                unreachable!();
+                            };
+                            l.errors |= LabelError::Redefined;
+                        }
+                        words.push_word(label);
                     }
                     Token::Space(_) | Token::ArgSep(_) => {
                         words.push_space(self.toks.advance());
@@ -101,7 +113,14 @@ impl<'s, 'd> Parser<'s, 'd> {
                     _ => panic!("unhandled token"),
                 }
             }
-            nodes.push(Cst::from(parse_inst(words)));
+            let mut inst = Inst {
+                opcode: Opcode::Invalid,
+                arg_layout: ArgLayout::Mnemonic,
+                words,
+                errors: EnumSet::empty(),
+            };
+            analyze_inst(&mut inst);
+            nodes.push(Cst::from(inst));
         }
         Cst::Dialect {
             dialect: Dialect::Palaiologos,
@@ -110,17 +129,15 @@ impl<'s, 'd> Parser<'s, 'd> {
     }
 }
 
-/// Parses the opcode and arguments of an instruction.
-fn parse_inst<'s>(words: Words<'s>) -> Inst<'s> {
-    if words.is_empty() {
-        return Inst {
-            opcode: Opcode::Nop,
-            words,
-            arg_layout: ArgLayout::Bare,
-            errors: EnumSet::empty(),
-        };
+/// Analyzes the opcode and arguments of an instruction.
+fn analyze_inst<'s>(inst: &mut Inst<'s>) {
+    if inst.words.is_empty() {
+        inst.opcode = Opcode::Nop;
+        inst.arg_layout = ArgLayout::Bare;
+        return;
     }
-    let (opcode, arg_style) = match &words[0] {
+
+    (inst.opcode, inst.arg_layout) = match &inst.words[0] {
         Token::Mnemonic(m) => (m.opcode, ArgLayout::Mnemonic),
         Token::Label(LabelToken {
             style: LabelStyle::AtSigil,
@@ -135,10 +152,45 @@ fn parse_inst<'s>(words: Words<'s>) -> Inst<'s> {
         | Token::Error(ErrorToken::UnrecognizedChar { .. }) => (Opcode::Invalid, ArgLayout::Bare),
         _ => panic!("unhandled token"),
     };
-    Inst {
-        opcode,
-        words,
-        arg_layout: arg_style,
-        errors: EnumSet::empty(),
+
+    let args_start = if inst.opcode == Opcode::PalaiologosRep {
+        2
+    } else {
+        1
+    };
+    let last = inst.words.words.len() - 1;
+    analyze_spaces(&mut inst.words.space_before, true, false, false);
+    for (i, (_, spaces)) in &mut inst.words.words.iter_mut().enumerate() {
+        analyze_spaces(spaces, false, i == last, i >= args_start);
+    }
+}
+
+/// Analyze spaces to attach errors.
+fn analyze_spaces(spaces: &mut Spaces<'_>, leading: bool, trailing: bool, between_args: bool) {
+    let mut has_comma = false;
+    let mut has_slash = false;
+    for space in &mut spaces.tokens {
+        match space {
+            Token::ArgSep(sep) => {
+                if has_comma {
+                    sep.errors |= ArgSepError::Multiple;
+                } else if between_args {
+                    sep.errors |= ArgSepError::NotBetweenArguments;
+                }
+                has_comma = true;
+            }
+            Token::InstSep(sep) => {
+                if has_slash {
+                    sep.errors |= InstSepError::Multiple;
+                }
+                if leading {
+                    sep.errors |= InstSepError::StartOfLine;
+                } else if trailing {
+                    sep.errors |= InstSepError::EndOfLine;
+                }
+                has_slash = true;
+            }
+            _ => {}
+        }
     }
 }
