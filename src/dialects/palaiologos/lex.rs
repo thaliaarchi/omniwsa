@@ -69,8 +69,8 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 // Try to scan a hex literal, even though the first digit is not
                 // allowed to be a letter. This does not conflict with any
                 // mnemonics.
-                let pos = scan.end();
                 if matches!(b, b'A'..=b'F' | b'a'..=b'f') {
+                    let pos = scan.end();
                     scan.bump_while(|b| b.is_ascii_hexdigit() || b == b'_');
                     if scan.bump_if(|b| b == b'h' || b == b'H') {
                         return self
@@ -79,8 +79,8 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                             .parse(scan.text().into(), &mut self.digit_buf)
                             .into();
                     }
+                    scan.revert(pos);
                 }
-                scan.revert(pos);
                 // Consume as much as possible, until a valid mnemonic.
                 while !scan.eof() && matches!(scan.peek_byte(), b'A'..=b'Z' | b'a'..=b'z' | b'_') {
                     if scan_mnemonic(scan.rest(), self.dialect).is_some() {
@@ -222,11 +222,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
 /// Tries to scan a mnemonic at the start of the bytes.
 fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], &'static [Opcode])> {
     let chunk = &s[..Palaiologos::MAX_MNEMONIC_LEN.min(s.len())];
-    let mut chunk_lower = [0; Palaiologos::MAX_MNEMONIC_LEN];
-    chunk_lower[..chunk.len()].copy_from_slice(chunk);
-    chunk_lower.iter_mut().for_each(|b| *b |= 0x20);
-
-    for len in (1..chunk.len()).rev() {
+    for len in (1..=chunk.len()).rev() {
         let mnemonic = &chunk[..len];
         if let Some(opcodes) = dialect.mnemonics().get_opcodes(mnemonic) {
             return Some((mnemonic, opcodes));
