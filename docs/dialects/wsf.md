@@ -1,12 +1,13 @@
 # wsf dialect
 
 - Source: [code](https://github.com/thaliaarchi/wslib)
-  (last updated [2024-08-23](https://github.com/thaliaarchi/wslib/commit/8c52c8e307085c755a8c847882041cb788d4661c)
+  (last updated [2024-08-23](https://github.com/thaliaarchi/wslib/commit/77bcd7ab67f24d6f8de72b55ef3890c54166ae35)
 - Corpus: [whitespace/thaliaarchi-wslib](https://github.com/wspace/corpus/tree/main/whitespace/thaliaarchi-wslib)
 
 wsf (“Whitespace Forth”) is a Whitespace assembly dialect by Thalia Archibald,
-made for the [wslib](https://github.com/thaliaarchi/wslib) standard library. It
-is inspired by Forth and uses postfix argument styles and numbers fused with
+made for the [wslib](https://github.com/thaliaarchi/wslib) standard library and
+also used for various [coding challenges](https://github.com/thaliaarchi/ws-challenges).
+It is inspired by Forth and uses postfix argument styles and numbers fused with
 mnemonics, unlike other dialects. The assembler is written in sed and bash and
 targets whitespace-rs assembly.
 
@@ -74,13 +75,15 @@ int_func ::=
     | "&" | "|" | "^" | "&~" | "<<" | ">>" | "**" | "~" | "neg"
 
 comment ::= "#" [^\n]*
-space ::= \s+
+# `sed -E` \s+
+space ::= (" " | "\t" | "\n" | "\v" | "\f" | "\r")+
 ```
 
 Space is not required around strings or chars. The grammar for `sep` is overly
 restrictive.
 
-TODO: What is `\s`?
+`\s` in GNU sed (via Gnulib) [defers to](https://git.savannah.gnu.org/cgit/gnulib.git/tree/lib/regcomp.c?id=38b5fabdfcf0ddd516fdd9105ccb1b2ac38cb62c#n3515)
+`isspace` from `<ctype.h>`.
 
 ## Generation
 
@@ -145,7 +148,9 @@ TODO: What is `\s`?
 
 where `{n}` is an integer literal and `"{s}"` is a string literal.
 
-Labels that start with a digit have an `L_` prefix added for whitespace-rs.
+Labels are transformed to work for whitespace-rs: A leading `.` is changed to
+`_` and `.` elsewhere is changed to `__`. An `L_` prefix is added to labels that
+start with a digit.
 
 ### Imports and modules
 
