@@ -16,7 +16,7 @@ It is now maintained [on GitHub](https://github.com/wspace/wconrad-ruby).
 
 ```bnf
 program ::= (line "\n")* line?
-line ::= strip_space? inst line_comment* strip_space?
+line ::= strip_space* inst line_comment* strip_space*
 
 inst :=
       | "push" signed
@@ -45,8 +45,8 @@ inst :=
       | "readchar"
       | "readnum"
 
-signed ::= space [-+]? [0-9]+
-unsigned ::= space [0-9]+
+signed ::= space+ [-+]? [0-9]+
+unsigned ::= space+ [0-9]+
 label := [0-9]+ ":"
 line_comment ::= "#" [^\n]*
 
