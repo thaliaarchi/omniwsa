@@ -1,0 +1,5 @@
+    pushs .
+label A
+    doub
+    outc
+    jump a

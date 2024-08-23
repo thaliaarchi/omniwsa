@@ -1,0 +1,5 @@
+    push 1
+elseifoption x
+    push 2
+endoption
+    push 3

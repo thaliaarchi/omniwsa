@@ -46,7 +46,7 @@ unquoted words, when no whitespace is between. For example, `add 1`, `add"1"`,
 parsed as `add` `1`, but `add{-c-}1` is parsed as `add1`.
 
 Everything is also lowercased, which makes mnemonics case-insensitive, but also
-lowercases strings and chars.
+lowercases strings.
 
 ```bnf
 lines ::= line*
@@ -225,7 +225,7 @@ In wsintercpp, `debug_printstack` and `debug_printheap` are known as
 ## Bugs in assembler
 
 - Anything can be `"`-quoted.
-- Strings and chars are lowercased.
+- Strings are lowercased.
 - Strings containing `"` or starting with `_` cannot be represented.
 - Block quotes are replaced with nothing, instead of with a space or LF, which
   splices adjacent unquoted words.
