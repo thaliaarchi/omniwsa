@@ -1,0 +1,4 @@
+valueinteger _n 5
+push _N
+valuestring _S abc
+pushs _s
