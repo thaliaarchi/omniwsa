@@ -2,10 +2,7 @@
 
 use std::{convert::Infallible, mem};
 
-use crate::{
-    codegen::{Inst, Opcode},
-    tokens::integer::Sign,
-};
+use crate::{codegen::Inst, tokens::integer::Sign};
 
 /// A Whitespace token.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,46 +24,46 @@ pub trait TokenWrite {
     fn write_token(&mut self, token: Token) -> Result<(), Self::Error>;
 
     /// Writes an instruction.
-    fn write_inst(&mut self, inst: &Inst<'_>) -> Result<(), Self::Error> {
+    fn write_inst(&mut self, inst: Inst<'_>) -> Result<(), Self::Error> {
         use Token::*;
-        let tokens: &[Token] = match inst.opcode {
-            Opcode::Push => &[S, S],
-            Opcode::Dup => &[S, L, S],
-            Opcode::Copy => &[S, T, S],
-            Opcode::Swap => &[S, L, T],
-            Opcode::Drop => &[S, L, L],
-            Opcode::Slide => &[S, T, L],
-            Opcode::Add => &[T, S, S, S],
-            Opcode::Sub => &[T, S, S, T],
-            Opcode::Mul => &[T, S, S, L],
-            Opcode::Div => &[T, S, T, S],
-            Opcode::Mod => &[T, S, T, T],
-            Opcode::Store => &[T, T, S],
-            Opcode::Retrieve => &[T, T, T],
-            Opcode::Label => &[L, S, S],
-            Opcode::Call => &[L, S, T],
-            Opcode::Jmp => &[L, S, L],
-            Opcode::Jz => &[L, T, S],
-            Opcode::Jn => &[L, T, T],
-            Opcode::Ret => &[L, T, L],
-            Opcode::End => &[L, L, L],
-            Opcode::Printc => &[T, L, S, S],
-            Opcode::Printi => &[T, L, S, T],
-            Opcode::Readc => &[T, L, T, S],
-            Opcode::Readi => &[T, L, T, T],
-            Opcode::BurghardPrintStack => &[L, L, S, S, S],
-            Opcode::BurghardPrintHeap => &[L, L, S, S, T],
-            Opcode::VolivaOr => &[T, S, L, S],
-            Opcode::VolivaNot => &[T, S, L, T],
-            Opcode::VolivaAnd => &[T, S, L, L],
-            Opcode::VolivaBreakpoint => &[L, L, S],
-            Opcode::VolivaBreakpointAlt => &[L, L, T],
+        let (tokens, arg): (&[Token], _) = match &inst {
+            Inst::Push(n) => (&[S, S], Some(&n.0)),
+            Inst::Dup => (&[S, L, S], None),
+            Inst::Copy(n) => (&[S, T, S], Some(&n.0)),
+            Inst::Swap => (&[S, L, T], None),
+            Inst::Drop => (&[S, L, L], None),
+            Inst::Slide(n) => (&[S, T, L], Some(&n.0)),
+            Inst::Add => (&[T, S, S, S], None),
+            Inst::Sub => (&[T, S, S, T], None),
+            Inst::Mul => (&[T, S, S, L], None),
+            Inst::Div => (&[T, S, T, S], None),
+            Inst::Mod => (&[T, S, T, T], None),
+            Inst::Store => (&[T, T, S], None),
+            Inst::Retrieve => (&[T, T, T], None),
+            Inst::Label(l) => (&[L, S, S], Some(&l.0)),
+            Inst::Call(l) => (&[L, S, T], Some(&l.0)),
+            Inst::Jmp(l) => (&[L, S, L], Some(&l.0)),
+            Inst::Jz(l) => (&[L, T, S], Some(&l.0)),
+            Inst::Jn(l) => (&[L, T, T], Some(&l.0)),
+            Inst::Ret => (&[L, T, L], None),
+            Inst::End => (&[L, L, L], None),
+            Inst::Printc => (&[T, L, S, S], None),
+            Inst::Printi => (&[T, L, S, T], None),
+            Inst::Readc => (&[T, L, T, S], None),
+            Inst::Readi => (&[T, L, T, T], None),
+            Inst::BurghardPrintStack => (&[L, L, S, S, S], None),
+            Inst::BurghardPrintHeap => (&[L, L, S, S, T], None),
+            Inst::VolivaOr => (&[T, S, L, S], None),
+            Inst::VolivaNot => (&[T, S, L, T], None),
+            Inst::VolivaAnd => (&[T, S, L, L], None),
+            Inst::VolivaBreakpoint => (&[L, L, S], None),
+            Inst::VolivaBreakpointAlt => (&[L, L, T], None),
         };
         for &token in tokens {
             self.write_token(token)?;
         }
 
-        if let Some(arg) = &inst.arg {
+        if let Some(arg) = arg {
             match arg.sign {
                 Sign::None => {}
                 Sign::Pos => self.write_token(S)?,
@@ -117,23 +114,21 @@ impl TokenWrite for String {
 
 #[cfg(test)]
 mod tests {
-    use rug::Integer;
+    use rug::{Complete, Integer};
 
     use crate::{
-        codegen::{IntegerBits, Opcode, Token::*, TokenWrite},
+        codegen::{Inst, IntegerBits, Token::*, TokenWrite},
         tokens::integer::Sign,
     };
 
     #[test]
     fn write_inst() {
         let mut s = Vec::new();
-        s.write_inst(
-            &Opcode::Push.integer(
-                &Integer::parse("31415926535897932384626433832795028841971693993751")
-                    .unwrap()
-                    .into(),
-            ),
-        )
+        s.write_inst(Inst::Push(IntegerBits::from(
+            &Integer::parse("31415926535897932384626433832795028841971693993751")
+                .unwrap()
+                .complete(),
+        )))
         .unwrap();
         assert_eq!(
             s,
@@ -149,7 +144,7 @@ mod tests {
         );
 
         s.clear();
-        s.write_inst(&Opcode::Slide.integer(IntegerBits::zero(Sign::None)))
+        s.write_inst(Inst::Slide(IntegerBits::zero(Sign::None)))
             .unwrap();
         assert_eq!(s, [S, T, L, L]);
     }
