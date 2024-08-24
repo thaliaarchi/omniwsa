@@ -1,9 +1,15 @@
 //! Generic token scanning.
 
+use std::str;
+
 use enumset::EnumSet;
 
-use crate::tokens::comment::{
-    BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken,
+use crate::tokens::{
+    comment::{
+        BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken,
+    },
+    spaces::EofToken,
+    ErrorToken, Token,
 };
 
 // TODO:
@@ -19,6 +25,9 @@ pub struct Utf8Scanner<'s> {
     start: Pos,
     /// End position of the current token.
     end: Pos,
+    /// The remaining text at the first UTF-8 error and the length of the
+    /// invalid sequence.
+    invalid_utf8: Option<(&'s [u8], usize)>,
 }
 
 /// A scanner for generically reading tokens from byte text.
@@ -45,8 +54,17 @@ pub struct Pos {
 
 impl<'s> Utf8Scanner<'s> {
     /// Constructs a new scanner for the UTF-8 source text.
-    #[inline]
-    pub fn new(src: &'s str) -> Self {
+    pub fn new(src: &'s [u8]) -> Self {
+        let (src, invalid_utf8) = match str::from_utf8(src) {
+            Ok(src) => (src, None),
+            Err(err) => {
+                let (valid, rest) = src.split_at(err.valid_up_to());
+                let error_len = err.error_len().unwrap_or(rest.len());
+                // SAFETY: This sequence has been validated as UTF-8.
+                let valid = unsafe { str::from_utf8_unchecked(valid) };
+                (valid, Some((rest, error_len)))
+            }
+        };
         let pos = Pos {
             offset: 0,
             line: 1,
@@ -56,6 +74,7 @@ impl<'s> Utf8Scanner<'s> {
             src,
             start: pos,
             end: pos,
+            invalid_utf8,
         }
     }
 
@@ -64,6 +83,21 @@ impl<'s> Utf8Scanner<'s> {
     pub fn eof(&self) -> bool {
         debug_assert!(self.end.offset <= self.src.len());
         self.end.offset >= self.src.len()
+    }
+
+    /// Returns an EOF token or an invalid UTF-8 token.
+    #[inline]
+    pub fn eof_token(&mut self) -> Token<'s> {
+        debug_assert!(self.eof());
+        match self.invalid_utf8.take() {
+            Some((rest, error_len)) => {
+                return Token::from(ErrorToken::InvalidUtf8 {
+                    text: rest.into(),
+                    error_len,
+                });
+            }
+            None => Token::from(EofToken),
+        }
     }
 
     /// Returns the next char without consuming it.

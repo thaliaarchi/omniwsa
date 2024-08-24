@@ -47,7 +47,6 @@ impl<'s, 'd> Lexer<'s, 'd> {
 }
 
 impl<'s> Lex<'s> for Lexer<'s, '_> {
-    /// Scans the next token from the source.
     fn next_token(&mut self) -> Token<'s> {
         let scan = &mut self.scan;
         scan.reset();
