@@ -152,6 +152,9 @@ Labels are transformed to work for whitespace-rs: A leading `.` is changed to
 `_` and `.` elsewhere is changed to `__`. An `L_` prefix is added to labels that
 start with a digit.
 
+`push`, `copy`, and `slide` with 0 are assembled with a positive sign (S) in the
+fork of whitespace-rs used by wsf. Upstream emits no sign.
+
 ### Imports and modules
 
 Labels that do not contain a `.` or have only a leading `.` are local to the
@@ -170,6 +173,9 @@ TODO: Expand section.
   wsf-assemble, but rejected by whitespace-rs.
 - If the final line in the assembled program is not `jmp`, `jz`, `jn`, `ret`, or
   `end`, it exits with an error.
+- wsf uses a [fork](https://github.com/wspace/censoredusername-whitespacers) of
+  whitespace-rs, which changes it emit a positive sign for 0 and to exit with
+  nonzero on error.
 
 ## Bugs in the assembler
 
