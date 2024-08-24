@@ -1,0 +1,3 @@
+wsa: terminating " not found (get)
+CallStack (from HasCallStack):
+  error, called at ./Trans.hs:325:21 in main:Trans

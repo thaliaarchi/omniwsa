@@ -1,0 +1,3 @@
+wsa: if without endif
+CallStack (from HasCallStack):
+  error, called at ./Trans.hs:154:31 in main:Trans

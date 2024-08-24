@@ -1,0 +1,1 @@
+wsa: fail/invalid_utf8.wsa: hGetContents: invalid argument (cannot decode byte sequence starting from 255)
