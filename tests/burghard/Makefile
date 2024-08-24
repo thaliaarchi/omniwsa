@@ -2,8 +2,8 @@ WSA = wsa
 
 PASS = $(shell find pass -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')
-WS = $(patsubst %.wsa, %.ws, $(PASS))
-ERR = $(patsubst %.wsa, %.err, $(FAIL))
+WS = $(PASS:.wsa=.ws)
+ERR = $(FAIL:.wsa=.err)
 
 .PHONY: all
 all: $(WS) $(ERR)

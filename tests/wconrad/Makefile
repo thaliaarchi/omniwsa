@@ -1,7 +1,7 @@
 ASM = ruby "$$(which whitespace-asm)"
 
 WSA = $(shell find . -name '*.wsa')
-WS = $(patsubst %.wsa, %.ws, $(WSA))
+WS = $(WSA:.wsa=.ws)
 
 .PHONY: all
 all: $(WS)
