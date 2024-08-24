@@ -59,25 +59,32 @@ impl<'s> Lex<'s> for Lexer<'s> {
             return Token::from(EofToken);
         }
 
-        match scan.next_char() {
-            ';' => scan.line_comment(LineCommentStyle::Semi).into(),
-            '-' if scan.bump_if(|c| c == '-') => {
+        let rest = scan.rest().as_bytes();
+        scan.next_char();
+        match rest {
+            [b';', ..] => scan.line_comment(LineCommentStyle::Semi).into(),
+            [b'-', b'-', ..] => {
+                scan.next_char();
                 scan.line_comment(LineCommentStyle::DashDash).into()
             }
-            '{' if scan.bump_if(|c| c == '-') => scan
-                .nested_block_comment(*b"{-", *b"-}", BlockCommentStyle::Haskell)
-                .into(),
-            '-' if scan.bump_if(|c| c == '}') => Token::from(BlockCommentToken {
-                text: b""[..].into(),
-                style: BlockCommentStyle::Haskell,
-                errors: BlockCommentError::Unopened.into(),
-            }),
-            ' ' | '\t' => {
+            [b'{', b'-', rest @ ..] if !rest.starts_with(b"-") => {
+                scan.next_char();
+                scan.burghard_nested_block_comment().into()
+            }
+            [b'-', b'}', ..] => {
+                scan.next_char();
+                Token::from(BlockCommentToken {
+                    text: b""[..].into(),
+                    style: BlockCommentStyle::Haskell,
+                    errors: BlockCommentError::Unopened.into(),
+                })
+            }
+            [b' ' | b'\t', ..] => {
                 scan.bump_while(|c| c == ' ' || c == '\t');
                 Token::from(SpaceToken::from(scan.text()))
             }
-            '\n' => Token::from(LineTermToken::from(LineTermStyle::Lf)),
-            '"' => {
+            [b'\n', ..] => Token::from(LineTermToken::from(LineTermStyle::Lf)),
+            [b'"', ..] => {
                 let word_start = scan.offset();
                 scan.bump_while(|c| c != '"' && c != '\n');
                 let word = &scan.src().as_bytes()[word_start..scan.offset()];
@@ -95,10 +102,9 @@ impl<'s> Lex<'s> for Lexer<'s> {
             _ => {
                 while !scan.eof() {
                     match scan.rest().as_bytes() {
-                        [b'"' | b';' | b' ' | b'\t' | b'\n', ..]
-                        | [b'-', b'-', ..]
-                        | [b'{', b'-', ..]
-                        | [b'-', b'}', ..] => break,
+                        [b'"' | b';' | b' ' | b'\t' | b'\n', ..] | [b'-', b'-' | b'}', ..] => break,
+                        // Line comments take precedence over block comments.
+                        [b'{', b'-', rest @ ..] if !rest.starts_with(b"-") => break,
                         _ => {}
                     }
                     scan.next_char();

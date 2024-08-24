@@ -1,0 +1,2 @@
+; The line comment takes precedence
+{--}
