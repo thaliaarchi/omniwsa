@@ -18,7 +18,14 @@ The file must be valid UTF-8. It is decoded strictly (in effect), because
 everything is demanded before it starts writing to a file.
 
 The file is first preprocessed by removing comments, that are outside of
-strings.
+strings. Line comments are removed first, so an empty block comment, `{--}`, is
+not possible and `--` and `;` take precedence over `{-` and `-}` in a block
+comment.
+
+When block comments are removed, they are replaced with nothing and splice
+adjacent unquoted words, when no whitespace is between. For example, `add 1`,
+`add"1"`, `"add"1`, `"add""1"`, `add{-c-}"1"`, `"add"{-c-}1`, and
+`"add"{-c-}"1"` are parsed as `add` `1`, but `add{-c-}1` is parsed as `add1`.
 
 ```bnf
 preprocess_program ::=
@@ -39,11 +46,7 @@ words, but not around strings. `{-`, `-}`, `;`, and `--` cannot occur within a
 word, but can be in a string. `"` cannot occur in either a word or string, since
 it has no escapes.
 
-Strings are unquoted, making them indistinguishable from words afterwards. When
-block comments are removed, they are replaced with nothing and splice adjacent
-unquoted words, when no whitespace is between. For example, `add 1`, `add"1"`,
-`"add"1`, `"add""1"`, `add{-c-}"1"`, `"add"{-c-}1`, and `"add"{-c-}"1"` are
-parsed as `add` `1`, but `add{-c-}1` is parsed as `add1`.
+Strings are unquoted, making them indistinguishable from words afterwards.
 
 Everything is also lowercased, which makes mnemonics case-insensitive, but also
 lowercases strings.
