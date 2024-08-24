@@ -1,0 +1,8 @@
+push       0
+push      (1)
+push     ((1))
+push    (((8)))
+push   (((-83)))
+push  ((((241))))
+push      617
+push      112
