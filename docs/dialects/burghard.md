@@ -31,8 +31,19 @@ adjacent unquoted words, when no whitespace is between. For example, `add 1`,
 preprocess_program ::=
     (block_comment | line_comment "\n" | string | rest)* line_comment?
 line_comment ::= (";" | "--") [^\n]*
-block_comment ::= "{-" block_comment_text (block_comment block_comment_text)* "-}"
-block_comment_text ::= ([^{-] | "{" [^-] | "-" [^}])* [{-]?
+block_comment ::= "{-" (block_comment_text_initial block_comment_text*)? "-}"
+block_comment_text_initial ::=
+    | [^{-;]
+    | "{"+ [^{-;]
+    | "{"* ";" [^\n]* "\n"
+    | "{"* block_comment
+block_comment_text ::=
+    | [^{-;]
+    | "-"? "{"+ [^{-;]
+    | "-" [^{}-;]
+    | "--" [^\n]* "\n"
+    | "-"? "{"* ";" [^\n]* "\n"
+    | "-"? "{"* block_comment
 string ::= "\"" [^"]* "\""
 rest ::= …
 ```

@@ -59,8 +59,12 @@ comment ::=
     | "#" [^\n]*
     | "--" [^\n]*
     | block_comment
-block_comment ::=
-    | "{-" ([^{-] | "{"+ [^{-] | "-"+ [^}-] | block_comment)* "-}"
+block_comment ::= "{-" block_comment_text* "-"+ "}"
+block_comment_text ::=
+    | [^{-]
+    | "-"+ [^{}-]
+    | "-"* "{"+ [^{-]
+    | "-"* "{"* block_comment
 ```
 
 The pattern `.` includes `\n` here.

@@ -36,8 +36,12 @@ line_comment ::=
     | "//" [^\n]*
 block_comment ::=
     | "/*" [^*]* "*"+ ([^/*] [^*]* "*"+)* "/"
-nested_comment ::=
-    | "{-" ([^{-] | "{"+ [^{-] | "-"+ [^}-] | nested_comment)* "-}"
+nested_comment ::= "{-" nested_comment_text* "-"+ "}"
+nested_comment_text ::=
+    | [^{-]
+    | "-"+ [^{}-]
+    | "-"* "{"+ [^{-]
+    | "-"* "{"* nested_comment
 space ::= \p{White_Space} NOT '\n'
 lf ::= "\n"
 ```
