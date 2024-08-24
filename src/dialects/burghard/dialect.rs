@@ -15,10 +15,10 @@ pub struct Burghard {
     mnemonics: MnemonicMap,
 }
 
-macro_rules! mnemonics[($($mnemonic:literal => [$($opcode:ident),+],)+) => {
+macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
     &[$((FoldedStr::new_detect($mnemonic, CaseFold::AsciiIK), &[$(Opcode::$opcode),+])),+]
-}];
-static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
+}}
+static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"push" => [Push],
     b"pushs" => [PushString0],
     b"doub" => [Dup],
@@ -58,7 +58,7 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
     b"elseifoption" => [ElseIfOption],
     b"elseoption" => [ElseOption],
     b"endoption" => [EndOption],
-];
+};
 
 impl Burghard {
     /// Constructs state for the Burghard dialect. Only one needs to be

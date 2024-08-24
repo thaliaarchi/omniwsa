@@ -16,10 +16,10 @@ pub struct Palaiologos {
     integers: IntegerSyntax,
 }
 
-macro_rules! mnemonics[($($mnemonic:literal => [$($opcode:ident),+],)+) => {
+macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
     &[$((FoldedStr::ascii($mnemonic), &[$(Opcode::$opcode),+])),+]
-}];
-static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
+}}
+static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"psh" => [Push, Push0],
     b"push" => [Push, Push0],
     b"dup" => [Dup],
@@ -56,7 +56,7 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
     b"getc" => [Readc, ReadcConst],
     b"getn" => [Readi, ReadiConst],
     b"rep" => [PalaiologosRep],
-];
+};
 
 impl Palaiologos {
     pub(super) const MAX_MNEMONIC_LEN: usize = 5;
