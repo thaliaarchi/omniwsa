@@ -23,10 +23,10 @@ pub struct WConrad {
     integers: IntegerSyntax,
 }
 
-macro_rules! mnemonics[($($mnemonic:literal => [$($opcode:ident),+],)+) => {
+macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
     &[$((FoldedStr::exact($mnemonic), &[$(Opcode::$opcode),+])),+]
-}];
-static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
+}}
+static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"push" => [Push],
     b"dup" => [Dup],
     b"copy" => [Copy],
@@ -51,7 +51,7 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics![
     b"outnum" => [Printi],
     b"readchar" => [Readc],
     b"readnum" => [Readi],
-];
+};
 
 impl WConrad {
     /// Constructs state for the wconrad dialect. Only one needs to be
