@@ -128,10 +128,13 @@ impl<'s> Utf8Scanner<'s> {
         let (text_end, errors) = loop {
             let rest = self.rest().as_bytes();
             if rest.len() < 2 {
-                self.end.offset = self.src.len();
+                if !self.eof() {
+                    self.next_char();
+                }
                 break (self.end.offset, BlockCommentError::Unterminated.into());
             } else if rest[..2] == close {
                 self.end.offset += 2;
+                self.end.col += 2;
                 break (self.end.offset - 2, EnumSet::empty());
             }
             self.next_char();
@@ -157,16 +160,20 @@ impl<'s> Utf8Scanner<'s> {
         let (text_end, errors) = loop {
             let rest = self.rest().as_bytes();
             if rest.len() < 2 {
-                self.end.offset = self.src.len();
+                if !self.eof() {
+                    self.next_char();
+                }
                 break (self.end.offset, BlockCommentError::Unterminated.into());
             } else if rest[..2] == close {
                 self.end.offset += 2;
+                self.end.col += 2;
                 level -= 1;
                 if level == 0 {
                     break (self.end.offset - 2, EnumSet::empty());
                 }
             } else if rest[..2] == open {
                 self.end.offset += 2;
+                self.end.col += 2;
                 level += 1;
             } else {
                 self.next_char();
@@ -175,6 +182,42 @@ impl<'s> Utf8Scanner<'s> {
         BlockCommentToken {
             text: &self.src.as_bytes()[text_start..text_end],
             style,
+            errors,
+        }
+    }
+
+    /// Consumes a Burghard-style nested block comment. Line comments take
+    /// precedence over block comment markers. The cursor must start after the
+    /// opening sequence.
+    pub fn burghard_nested_block_comment(&mut self) -> BlockCommentToken<'s> {
+        let mut level = 1;
+        let text_start = self.offset();
+        let (text_end, errors) = loop {
+            let rest = self.rest().as_bytes();
+            if rest.len() < 2 {
+                if !self.eof() {
+                    self.next_char();
+                }
+                break (self.end.offset, BlockCommentError::Unterminated.into());
+            } else if rest[..2] == b"-}"[..] {
+                self.end.offset += 2;
+                self.end.col += 2;
+                level -= 1;
+                if level == 0 {
+                    break (self.end.offset - 2, EnumSet::empty());
+                }
+            } else if rest[..2] == b"{-"[..] && rest.get(2) != Some(&b'-') {
+                self.end.offset += 2;
+                level += 1;
+            } else if rest[..2] == b"--"[..] || rest[0] == b';' {
+                while !self.eof() && self.next_char() != '\n' {}
+            } else {
+                self.next_char();
+            }
+        };
+        BlockCommentToken {
+            text: &self.src.as_bytes()[text_start..text_end],
+            style: BlockCommentStyle::Haskell,
             errors,
         }
     }
@@ -354,10 +397,13 @@ impl<'s> ByteScanner<'s> {
         let (text_end, errors) = loop {
             let rest = self.rest();
             if rest.len() < 2 {
-                self.end.offset = self.src.len();
+                if !self.eof() {
+                    self.next_byte();
+                }
                 break (self.end.offset, BlockCommentError::Unterminated.into());
             } else if rest[..2] == close {
                 self.end.offset += 2;
+                self.end.col += 2;
                 break (self.end.offset - 2, EnumSet::empty());
             }
             self.next_byte();
@@ -383,16 +429,20 @@ impl<'s> ByteScanner<'s> {
         let (text_end, errors) = loop {
             let rest = self.rest();
             if rest.len() < 2 {
-                self.end.offset = self.src.len();
+                if !self.eof() {
+                    self.next_byte();
+                }
                 break (self.end.offset, BlockCommentError::Unterminated.into());
             } else if rest[..2] == close {
                 self.end.offset += 2;
+                self.end.col += 2;
                 level -= 1;
                 if level == 0 {
                     break (self.end.offset - 2, EnumSet::empty());
                 }
             } else if rest[..2] == open {
                 self.end.offset += 2;
+                self.end.col += 2;
                 level += 1;
             } else {
                 self.next_byte();
