@@ -15,7 +15,7 @@ use crate::{
         spaces::Spaces,
         string::{QuoteStyle, StringData, StringError, StringToken},
         words::Words,
-        ErrorToken, SplicedToken, Token, VariableStyle, VariableToken,
+        SplicedToken, Token, VariableStyle, VariableToken,
     },
 };
 
@@ -23,7 +23,6 @@ use crate::{
 // - Transform strings to lowercase.
 // - Clean up UTF-8 decoding in parse_arg, since tokens are already validated as
 //   UTF-8.
-// - BUG: InvalidUtf8 is considered space here, but not by Spaces.
 
 /// A parser for the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -74,7 +73,7 @@ impl<'s> Iterator for Parser<'s, '_> {
         }
         debug_assert!(matches!(
             self.toks.curr(),
-            Token::LineTerm(_) | Token::Eof(_) | Token::Error(ErrorToken::InvalidUtf8 { .. }),
+            Token::LineTerm(_) | Token::Eof(_),
         ));
         space_after.push(self.toks.advance());
 

@@ -12,7 +12,7 @@ use crate::{
         label::{LabelError, LabelStyle, LabelToken},
         spaces::{ArgSepError, InstSepError, Spaces},
         words::Words,
-        ErrorToken, Token,
+        Token,
     },
 };
 
@@ -61,7 +61,7 @@ impl<'s, 'd> Parser<'s, 'd> {
                         style: LabelStyle::PercentSigil,
                         ..
                     })
-                    | Token::Error(ErrorToken::UnrecognizedChar { .. }) => {
+                    | Token::Error(_) => {
                         if separated && !words.is_empty() {
                             // Split off trailing spaces into the next
                             // instruction.
@@ -149,7 +149,7 @@ fn analyze_inst<'s>(inst: &mut Inst<'s>) {
             ..
         })
         | Token::String(_)
-        | Token::Error(ErrorToken::UnrecognizedChar { .. }) => (Opcode::Invalid, ArgLayout::Bare),
+        | Token::Error(_) => (Opcode::Invalid, ArgLayout::Bare),
         _ => panic!("unhandled token"),
     };
 

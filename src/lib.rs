@@ -2,7 +2,7 @@
 
 pub mod codegen;
 pub mod dialects;
-mod lex;
+pub mod lex;
 pub mod syntax;
 #[cfg(test)]
 mod tests;

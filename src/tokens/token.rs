@@ -7,6 +7,7 @@ use std::{
 
 use bstr::ByteSlice;
 use derive_more::{Debug as DebugCustom, From};
+use enumset::{EnumSet, EnumSetType};
 
 use crate::{
     syntax::{HasError, Pretty},
@@ -28,7 +29,6 @@ use crate::{
 //   Cow.
 //   - Create utilities for slicing and manipulating easier than Cow.
 //   - Display it as conventionally UTF-8.
-// - Make UTF-8 error a first-class token.
 
 /// A lexical token, a unit of scanned text, in interoperable Whitespace
 /// assembly.
@@ -98,6 +98,15 @@ pub struct WordToken<'s> {
     /// The text of the word.
     #[debug("{:?}", word.as_bstr())]
     pub word: Cow<'s, [u8]>,
+    /// All errors from parsing this word.
+    pub errors: EnumSet<WordError>,
+}
+
+/// A parse error for a word.
+#[derive(EnumSetType, Debug)]
+pub enum WordError {
+    /// The word contains invalid UTF-8.
+    InvalidUtf8,
 }
 
 /// Tokens spliced by block comments (Burghard).
@@ -110,23 +119,12 @@ pub struct SplicedToken<'s> {
     pub spliced: Box<Token<'s>>,
 }
 
-/// A lexical error.
+/// A sequence that could not be lexed.
 #[derive(Clone, DebugCustom, PartialEq, Eq)]
-pub enum ErrorToken<'s> {
-    /// Invalid UTF-8 sequence (Burghard).
-    InvalidUtf8 {
-        /// The remainder of the file, starting with an invalid UTF-8 sequence.
-        #[debug("{:?}", text.as_bstr())]
-        text: Cow<'s, [u8]>,
-        /// Length of the invalid sequence.
-        error_len: usize,
-    },
-    /// A sequence that could not be lexed.
-    UnrecognizedChar {
-        /// The unrecognized sequence.
-        #[debug("{:?}", text.as_bstr())]
-        text: Cow<'s, [u8]>,
-    },
+pub struct ErrorToken<'s> {
+    /// The unrecognized sequence.
+    #[debug("{:?}", text.as_bstr())]
+    pub text: Cow<'s, [u8]>,
 }
 
 impl<'s> Token<'s> {
@@ -242,11 +240,7 @@ impl Pretty for SplicedToken<'_> {
 
 impl Pretty for ErrorToken<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
-        match self {
-            ErrorToken::InvalidUtf8 { text, .. } | ErrorToken::UnrecognizedChar { text } => {
-                text.pretty(buf)
-            }
-        }
+        self.text.pretty(buf)
     }
 }
 
@@ -270,7 +264,7 @@ impl Debug for Token<'_> {
             Token::Word(w) => Debug::fmt(w, f),
             Token::Quoted(q) => Debug::fmt(q, f),
             Token::Spliced(s) => Debug::fmt(s, f),
-            Token::Error(err) => f.debug_tuple("Error").field(err).finish(),
+            Token::Error(e) => Debug::fmt(e, f),
             Token::Placeholder => write!(f, "Placeholder"),
         }
     }

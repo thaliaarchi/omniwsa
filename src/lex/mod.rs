@@ -1,6 +1,7 @@
-#[allow(dead_code)]
+//! Generic token scanning.
+
 mod scan;
 mod token_stream;
 
-pub(crate) use scan::*;
+pub use scan::*;
 pub(crate) use token_stream::*;

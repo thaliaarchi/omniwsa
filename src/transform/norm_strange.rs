@@ -69,7 +69,7 @@ mod tests {
     macro_rules! block_comment(($text:literal) => {
         Token::from(BlockCommentToken {
             text: $text,
-            style: BlockCommentStyle::Haskell,
+            style: BlockCommentStyle::Burghard,
             errors: EnumSet::empty(),
         })
     });

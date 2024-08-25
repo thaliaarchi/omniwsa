@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     syntax::HasError,
-    tokens::{spaces::Spaces, ErrorToken, Token},
+    tokens::{spaces::Spaces, Token},
 };
 
 /// A sequence of words, separated and surrounded by optional spaces.
@@ -142,17 +142,14 @@ impl<'s> Words<'s> {
             | Token::Word(_)
             | Token::Quoted(_)
             | Token::Spliced(_)
-            | Token::Error(ErrorToken::InvalidUtf8 { .. }) => {
-                self.push_word(token);
-            }
+            | Token::Error(_) => self.push_word(token),
             Token::Space(_)
             | Token::LineTerm(_)
             | Token::Eof(_)
             | Token::InstSep(_)
             | Token::ArgSep(_)
             | Token::LineComment(_)
-            | Token::BlockComment(_)
-            | Token::Error(ErrorToken::UnrecognizedChar { .. }) => self.push_space(token),
+            | Token::BlockComment(_) => self.push_space(token),
             Token::Placeholder => panic!("placeholder"),
         }
     }

@@ -27,7 +27,7 @@ impl<'s> Lex<'s> for Lexer<'s> {
         if scan.eof() {
             return Token::from(EofToken);
         }
-        match scan.next_char_or_replace() {
+        match scan.next_char() {
             '-' | '+' | '0'..='9' => todo!(),
             '#' => todo!(),
             ' ' | '\t' | '\n' | '\x0b' | '\x0c' | '\r' => todo!(),
