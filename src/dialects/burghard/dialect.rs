@@ -75,7 +75,7 @@ impl Burghard {
     }
 
     /// Gets the mnemonic map for this dialect.
-    pub(super) fn mnemonics(&self) -> &MnemonicMap {
+    pub fn mnemonics(&self) -> &MnemonicMap {
         &self.mnemonics
     }
 }
