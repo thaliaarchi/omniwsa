@@ -169,6 +169,12 @@ impl VariableStyle {
     }
 }
 
+impl<'s, T: Into<Cow<'s, [u8]>>> From<T> for ErrorToken<'s> {
+    fn from(text: T) -> Self {
+        ErrorToken { text: text.into() }
+    }
+}
+
 impl HasError for Token<'_> {
     fn has_error(&self) -> bool {
         match self {

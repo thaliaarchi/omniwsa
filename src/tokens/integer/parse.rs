@@ -6,6 +6,9 @@ use crate::tokens::integer::{
     Base, BaseStyle, DigitSep, IntegerError, IntegerSyntax, IntegerToken, Sign, SignStyle,
 };
 
+// TODO:
+// - Move integer scanning here.
+
 impl IntegerSyntax {
     /// Parses an integer with the described syntax, using a scratch buffer of
     /// digits to reuse allocations.
