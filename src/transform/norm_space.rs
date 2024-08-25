@@ -85,6 +85,7 @@ mod tests {
                         Token::from(LineCommentToken {
                             text: b" start",
                             style: LineCommentStyle::Semi,
+                            errors: EnumSet::empty(),
                         }),
                         Token::from(LineTermToken::from(LineTermStyle::Lf)),
                     ]))),
@@ -122,7 +123,7 @@ mod tests {
                                 Token::from(SpaceToken::from(b"    ")),
                                 Token::from(BlockCommentToken {
                                     text: b"1",
-                                    style: BlockCommentStyle::Haskell,
+                                    style: BlockCommentStyle::Burghard,
                                     errors: EnumSet::empty(),
                                 }),
                                 Token::from(SpaceToken::from(b"  ")),
@@ -155,6 +156,7 @@ mod tests {
                         Token::from(LineCommentToken {
                             text: b" 2",
                             style: LineCommentStyle::Semi,
+                            errors: EnumSet::empty(),
                         }),
                         Token::from(LineTermToken::from(LineTermStyle::Lf)),
                     ]))),
@@ -179,7 +181,7 @@ mod tests {
                                     Spaces::from(vec![
                                         Token::from(BlockCommentToken {
                                             text: b"2",
-                                            style: BlockCommentStyle::Haskell,
+                                            style: BlockCommentStyle::Burghard,
                                             errors: EnumSet::empty(),
                                         }),
                                         Token::from(EofToken),

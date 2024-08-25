@@ -14,6 +14,8 @@ pub struct LineCommentToken<'s> {
     pub text: &'s [u8],
     /// The style of this line comment.
     pub style: LineCommentStyle,
+    /// All errors from parsing this line comment.
+    pub errors: EnumSet<LineCommentError>,
 }
 
 /// The style of a line comment.
@@ -29,12 +31,19 @@ pub enum LineCommentStyle {
     DashDash,
 }
 
+/// A parse error for a line comment.
+#[derive(EnumSetType, Debug)]
+pub enum LineCommentError {
+    /// The line comment contains invalid UTF-8.
+    InvalidUtf8,
+}
+
 /// Block comment token (e.g., `{- -}` or `/* */`).
 /// Sequences ignored due to a bug in the reference parser also count as block
 /// comments (e.g., voliva ignored arguments).
 #[derive(Clone, DebugCustom, PartialEq, Eq)]
 pub struct BlockCommentToken<'s> {
-    /// The text contained within the comment markers, including any nested
+    /// The text contained within the comment delimiters, including any nested
     /// block comments.
     #[debug("{:?}", text.as_bstr())]
     pub text: &'s [u8],
@@ -47,19 +56,24 @@ pub struct BlockCommentToken<'s> {
 /// The style of a block comment.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BlockCommentStyle {
-    /// Haskell-style `{- -}` nested block comment (Burghard, Whitelips).
-    Haskell,
     /// C-style `/* */` block comment (Lime).
     C,
+    /// Haskell-style `{- -}` nested block comment (Whitelips).
+    Haskell,
+    /// Burghard-style `{- -}` nested block comment, where `--` and `;` line
+    /// comments take precedence over block comment delimiters  (Burghard).
+    Burghard,
 }
 
 /// A parse error for a block comment.
 #[derive(EnumSetType, Debug)]
 pub enum BlockCommentError {
-    /// The block comment is not terminated by a closing marker.
+    /// The block comment is not terminated by a closing delimiter.
     Unterminated,
-    /// A closing marker has no paired opening marker.
+    /// A closing delimiter has no paired opening delimiter.
     Unopened,
+    /// The block comment contains invalid UTF-8.
+    InvalidUtf8,
 }
 
 impl LineCommentStyle {
@@ -92,24 +106,24 @@ impl BlockCommentStyle {
     /// comments.
     pub fn can_nest(&self) -> bool {
         match self {
-            BlockCommentStyle::Haskell => true,
             BlockCommentStyle::C => false,
+            BlockCommentStyle::Haskell | BlockCommentStyle::Burghard => true,
         }
     }
 
-    /// The opening marker (e.g., `{-` or `/*`).
+    /// The opening delimiter (e.g., `{-` or `/*`).
     pub fn open(&self) -> &'static str {
         match self {
-            BlockCommentStyle::Haskell => "{-",
             BlockCommentStyle::C => "/*",
+            BlockCommentStyle::Haskell | BlockCommentStyle::Burghard => "{-",
         }
     }
 
-    /// The closing marker (e.g., `-}` or `*/`).
+    /// The closing delimiter (e.g., `-}` or `*/`).
     pub fn close(&self) -> &'static str {
         match self {
-            BlockCommentStyle::Haskell => "-}",
             BlockCommentStyle::C => "*/",
+            BlockCommentStyle::Haskell | BlockCommentStyle::Burghard => "-}",
         }
     }
 }
