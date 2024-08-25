@@ -13,6 +13,8 @@ use crate::{
 
 // TODO:
 // - Create StringSyntax to describe escapes.
+// - Replace StringData with `enum Encoding { Utf8, Bytes }` and
+//   `unescaped: Cow<'s, [u8]>`.
 // - How to represent char literals with buggy delimiters, like those allowed
 //   with littleBugHunter's `'..` pattern? Maybe QuoteStyle::Custom with open
 //   and close.
@@ -105,6 +107,8 @@ pub enum CharError {
     Empty,
     /// Has more than one char.
     MoreThanOneChar,
+    /// Expected exactly one byte, not a non-ASCII Unicode code point.
+    UnexpectedUnicode,
 }
 
 /// A parse error for a quoted token.
