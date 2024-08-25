@@ -92,7 +92,7 @@ mod tests {
             integer::{Integer, IntegerToken},
             mnemonics::MnemonicToken,
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
-            string::{QuoteStyle, QuotedError, QuotedToken, StringData, StringToken},
+            string::{Encoding, QuoteStyle, QuotedError, QuotedToken, StringToken},
             words::Words,
             SplicedToken, Token, WordToken,
         },
@@ -164,7 +164,8 @@ mod tests {
                     (
                         Token::from(StringToken {
                             literal: b"!".into(),
-                            unescaped: StringData::Utf8("!".into()),
+                            unescaped: b"!".into(),
+                            encoding: Encoding::Utf8,
                             quotes: QuoteStyle::Bare,
                             errors: EnumSet::empty(),
                         }),
@@ -218,7 +219,8 @@ mod tests {
                     (
                         Token::from(StringToken {
                             literal: b"1".into(),
-                            unescaped: StringData::Utf8("1".into()),
+                            unescaped: b"1".into(),
+                            encoding: Encoding::Utf8,
                             quotes: QuoteStyle::Double,
                             errors: EnumSet::empty(),
                         }),

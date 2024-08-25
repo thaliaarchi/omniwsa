@@ -2,6 +2,7 @@
 
 use std::collections::HashSet;
 
+use bstr::ByteSlice;
 use rug::integer::MiniInteger;
 
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
     syntax::{Cst, Inst as WsaInst, Opcode},
     tokens::{
         integer::Integer,
-        string::{StringData, StringToken},
+        string::{Encoding, StringToken},
         Token, WordToken,
     },
 };
@@ -397,15 +398,15 @@ fn each_char<E, F: FnMut(&Integer) -> Result<(), E>>(
     mut f: F,
 ) -> Result<(), E> {
     let mut int;
-    match &s.unescaped {
-        StringData::Utf8(s) => {
-            for ch in s.chars().rev() {
+    match s.encoding {
+        Encoding::Utf8 => {
+            for ch in s.unescaped.as_bstr().chars().rev() {
                 int = MiniInteger::from(ch as u32);
                 f(int.borrow_excl())?;
             }
         }
-        StringData::Bytes(b) => {
-            for &b in b.iter().rev() {
+        Encoding::Bytes => {
+            for &b in s.unescaped.iter().rev() {
                 int = MiniInteger::from(b);
                 f(int.borrow_excl())?;
             }

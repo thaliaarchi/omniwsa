@@ -1,6 +1,6 @@
 //! String literal parsing and token.
 
-use std::{borrow::Cow, str, str::Utf8Error};
+use std::{borrow::Cow, str};
 
 use bstr::ByteSlice;
 use derive_more::Debug as DebugCustom;
@@ -13,8 +13,6 @@ use crate::{
 
 // TODO:
 // - Create StringSyntax to describe escapes.
-// - Replace StringData with `enum Encoding { Utf8, Bytes }` and
-//   `unescaped: Cow<'s, [u8]>`.
 // - How to represent char literals with buggy delimiters, like those allowed
 //   with littleBugHunter's `'..` pattern? Maybe QuoteStyle::Custom with open
 //   and close.
@@ -27,7 +25,10 @@ pub struct StringToken<'s> {
     #[debug("{:?}", literal.as_bstr())]
     pub literal: Cow<'s, [u8]>,
     /// The unescaped data.
-    pub unescaped: StringData<'s>,
+    #[debug("{:?}", unescaped.as_bstr())]
+    pub unescaped: Cow<'s, [u8]>,
+    /// The encoding of the unescaped data.
+    pub encoding: Encoding,
     /// The style of the quotes enclosing this string literal.
     pub quotes: QuoteStyle,
     /// All errors from parsing this string literal. When any errors are
@@ -61,13 +62,13 @@ pub struct QuotedToken<'s> {
     pub errors: EnumSet<QuotedError>,
 }
 
-/// The unescaped data of a string literal.
-#[derive(Clone, DebugCustom, PartialEq, Eq)]
-pub enum StringData<'s> {
+/// The encoding of an unescaped string literal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Encoding {
     /// A string encoded as UTF-8 chars.
-    Utf8(Cow<'s, str>),
+    Utf8,
     /// A string encoded as raw bytes.
-    Bytes(#[debug("{:?}", _0.as_bstr())] Cow<'s, [u8]>),
+    Bytes,
 }
 
 /// The unescaped data of a char literal.
@@ -118,33 +119,6 @@ pub enum QuotedError {
     Unterminated,
 }
 
-impl<'s> StringData<'s> {
-    /// Constructs a `StringData` from bytes, validating that it is UTF-8.
-    pub fn from_utf8(b: Cow<'s, [u8]>) -> Result<Self, Utf8Error> {
-        let s = match b {
-            Cow::Borrowed(b) => Cow::Borrowed(str::from_utf8(b)?),
-            Cow::Owned(b) => Cow::Owned(String::from_utf8(b).map_err(|err| err.utf8_error())?),
-        };
-        Ok(StringData::Utf8(s))
-    }
-
-    /// Constructs a `StringData` from bytes, assuming that it is valid UTF-8.
-    ///
-    /// # Safety
-    ///
-    /// The bytes must be valid UTF-8.
-    pub unsafe fn from_utf8_unchecked(b: Cow<'s, [u8]>) -> Self {
-        // SAFETY: Guaranteed by caller.
-        let s = unsafe {
-            match b {
-                Cow::Borrowed(b) => Cow::Borrowed(str::from_utf8_unchecked(b)),
-                Cow::Owned(b) => Cow::Owned(String::from_utf8_unchecked(b)),
-            }
-        };
-        StringData::Utf8(s)
-    }
-}
-
 impl QuoteStyle {
     /// The opening and closing quote.
     pub fn quote(&self) -> &'static str {
@@ -153,18 +127,6 @@ impl QuoteStyle {
             QuoteStyle::Single => "'",
             QuoteStyle::Bare => "",
         }
-    }
-}
-
-impl<'s> From<Cow<'s, str>> for StringData<'s> {
-    fn from(s: Cow<'s, str>) -> Self {
-        StringData::Utf8(s)
-    }
-}
-
-impl<'s> From<Cow<'s, [u8]>> for StringData<'s> {
-    fn from(b: Cow<'s, [u8]>) -> Self {
-        StringData::Bytes(b)
     }
 }
 

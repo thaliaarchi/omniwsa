@@ -15,9 +15,7 @@ use crate::{
             ArgSepStyle, ArgSepToken, EofToken, InstSepStyle, InstSepToken, LineTermStyle,
             LineTermToken, SpaceToken,
         },
-        string::{
-            CharData, CharError, CharToken, QuoteStyle, StringData, StringError, StringToken,
-        },
+        string::{CharData, CharError, CharToken, Encoding, QuoteStyle, StringError, StringToken},
         ErrorToken, Token,
     },
 };
@@ -284,7 +282,8 @@ fn scan_string_literal<'s>(scan: &mut Scanner<'s>) -> StringToken<'s> {
     };
     StringToken {
         literal: literal.into(),
-        unescaped: StringData::Bytes(unescaped),
+        unescaped,
+        encoding: Encoding::Bytes,
         quotes: QuoteStyle::Double,
         errors,
     }
