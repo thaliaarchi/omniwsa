@@ -115,7 +115,7 @@ mod tests {
     macro_rules! block_comment(($text:literal) => {
         Token::from(BlockCommentToken {
             text: $text,
-            style: BlockCommentStyle::Haskell,
+            style: BlockCommentStyle::Burghard,
             errors: EnumSet::empty(),
         })
     });
@@ -145,11 +145,13 @@ mod tests {
                         Token::from(SplicedToken {
                             tokens: vec![
                                 Token::from(WordToken {
-                                    word: b"hello".into()
+                                    word: b"hello".into(),
+                                    errors: EnumSet::empty(),
                                 }),
                                 block_comment!(b"splice"),
                                 Token::from(WordToken {
-                                    word: b"world".into()
+                                    word: b"world".into(),
+                                    errors: EnumSet::empty(),
                                 }),
                             ],
                             spliced: Box::new(mnemonic!(b"helloworld", Opcode::Invalid)),
@@ -262,7 +264,13 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![
                         (mnemonic!(b"ifoption", Opcode::IfOption), space!(b" ")),
-                        (Token::from(WordToken { word: $option.into() }), lf!()),
+                        (
+                            Token::from(WordToken {
+                                word: $option.into(),
+                                errors: EnumSet::empty(),
+                            }),
+                            lf!(),
+                        ),
                     ],
                 },
                 arg_layout: ArgLayout::Mnemonic,
@@ -276,7 +284,13 @@ mod tests {
                     space_before: Spaces::new(),
                     words: vec![
                         (mnemonic!(b"elseifoption", Opcode::ElseIfOption), space!(b" ")),
-                        (Token::from(WordToken { word: $option.into() }), lf!()),
+                        (
+                            Token::from(WordToken {
+                                word: $option.into(),
+                                errors: EnumSet::empty(),
+                            }),
+                            lf!(),
+                        ),
                     ],
                 },
                 arg_layout: ArgLayout::Mnemonic,

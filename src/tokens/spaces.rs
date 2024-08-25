@@ -11,7 +11,7 @@ use enumset::{EnumSet, EnumSetType};
 
 use crate::{
     syntax::{HasError, Pretty},
-    tokens::{ErrorToken, Token},
+    tokens::Token,
 };
 
 // TODO:
@@ -151,12 +151,7 @@ impl<'s> Spaces<'s> {
     /// Trims trailing spaces before the end of a line.
     pub fn trim_trailing(&mut self) {
         let mut j = self.tokens.len();
-        if j > 0
-            && matches!(
-                self.tokens[j - 1],
-                Token::LineTerm(_) | Token::Eof(_) | Token::Error(ErrorToken::InvalidUtf8 { .. })
-            )
-        {
+        if j > 0 && matches!(self.tokens[j - 1], Token::LineTerm(_) | Token::Eof(_)) {
             j -= 1;
         }
         if j > 0 && matches!(self.tokens[j - 1], Token::LineComment(_)) {

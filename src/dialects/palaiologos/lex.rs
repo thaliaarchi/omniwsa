@@ -53,7 +53,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             return Token::from(EofToken);
         }
 
-        match scan.next_char_or_replace() {
+        match scan.next_char() {
             ch @ ('A'..='Z' | 'a'..='z' | '_') => {
                 if let Some((mnemonic, opcodes)) =
                     scan_mnemonic(scan.rest_from_start(), self.dialect)
@@ -100,7 +100,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 scan.bump_while_ascii(|ch| ch.is_ascii_hexdigit() || ch == b'_');
                 scan.bump_if_ascii(|ch| matches!(ch, b'h' | b'H' | b'o' | b'O'));
                 if (ch == '-' || ch == '+') && scan.text().len() == 1 {
-                    Token::from(ErrorToken::UnrecognizedChar {
+                    Token::from(ErrorToken {
                         text: scan.text().into(),
                     })
                 } else {
@@ -136,6 +136,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 Token::from(LineCommentToken {
                     text: &scan.text()[1..],
                     style: LineCommentStyle::Semi,
+                    errors: EnumSet::empty(),
                 })
             }
             ',' => ArgSepToken::from(ArgSepStyle::Comma).into(),
@@ -167,7 +168,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                         | b'\x0c'
                     )
                 });
-                Token::from(ErrorToken::UnrecognizedChar {
+                Token::from(ErrorToken {
                     text: scan.text().into(),
                 })
             }
