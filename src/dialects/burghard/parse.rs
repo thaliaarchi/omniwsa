@@ -13,7 +13,7 @@ use crate::{
         label::{LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::Spaces,
-        string::{QuoteStyle, StringData, StringError, StringToken},
+        string::{Encoding, QuoteStyle, StringError, StringToken},
         words::Words,
         SplicedToken, Token, VariableStyle, VariableToken,
     },
@@ -21,8 +21,6 @@ use crate::{
 
 // TODO:
 // - Transform strings to lowercase.
-// - Clean up UTF-8 decoding in parse_arg, since tokens are already validated as
-//   UTF-8.
 
 /// A parser for the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -199,7 +197,8 @@ impl<'s> Parser<'s, '_> {
         *tok = match mem::take(tok) {
             Token::Word(w) => Token::from(StringToken {
                 literal: w.word.clone(),
-                unescaped: StringData::from_utf8(w.word.clone()).unwrap(),
+                unescaped: w.word,
+                encoding: Encoding::Utf8,
                 quotes: QuoteStyle::Bare,
                 errors: EnumSet::empty(),
             }),
@@ -213,7 +212,8 @@ impl<'s> Parser<'s, '_> {
                 }
                 Token::from(StringToken {
                     literal: w.word.clone(),
-                    unescaped: StringData::from_utf8(w.word).unwrap(),
+                    unescaped: w.word,
+                    encoding: Encoding::Utf8,
                     quotes: q.quotes,
                     errors,
                 })
