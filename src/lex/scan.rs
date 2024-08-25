@@ -1,9 +1,6 @@
 //! Generic token scanning.
 
-use std::cmp::Ordering;
-
-// TODO:
-// - Make Pos::line and Pos::col be NonZeroU32 and rename Pos::col -> column.
+use std::{cmp::Ordering, num::NonZeroU32};
 
 /// A scanner for generically reading tokens from conventionally UTF-8 text.
 #[derive(Clone, Debug)]
@@ -23,11 +20,11 @@ pub struct Scanner<'s> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Pos {
     /// Byte offset, starting at 0.
-    pub offset: usize,
+    offset: usize,
     /// Line number, starting at 1.
-    pub line: usize,
+    line: NonZeroU32,
     /// Column number, starting at 1.
-    pub col: usize,
+    column: NonZeroU32,
 }
 
 /// An error from decoding an invalid UTF-8 code point.
@@ -39,8 +36,8 @@ impl<'s> Scanner<'s> {
     pub fn new(src: &'s [u8]) -> Self {
         let pos = Pos {
             offset: 0,
-            line: 1,
-            col: 1,
+            line: NonZeroU32::new(1).unwrap(),
+            column: NonZeroU32::new(1).unwrap(),
         };
         Scanner {
             src,
@@ -144,12 +141,7 @@ impl<'s> Scanner<'s> {
     pub fn try_next_char(&mut self) -> Result<char, Utf8Error> {
         debug_assert!(!self.eof());
         let (ch, size) = bstr::decode_utf8(self.rest());
-        self.end.offset += size;
-        self.end.col += 1;
-        if ch == Some('\n') {
-            self.end.line += 1;
-            self.end.col = 1;
-        }
+        self.end.move_char(ch, size);
         match ch {
             Some(ch) => Ok(ch),
             None => {
@@ -174,26 +166,15 @@ impl<'s> Scanner<'s> {
                 Err(&self.rest()[..size])
             }
         };
-        self.end.offset += size;
-        self.end.col += 1;
-        if ch == Some('\n') {
-            self.end.line += 1;
-            self.end.col = 1;
-        }
+        self.end.move_char(ch, size);
         res
     }
 
     /// Consumes the next character.
     pub fn bump_char(&mut self) {
         let (ch, size) = bstr::decode_utf8(self.rest());
+        self.end.move_char(ch, size);
         self.has_invalid_utf8 |= ch.is_none();
-        self.end.offset += size;
-        if ch == Some('\n') {
-            self.end.line += 1;
-            self.end.col = 1;
-        } else {
-            self.end.col += 1;
-        }
     }
 
     /// Consumes the next character. The caller must guarantee that the next
@@ -201,24 +182,16 @@ impl<'s> Scanner<'s> {
     pub fn bump_char_no_lf(&mut self) {
         let (ch, size) = bstr::decode_utf8(self.rest());
         debug_assert!(ch != Some('\n'));
-        self.has_invalid_utf8 |= ch.is_none();
         self.end.offset += size;
-        self.end.col += 1;
+        self.end.column = self.end.column.saturating_add(1);
+        self.has_invalid_utf8 |= ch.is_none();
     }
 
     /// Consumes the next ASCII character. The caller must guarantee that the
     /// next character is ASCII.
     #[inline]
     pub fn bump_ascii(&mut self) {
-        let b = self.src[self.end.offset];
-        debug_assert!(b.is_ascii());
-        self.end.offset += 1;
-        if b == b'\n' {
-            self.end.line += 1;
-            self.end.col = 1;
-        } else {
-            self.end.col += 1;
-        }
+        self.end.move_ascii(self.src[self.end.offset])
     }
 
     /// Consumes a number of ASCII characters. The caller must guarantee that
@@ -232,8 +205,9 @@ impl<'s> Scanner<'s> {
                 .all(|&b| b.is_ascii() && b != b'\n'),
             "bumped past ASCII or LF",
         );
+        debug_assert!(u32::try_from(count).is_ok(), "count too large for u32");
         self.end.offset += count;
-        self.end.col += count;
+        self.end.column = self.end.column.saturating_add(count as u32);
     }
 
     /// Consumes the next character if it is ASCII and matches the predicate.
@@ -291,6 +265,47 @@ impl<'s> Scanner<'s> {
     }
 }
 
+impl Pos {
+    /// Returns the byte offset, starting at 0.
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
+    /// Returns the line number, starting at 1.
+    pub fn line(&self) -> usize {
+        self.line.get() as usize
+    }
+
+    /// Returns the column number, starting at 1.
+    pub fn column(&self) -> usize {
+        self.column.get() as usize
+    }
+
+    /// Moves the position by the width of the char.
+    #[inline(always)]
+    fn move_char(&mut self, ch: Option<char>, size: usize) {
+        self.offset += size;
+        self.column = self.column.saturating_add(1);
+        if ch == Some('\n') {
+            self.line = self.line.saturating_add(1);
+            self.column = NonZeroU32::new(1).unwrap();
+        }
+    }
+
+    /// Moves the position by 1. The caller must guarantee that the byte is
+    /// ASCII.
+    #[inline(always)]
+    fn move_ascii(&mut self, ch: u8) {
+        debug_assert!(ch.is_ascii());
+        self.offset += 1;
+        self.column = self.column.saturating_add(1);
+        if ch == b'\n' {
+            self.line = self.line.saturating_add(1);
+            self.column = NonZeroU32::new(1).unwrap();
+        }
+    }
+}
+
 impl PartialOrd for Pos {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         #[cfg(not(debug_assertions))]
@@ -300,15 +315,17 @@ impl PartialOrd for Pos {
         #[cfg(debug_assertions)]
         match self.offset.cmp(&other.offset) {
             Ordering::Less
-                if self.line < other.line || self.line == other.line && self.col < other.line =>
+                if self.line < other.line
+                    || self.line == other.line && self.column < other.line =>
             {
                 Some(Ordering::Less)
             }
-            Ordering::Equal if self.line == other.line && self.col == other.col => {
+            Ordering::Equal if self.line == other.line && self.column == other.column => {
                 Some(Ordering::Equal)
             }
             Ordering::Greater
-                if self.line > other.line || self.line == other.line && self.col > other.col =>
+                if self.line > other.line
+                    || self.line == other.line && self.column > other.column =>
             {
                 Some(Ordering::Greater)
             }
