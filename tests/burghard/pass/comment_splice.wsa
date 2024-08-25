@@ -2,3 +2,10 @@ r{-h-}e{-e-}t{-l-}r{-l-}i{-o-}v{-!-}e
 push{-a-}"123"
 "push"{-b-}456
 "push"{-c-}"789"
+
+push (-123{-
+push a + b * c
+push -}456)
+push {-
+
+hack(-}(42)

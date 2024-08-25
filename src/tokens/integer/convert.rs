@@ -13,6 +13,8 @@ use crate::tokens::integer::{
 // - Manipulate leading zeros according to base.
 // - Maintain digit separators when possible.
 // - Make in-place version, which reuses `self.value`.
+// - When removing Haskell parentheses, keep the spaces, either in the token if
+//   allowed by the dialect or moved out as space tokens.
 
 impl IntegerToken<'_> {
     /// Returns whether this integer literal is already compatible with the
