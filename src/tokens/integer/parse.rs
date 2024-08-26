@@ -49,6 +49,13 @@ impl IntegerSyntax {
         }
         int.parse_digits(s, digits);
         int.literal = literal;
+        if digits.is_empty() && int.leading_zeros == 0 {
+            if !int.errors.contains(IntegerError::InvalidDigit) {
+                int.errors |= IntegerError::NoDigits;
+            } else if int.base == Base::Octal && self.base_style == BaseStyle::C {
+                int.base = Base::Decimal;
+            }
+        }
         if int.has_digit_seps && self.digit_sep == DigitSep::None {
             int.errors |= IntegerError::InvalidDigitSep;
         }
@@ -69,81 +76,80 @@ impl IntegerToken<'_> {
 
         self.leading_zeros = s.iter().take_while(|&&ch| ch == b'0').count();
         let s = &s[self.leading_zeros..];
+        if s.is_empty() {
+            return;
+        }
 
-        if !s.is_empty() {
-            digits.reserve(s.len());
-            match self.base {
-                Base::Decimal => {
-                    for &b in s {
-                        let digit = b.wrapping_sub(b'0');
-                        if digit >= 10 {
-                            if digit == b'_' - b'0' {
-                                self.has_digit_seps = true;
-                                continue;
-                            }
-                            self.errors |= IntegerError::InvalidDigit;
-                            break;
+        digits.reserve(s.len());
+        match self.base {
+            Base::Decimal => {
+                for &b in s {
+                    let digit = b.wrapping_sub(b'0');
+                    if digit >= 10 {
+                        if digit == b'_' - b'0' {
+                            self.has_digit_seps = true;
+                            continue;
                         }
-                        digits.push(digit);
+                        self.errors |= IntegerError::InvalidDigit;
+                        break;
                     }
-                }
-                Base::Hexadecimal => {
-                    for &b in s {
-                        let digit = match b {
-                            b'0'..=b'9' => b - b'0',
-                            b'a'..=b'f' => b - b'a' + 10,
-                            b'A'..=b'F' => b - b'A' + 10,
-                            _ => {
-                                if b == b'_' {
-                                    self.has_digit_seps = true;
-                                    continue;
-                                }
-                                self.errors |= IntegerError::InvalidDigit;
-                                break;
-                            }
-                        };
-                        digits.push(digit);
-                    }
-                }
-                Base::Octal => {
-                    for &b in s {
-                        let digit = b.wrapping_sub(b'0');
-                        if digit >= 8 {
-                            if digit == b'_' - b'0' {
-                                self.has_digit_seps = true;
-                                continue;
-                            }
-                            self.errors |= IntegerError::InvalidDigit;
-                            break;
-                        }
-                        digits.push(digit);
-                    }
-                }
-                Base::Binary => {
-                    for &b in s {
-                        let digit = b.wrapping_sub(b'0');
-                        if digit >= 2 {
-                            if digit == b'_' - b'0' {
-                                self.has_digit_seps = true;
-                                continue;
-                            }
-                            self.errors |= IntegerError::InvalidDigit;
-                            break;
-                        }
-                        digits.push(digit);
-                    }
+                    digits.push(digit);
                 }
             }
-            // SAFETY: Digits are constructed to be in range for the base.
-            unsafe {
-                self.value.assign_bytes_radix_unchecked(
-                    digits,
-                    self.base as i32,
-                    self.sign == Sign::Neg,
-                );
+            Base::Hexadecimal => {
+                for &b in s {
+                    let digit = match b {
+                        b'0'..=b'9' => b - b'0',
+                        b'a'..=b'f' => b - b'a' + 10,
+                        b'A'..=b'F' => b - b'A' + 10,
+                        _ => {
+                            if b == b'_' {
+                                self.has_digit_seps = true;
+                                continue;
+                            }
+                            self.errors |= IntegerError::InvalidDigit;
+                            break;
+                        }
+                    };
+                    digits.push(digit);
+                }
             }
-        } else if self.leading_zeros == 0 {
-            self.errors |= IntegerError::NoDigits;
+            Base::Octal => {
+                for &b in s {
+                    let digit = b.wrapping_sub(b'0');
+                    if digit >= 8 {
+                        if digit == b'_' - b'0' {
+                            self.has_digit_seps = true;
+                            continue;
+                        }
+                        self.errors |= IntegerError::InvalidDigit;
+                        break;
+                    }
+                    digits.push(digit);
+                }
+            }
+            Base::Binary => {
+                for &b in s {
+                    let digit = b.wrapping_sub(b'0');
+                    if digit >= 2 {
+                        if digit == b'_' - b'0' {
+                            self.has_digit_seps = true;
+                            continue;
+                        }
+                        self.errors |= IntegerError::InvalidDigit;
+                        break;
+                    }
+                    digits.push(digit);
+                }
+            }
+        }
+        // SAFETY: Digits are constructed to be in range for the base.
+        unsafe {
+            self.value.assign_bytes_radix_unchecked(
+                digits,
+                self.base as i32,
+                self.sign == Sign::Neg,
+            );
         }
     }
 }
