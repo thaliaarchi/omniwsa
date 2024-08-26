@@ -63,7 +63,7 @@ mod tests {
         syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
-            integer::{Integer, IntegerToken},
+            integer::{Base, BaseStyle, Integer, IntegerToken, Sign},
             label::{LabelStyle, LabelToken},
             mnemonics::MnemonicToken,
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
@@ -71,6 +71,19 @@ mod tests {
             Token,
         },
     };
+
+    macro_rules! integer(($value:literal) => {
+        IntegerToken {
+            literal: stringify!($value).as_bytes().into(),
+            value: Integer::from($value),
+            sign: Sign::None,
+            base: Base::Decimal,
+            base_style: BaseStyle::Rust,
+            leading_zeros: 0,
+            has_digit_seps: false,
+            errors: EnumSet::empty(),
+        }
+    });
 
     #[test]
     fn normalize_whitespace() {
@@ -137,11 +150,7 @@ mod tests {
                                     Spaces::from(Token::from(SpaceToken::from(b" "))),
                                 ),
                                 (
-                                    Token::from(IntegerToken {
-                                        literal: b"1".into(),
-                                        value: Integer::from(1),
-                                        ..Default::default()
-                                    }),
+                                    Token::from(integer!(1)),
                                     Spaces::from(Token::from(LineTermToken::from(
                                         LineTermStyle::Lf,
                                     ))),
@@ -173,11 +182,7 @@ mod tests {
                                     Spaces::from(Token::from(SpaceToken::from(b" "))),
                                 ),
                                 (
-                                    Token::from(IntegerToken {
-                                        literal: b"2".into(),
-                                        value: Integer::from(2),
-                                        ..Default::default()
-                                    }),
+                                    Token::from(integer!(2)),
                                     Spaces::from(vec![
                                         Token::from(BlockCommentToken {
                                             text: b"2",
