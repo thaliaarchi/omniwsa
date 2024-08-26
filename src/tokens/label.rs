@@ -48,7 +48,7 @@ pub struct LabelColonToken;
 
 impl LabelStyle {
     /// The prefix sigil.
-    pub fn sigil(&self) -> &'static str {
+    pub const fn sigil(&self) -> &'static str {
         match self {
             LabelStyle::NoSigil => "",
             LabelStyle::AtSigil => "@",

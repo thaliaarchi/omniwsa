@@ -162,7 +162,7 @@ impl<'s> Token<'s> {
 
 impl VariableStyle {
     /// The prefix sigil.
-    pub fn sigil(&self) -> &'static str {
+    pub const fn sigil(&self) -> &'static str {
         match self {
             VariableStyle::UnderscoreSigil => "_",
         }

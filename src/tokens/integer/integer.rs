@@ -148,7 +148,7 @@ impl Pretty for IntegerToken<'_> {
 
 impl Sign {
     /// The string representation of this sign.
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Sign::None => "",
             Sign::Pos => "+",
