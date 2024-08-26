@@ -78,7 +78,7 @@ pub enum BlockCommentError {
 
 impl LineCommentStyle {
     /// The prefix marker (e.g., `#` or `//`).
-    pub fn prefix(&self) -> &'static str {
+    pub const fn prefix(&self) -> &'static str {
         match self {
             LineCommentStyle::Semi => ";",
             LineCommentStyle::Hash => "#",
@@ -104,7 +104,7 @@ impl LineCommentToken<'_> {
 impl BlockCommentStyle {
     /// Returns whether this style of block comment can contain nested block
     /// comments.
-    pub fn can_nest(&self) -> bool {
+    pub const fn can_nest(&self) -> bool {
         match self {
             BlockCommentStyle::C => false,
             BlockCommentStyle::Haskell | BlockCommentStyle::Burghard => true,
@@ -112,7 +112,7 @@ impl BlockCommentStyle {
     }
 
     /// The opening delimiter (e.g., `{-` or `/*`).
-    pub fn open(&self) -> &'static str {
+    pub const fn open(&self) -> &'static str {
         match self {
             BlockCommentStyle::C => "/*",
             BlockCommentStyle::Haskell | BlockCommentStyle::Burghard => "{-",
@@ -120,7 +120,7 @@ impl BlockCommentStyle {
     }
 
     /// The closing delimiter (e.g., `-}` or `*/`).
-    pub fn close(&self) -> &'static str {
+    pub const fn close(&self) -> &'static str {
         match self {
             BlockCommentStyle::C => "*/",
             BlockCommentStyle::Haskell | BlockCommentStyle::Burghard => "-}",
