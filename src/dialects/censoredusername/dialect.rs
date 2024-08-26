@@ -7,7 +7,7 @@ use crate::{
     lex::Lex,
     syntax::Opcode,
     tokens::{
-        integer::{Base, BaseStyle, DigitSep, IntegerSyntax, SignStyle},
+        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
         mnemonics::{FoldedStr, MnemonicMap},
         Token,
     },
@@ -96,8 +96,7 @@ impl CensoredUsername {
     pub const fn new_integers() -> IntegerSyntax {
         IntegerSyntax {
             sign_style: SignStyle::Neg,
-            base_style: BaseStyle::Rust,
-            bases: enum_set!(Base::Decimal),
+            base_styles: enum_set!(BaseStyle::Decimal),
             digit_sep: DigitSep::None,
             min_value: None,
             max_value: None,

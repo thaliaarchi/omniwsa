@@ -4,7 +4,7 @@ use crate::{
     dialects::palaiologos::parse::Parser,
     syntax::{Cst, Opcode},
     tokens::{
-        integer::{Base, BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
+        integer::{BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
         mnemonics::{FoldedStr, MnemonicMap},
     },
 };
@@ -98,23 +98,16 @@ impl Palaiologos {
     ///     | "-"? [0-7]+ [oO]
     ///     | "-"? [0-9] [0-9 a-f A-F]* [hH]
     /// ```
-    ///
-    /// In addition, `omniwsa` recognizes positive signs, hex literals starting
-    /// with letters, and `_` digit separators, matching the following grammar.
-    /// Any extensions are marked as errors.
-    ///
-    /// ```bnf
-    /// integer ::=
-    ///     | [-+]? [0-9 _]*
-    ///     | [-+]? [01 _]* [bB]
-    ///     | [-+]? [0-7 _]* [oO]
-    ///     | [-+]? [0-9 a-f A-F _]* [hH]
-    /// ```
     pub fn new_integers() -> IntegerSyntax {
         IntegerSyntax {
             sign_style: SignStyle::Neg,
-            base_style: BaseStyle::Palaiologos,
-            bases: Base::Decimal | Base::Binary | Base::Octal | Base::Hexadecimal,
+            base_styles: BaseStyle::Decimal
+                | BaseStyle::BinSuffix_b
+                | BaseStyle::BinSuffix_B
+                | BaseStyle::OctSuffix_o
+                | BaseStyle::OctSuffix_O
+                | BaseStyle::HexSuffix_h
+                | BaseStyle::HexSuffix_H,
             digit_sep: DigitSep::None,
             min_value: Some(Integer::from(i32::MIN)),
             max_value: Some(Integer::from(i32::MAX)),
