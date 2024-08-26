@@ -121,7 +121,7 @@ pub enum QuotedError {
 
 impl QuoteStyle {
     /// The opening and closing quote.
-    pub fn quote(&self) -> &'static str {
+    pub const fn quote(&self) -> &'static str {
         match self {
             QuoteStyle::Double => "\"",
             QuoteStyle::Single => "'",
