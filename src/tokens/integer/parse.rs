@@ -2,8 +2,10 @@
 
 use std::borrow::Cow;
 
+use enumset::EnumSet;
+
 use crate::tokens::integer::{
-    Base, BaseStyle, DigitSep, IntegerError, IntegerSyntax, IntegerToken, Sign, SignStyle,
+    Base, BaseStyle, DigitSep, Integer, IntegerError, IntegerSyntax, IntegerToken, Sign, SignStyle,
 };
 
 // TODO:
@@ -13,11 +15,20 @@ impl IntegerSyntax {
     /// Parses an integer with the described syntax, using a scratch buffer of
     /// digits to reuse allocations.
     pub fn parse<'s>(&self, literal: Cow<'s, [u8]>, digits: &mut Vec<u8>) -> IntegerToken<'s> {
-        let mut int = IntegerToken::default();
+        let mut int = IntegerToken {
+            literal: b""[..].into(),
+            value: Integer::new(),
+            sign: Sign::None,
+            base: Base::Decimal,
+            base_style: self.base_style,
+            leading_zeros: 0,
+            has_digit_seps: false,
+            errors: EnumSet::empty(),
+        };
         let (sign, s) = match self.sign_style {
             SignStyle::Neg | SignStyle::NegPos => {
                 let (sign, s) = Sign::strip(&literal);
-                if int.sign == Sign::Pos && self.sign_style == SignStyle::NegPos {
+                if sign == Sign::Pos && self.sign_style == SignStyle::NegPos {
                     int.errors |= IntegerError::InvalidSign;
                 }
                 (sign, s)

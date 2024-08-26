@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// An integer literal token.
-#[derive(Clone, DebugCustom, Default, PartialEq, Eq)]
+#[derive(Clone, DebugCustom, PartialEq, Eq)]
 pub struct IntegerToken<'s> {
     /// The literal integer including formatting.
     #[debug("{:?}", literal.as_bstr())]
@@ -23,6 +23,8 @@ pub struct IntegerToken<'s> {
     pub sign: Sign,
     /// The base of the integer literal.
     pub base: Base,
+    /// The lexical style of the base.
+    pub base_style: BaseStyle,
     /// The number of leading zeros, excluding a base prefix, written in the
     /// integer literal.
     pub leading_zeros: usize,

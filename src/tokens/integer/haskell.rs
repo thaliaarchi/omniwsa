@@ -184,7 +184,9 @@ mod tests {
 
     use enumset::EnumSet;
 
-    use crate::tokens::integer::{Base, Integer, IntegerError, IntegerSyntax, IntegerToken, Sign};
+    use crate::tokens::integer::{
+        Base, BaseStyle, Integer, IntegerError, IntegerSyntax, IntegerToken, Sign,
+    };
 
     use Base::{Binary as Bin, Decimal as Dec, Hexadecimal as Hex, Octal as Oct};
     use IntegerError::*;
@@ -215,6 +217,7 @@ mod tests {
                     value: Integer::parse(output).unwrap().into(),
                     sign,
                     base,
+                    base_style: BaseStyle::Rust,
                     leading_zeros,
                     has_digit_seps,
                     errors,

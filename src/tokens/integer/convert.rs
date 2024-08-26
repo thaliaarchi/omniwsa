@@ -23,9 +23,9 @@ impl IntegerToken<'_> {
         if !to.bases.contains(self.base) {
             return false;
         }
-        if from.base_style != to.base_style && self.base != Base::Decimal {
+        if self.base_style != to.base_style && self.base != Base::Decimal {
             if !matches!(
-                (self.base, from.base_style, to.base_style),
+                (self.base, self.base_style, to.base_style),
                 (
                     Base::Hexadecimal | Base::Binary,
                     BaseStyle::C | BaseStyle::Rust,
@@ -56,7 +56,7 @@ impl IntegerToken<'_> {
         // Both Haskell parentheses and Palaiologos bases use suffixes and would
         // need a refactor to combine.
         debug_assert!(
-            !(from.sign_style == SignStyle::Haskell && from.base_style == BaseStyle::Palaiologos
+            !(from.sign_style == SignStyle::Haskell && self.base_style == BaseStyle::Palaiologos
                 || to.sign_style == SignStyle::Haskell && to.base_style == BaseStyle::Palaiologos)
         );
 
@@ -103,7 +103,7 @@ impl IntegerToken<'_> {
         } else {
             self.base
         };
-        let (parsed_base, s) = match from.base_style {
+        let (parsed_base, s) = match self.base_style {
             BaseStyle::C => {
                 let (base, s2) = Base::strip_c(s);
                 let (base_bytes, _) = slice_subtract(s, s2);
@@ -170,7 +170,7 @@ impl IntegerToken<'_> {
         if to.base_style == BaseStyle::C && new_base == Base::Decimal {
             debug_assert!(s.len() >= self.leading_zeros);
             new_leading_zeros = 0;
-        } else if from.base_style == BaseStyle::Palaiologos
+        } else if self.base_style == BaseStyle::Palaiologos
             && to.base_style != BaseStyle::Palaiologos
             && self.base == Base::Hexadecimal
             && self.leading_zeros == 1
@@ -178,7 +178,7 @@ impl IntegerToken<'_> {
         {
             debug_assert!(!s.is_empty());
             new_leading_zeros = 0;
-        } else if from.base_style != BaseStyle::Palaiologos
+        } else if self.base_style != BaseStyle::Palaiologos
             && to.base_style == BaseStyle::Palaiologos
             && new_base == Base::Hexadecimal
             && self.leading_zeros == 0
@@ -212,6 +212,7 @@ impl IntegerToken<'_> {
             value: self.value.clone(),
             sign: new_sign,
             base: new_base,
+            base_style: to.base_style,
             leading_zeros: new_leading_zeros,
             has_digit_seps: new_has_digit_seps,
             errors: self.errors,
