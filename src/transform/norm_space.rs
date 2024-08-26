@@ -63,7 +63,7 @@ mod tests {
         syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
-            integer::{Base, BaseStyle, Integer, IntegerToken, Sign},
+            integer::{BaseStyle, Integer, IntegerToken, Sign},
             label::{LabelStyle, LabelToken},
             mnemonics::MnemonicToken,
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
@@ -77,8 +77,7 @@ mod tests {
             literal: stringify!($value).as_bytes().into(),
             value: Integer::from($value),
             sign: Sign::None,
-            base: Base::Decimal,
-            base_style: BaseStyle::Rust,
+            base_style: BaseStyle::Decimal,
             leading_zeros: 0,
             has_digit_seps: false,
             errors: EnumSet::empty(),

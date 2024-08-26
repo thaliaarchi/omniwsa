@@ -56,9 +56,11 @@
 use bstr::ByteSlice;
 use enumset::{enum_set, EnumSet};
 
-use crate::tokens::integer::{
-    Base, BaseStyle, DigitSep, IntegerError, IntegerSyntax, Sign, SignStyle,
-};
+use crate::tokens::integer::{BaseStyle, DigitSep, IntegerError, IntegerSyntax, Sign, SignStyle};
+
+/// TODO:
+/// - Strip parens by looping at the front, then the back, keeping an isize
+///   count. That will reduce locations of strip.
 
 impl IntegerSyntax {
     /// Integers with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)
@@ -88,23 +90,6 @@ impl IntegerSyntax {
     /// space ::= \p{White_Space} NOT (U+0085 | U+2028 | U+2029)
     /// ```
     ///
-    /// In addition, `omniwsa` recognizes positive signs, signs before
-    /// parentheses, binary literals, and `_` digit separators, matching the
-    /// following grammar. Any extensions are marked as errors.
-    ///
-    /// ```bnf
-    /// read ::=
-    ///     | space* sign* "(" read ")" space*
-    ///     | space* sign* integer space*
-    /// sign ::= ("-" | "+") space*
-    /// integer ::=
-    ///     | [0-9 _]*
-    ///     | "0" [bB] [01 _]*
-    ///     | "0" [oO] [0-7 _]*
-    ///     | "0" [xX] [0-9 a-f A-F _]*
-    /// space ::= \p{White_Space} NOT (U+0085 | U+2028 | U+2029)
-    /// ```
-    ///
     /// # Compliance
     ///
     /// It has been tested to match the behavior of at least GHC 8.8.4 and 9.4.4
@@ -112,8 +97,13 @@ impl IntegerSyntax {
     pub(crate) const fn haskell() -> Self {
         IntegerSyntax {
             sign_style: SignStyle::Haskell,
-            base_style: BaseStyle::Rust,
-            bases: enum_set!(Base::Decimal | Base::Octal | Base::Hexadecimal),
+            base_styles: enum_set!(
+                BaseStyle::Decimal
+                    | BaseStyle::OctPrefix_0o
+                    | BaseStyle::OctPrefix_0O
+                    | BaseStyle::HexPrefix_0x
+                    | BaseStyle::HexPrefix_0X
+            ),
             digit_sep: DigitSep::None,
             min_value: None,
             max_value: None,
@@ -185,10 +175,10 @@ mod tests {
     use enumset::EnumSet;
 
     use crate::tokens::integer::{
-        Base, BaseStyle, Integer, IntegerError, IntegerSyntax, IntegerToken, Sign,
+        BaseStyle, Integer, IntegerError, IntegerSyntax, IntegerToken, Sign,
     };
 
-    use Base::{Binary as Bin, Decimal as Dec, Hexadecimal as Hex, Octal as Oct};
+    use BaseStyle::*;
     use IntegerError::*;
     use Sign::{Neg, None as No, Pos};
 
@@ -205,7 +195,7 @@ mod tests {
             input: S,
             output: &'static str,
             sign: Sign,
-            base: Base,
+            base_style: BaseStyle,
             leading_zeros: usize,
             has_digit_seps: bool,
             errors: EnumSet<IntegerError>,
@@ -216,8 +206,7 @@ mod tests {
                     literal: Cow::Owned(input.into().into_bytes()),
                     value: Integer::parse(output).unwrap().into(),
                     sign,
-                    base,
-                    base_style: BaseStyle::Rust,
+                    base_style,
                     leading_zeros,
                     has_digit_seps,
                     errors,
@@ -238,81 +227,81 @@ mod tests {
     #[test]
     fn parse_haskell() {
         let mut tests = vec![
-            test!("42" => "42", No, Dec, 0, F),
+            test!("42" => "42", No, Decimal, 0, F),
             // C-style bases
-            test!("0o42" => "34", No, Oct, 0, F),
-            test!("0O42" => "34", No, Oct, 0, F),
-            test!("0xff" => "255", No, Hex, 0, F),
-            test!("0Xff" => "255", No, Hex, 0, F),
-            test!("0Xff" => "255", No, Hex, 0, F),
-            test!("0b101" => "5", No, Bin, 0, F; InvalidBase),
-            test!("0B101" => "5", No, Bin, 0, F; InvalidBase),
+            test!("0o42" => "34", No, OctPrefix_0o, 0, F),
+            test!("0O42" => "34", No, OctPrefix_0O, 0, F),
+            test!("0xff" => "255", No, HexPrefix_0x, 0, F),
+            test!("0Xff" => "255", No, HexPrefix_0X, 0, F),
+            test!("0Xff" => "255", No, HexPrefix_0X, 0, F),
+            test!("0b101" => "5", No, BinPrefix_0b, 0, F; InvalidBase),
+            test!("0B101" => "5", No, BinPrefix_0B, 0, F; InvalidBase),
             // Leading zeros
-            test!("000" => "0", No, Dec, 3, F),
-            test!("042" => "42", No, Dec, 1, F),
-            test!("00042" => "42", No, Dec, 3, F),
-            test!("0o00042" => "34", No, Oct, 3, F),
-            test!("0x000ff" => "255", No, Hex, 3, F),
+            test!("000" => "0", No, Decimal, 3, F),
+            test!("042" => "42", No, Decimal, 1, F),
+            test!("00042" => "42", No, Decimal, 3, F),
+            test!("0o00042" => "34", No, OctPrefix_0o, 3, F),
+            test!("0x000ff" => "255", No, HexPrefix_0x, 3, F),
             // Other styles
-            test!("0d42" => "0", No, Dec, 1, F; InvalidDigit),
-            test!("2#101" => "2", No, Dec, 0, F; InvalidDigit),
-            test!("2#101#" => "2", No, Dec, 0, F; InvalidDigit),
-            test!("&b101" => "0", No, Dec, 0, F; InvalidDigit),
-            test!("&o42" => "0", No, Dec, 0, F; InvalidDigit),
-            test!("&hff" => "0", No, Dec, 0, F; InvalidDigit),
+            test!("0d42" => "0", No, Decimal, 1, F; InvalidDigit),
+            test!("2#101" => "2", No, Decimal, 0, F; InvalidDigit),
+            test!("2#101#" => "2", No, Decimal, 0, F; InvalidDigit),
+            test!("&b101" => "0", No, Decimal, 0, F; InvalidDigit),
+            test!("&o42" => "0", No, Decimal, 0, F; InvalidDigit),
+            test!("&hff" => "0", No, Decimal, 0, F; InvalidDigit),
             // Signs
-            test!("-42" => "-42", Neg, Dec, 0, F),
-            test!("+42" => "42", Pos, Dec, 0, F; InvalidSign),
+            test!("-42" => "-42", Neg, Decimal, 0, F),
+            test!("+42" => "42", Pos, Decimal, 0, F; InvalidSign),
             // Parentheses
-            test!("(42)" => "42", No, Dec, 0, F),
-            test!("((42))" => "42", No, Dec, 0, F),
-            test!("(((42)))" => "42", No, Dec, 0, F),
-            test!(" ( ( ( 42 ) ) ) " => "42", No, Dec, 0, F),
-            test!("(-42)" => "-42", Neg, Dec, 0, F),
-            test!("-(42)" => "-42", Neg, Dec, 0, F; InvalidSign),
-            test!("-(-42)" => "42", Pos, Dec, 0, F; InvalidSign),
-            test!("(--42)" => "42", Pos, Dec, 0, F; InvalidSign),
-            test!("(- -42)" => "42", Pos, Dec, 0, F; InvalidSign),
-            test!("(-(-42))" => "42", Pos, Dec, 0, F; InvalidSign),
-            test!("(42" => "42", No, Dec, 0, F; UnpairedParen),
-            test!("42)" => "42", No, Dec, 0, F; UnpairedParen),
-            test!("-(42" => "-42", Neg, Dec, 0, F; UnpairedParen | InvalidSign),
-            test!("-42)" => "-42", Neg, Dec, 0, F; UnpairedParen),
-            test!("((42)" => "42", No, Dec, 0, F; UnpairedParen),
-            test!("(42))" => "42", No, Dec, 0, F; UnpairedParen),
+            test!("(42)" => "42", No, Decimal, 0, F),
+            test!("((42))" => "42", No, Decimal, 0, F),
+            test!("(((42)))" => "42", No, Decimal, 0, F),
+            test!(" ( ( ( 42 ) ) ) " => "42", No, Decimal, 0, F),
+            test!("(-42)" => "-42", Neg, Decimal, 0, F),
+            test!("-(42)" => "-42", Neg, Decimal, 0, F; InvalidSign),
+            test!("-(-42)" => "42", Pos, Decimal, 0, F; InvalidSign),
+            test!("(--42)" => "42", Pos, Decimal, 0, F; InvalidSign),
+            test!("(- -42)" => "42", Pos, Decimal, 0, F; InvalidSign),
+            test!("(-(-42))" => "42", Pos, Decimal, 0, F; InvalidSign),
+            test!("(42" => "42", No, Decimal, 0, F; UnpairedParen),
+            test!("42)" => "42", No, Decimal, 0, F; UnpairedParen),
+            test!("-(42" => "-42", Neg, Decimal, 0, F; UnpairedParen | InvalidSign),
+            test!("-42)" => "-42", Neg, Decimal, 0, F; UnpairedParen),
+            test!("((42)" => "42", No, Decimal, 0, F; UnpairedParen),
+            test!("(42))" => "42", No, Decimal, 0, F; UnpairedParen),
             // Exponent
-            test!("1e3" => "1", No, Dec, 0, F; InvalidDigit),
+            test!("1e3" => "1", No, Decimal, 0, F; InvalidDigit),
             // Decimal point
-            test!("3.14" => "3", No, Dec, 0, F; InvalidDigit),
+            test!("3.14" => "3", No, Decimal, 0, F; InvalidDigit),
             // Digit separators
-            test!("1_000" => "1000", No, Dec, 0, T; InvalidDigitSep),
-            test!("1 000" => "1", No, Dec, 0, F; InvalidDigit),
-            test!("1,000" => "1", No, Dec, 0, F; InvalidDigit),
-            test!("1'000" => "1", No, Dec, 0, F; InvalidDigit),
-            test!("0o_42" => "34", No, Oct, 0, T; InvalidDigitSep),
-            test!("0Xf_f" => "255", No, Hex, 0, T; InvalidDigitSep),
-            test!("0O42_" => "34", No, Oct, 0, T; InvalidDigitSep),
+            test!("1_000" => "1000", No, Decimal, 0, T; InvalidDigitSep),
+            test!("1 000" => "1", No, Decimal, 0, F; InvalidDigit),
+            test!("1,000" => "1", No, Decimal, 0, F; InvalidDigit),
+            test!("1'000" => "1", No, Decimal, 0, F; InvalidDigit),
+            test!("0o_42" => "34", No, OctPrefix_0o, 0, T; InvalidDigitSep),
+            test!("0Xf_f" => "255", No, HexPrefix_0X, 0, T; InvalidDigitSep),
+            test!("0O42_" => "34", No, OctPrefix_0O, 0, T; InvalidDigitSep),
             // Larger than 128 bits
             test!(
                 "31415926535897932384626433832795028841971693993751" =>
                 "31415926535897932384626433832795028841971693993751",
                 No,
-                Dec,
+                Decimal,
                 0,
                 F,
             ),
             // Empty
-            test!("" => "0", No, Dec, 0, F; NoDigits),
-            test!("-" => "0", Neg, Dec, 0, F; NoDigits),
+            test!("" => "0", No, Decimal, 0, F; NoDigits),
+            test!("-" => "0", Neg, Decimal, 0, F; NoDigits),
             // Operations
-            test!("1+2" => "1", No, Dec, 0, F; InvalidDigit),
-            test!("1-2" => "1", No, Dec, 0, F; InvalidDigit),
-            test!("1*2" => "1", No, Dec, 0, F; InvalidDigit),
-            test!("1/2" => "1", No, Dec, 0, F; InvalidDigit),
-            test!("1%2" => "1", No, Dec, 0, F; InvalidDigit),
+            test!("1+2" => "1", No, Decimal, 0, F; InvalidDigit),
+            test!("1-2" => "1", No, Decimal, 0, F; InvalidDigit),
+            test!("1*2" => "1", No, Decimal, 0, F; InvalidDigit),
+            test!("1/2" => "1", No, Decimal, 0, F; InvalidDigit),
+            test!("1%2" => "1", No, Decimal, 0, F; InvalidDigit),
             // Non-digits
-            test!("9000over" => "9000", No, Dec, 0, F; InvalidDigit),
-            test!("invalid" => "0", No, Dec, 0, F; InvalidDigit),
+            test!("9000over" => "9000", No, Decimal, 0, F; InvalidDigit),
+            test!("invalid" => "0", No, Decimal, 0, F; InvalidDigit),
         ];
 
         // All characters with the Unicode property White_Space, excluding
@@ -359,18 +348,18 @@ mod tests {
             '\u{FEFF}', // Zero width non-breaking space
         ];
         for space in ok_spaces {
-            tests.push(test!(format!("{space}") => "0", No, Dec, 0, F; NoDigits));
-            tests.push(test!(format!("{space}-42") => "-42", Neg, Dec, 0, F));
-            tests.push(test!(format!("-{space}42") => "-42", Neg, Dec, 0, F));
-            tests.push(test!(format!("-4{space}2") => "-4", Neg, Dec, 0, F; InvalidDigit));
-            tests.push(test!(format!("-42{space}") => "-42", Neg, Dec, 0, F));
+            tests.push(test!(format!("{space}") => "0", No, Decimal, 0, F; NoDigits));
+            tests.push(test!(format!("{space}-42") => "-42", Neg, Decimal, 0, F));
+            tests.push(test!(format!("-{space}42") => "-42", Neg, Decimal, 0, F));
+            tests.push(test!(format!("-4{space}2") => "-4", Neg, Decimal, 0, F; InvalidDigit));
+            tests.push(test!(format!("-42{space}") => "-42", Neg, Decimal, 0, F));
         }
         for space in err_spaces {
-            tests.push(test!(format!("{space}") => "0", No, Dec, 0, F; InvalidDigit));
-            tests.push(test!(format!("{space}-42") => "0", No, Dec, 0, F; InvalidDigit));
-            tests.push(test!(format!("-{space}42") => "0", Neg, Dec, 0, F; InvalidDigit));
-            tests.push(test!(format!("-4{space}2") => "-4", Neg, Dec, 0, F; InvalidDigit));
-            tests.push(test!(format!("-42{space}") => "-42", Neg, Dec, 0, F; InvalidDigit));
+            tests.push(test!(format!("{space}") => "0", No, Decimal, 0, F; InvalidDigit));
+            tests.push(test!(format!("{space}-42") => "0", No, Decimal, 0, F; InvalidDigit));
+            tests.push(test!(format!("-{space}42") => "0", Neg, Decimal, 0, F; InvalidDigit));
+            tests.push(test!(format!("-4{space}2") => "-4", Neg, Decimal, 0, F; InvalidDigit));
+            tests.push(test!(format!("-42{space}") => "-42", Neg, Decimal, 0, F; InvalidDigit));
         }
 
         let haskell = IntegerSyntax::haskell();

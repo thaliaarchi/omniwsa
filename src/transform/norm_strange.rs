@@ -58,7 +58,7 @@ mod tests {
         syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},
-            integer::{Base, BaseStyle, Integer, IntegerToken, Sign},
+            integer::{BaseStyle, Integer, IntegerToken, Sign},
             mnemonics::MnemonicToken,
             spaces::{EofToken, SpaceToken, Spaces},
             words::Words,
@@ -109,8 +109,7 @@ mod tests {
                                     literal: b"42".into(),
                                     value: Integer::from(42),
                                     sign: Sign::None,
-                                    base: Base::Decimal,
-                                    base_style: BaseStyle::Rust,
+                                    base_style: BaseStyle::Decimal,
                                     leading_zeros: 0,
                                     has_digit_seps: false,
                                     errors: EnumSet::empty(),

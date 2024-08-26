@@ -10,6 +10,10 @@ use crate::tokens::integer::{
 
 // TODO:
 // - Move integer scanning here.
+// - Extend Palaiologos syntax with `x`/`X` suffix. It conflicts with `xchg`, so
+//   it should peek before bumping.
+// - When an integer that ends with `b`/`B` is valid as binary, interpret it as
+//   a suffix. Otherwise, unless it is supported, always treat it as decimal.
 
 impl IntegerSyntax {
     /// Parses an integer with the described syntax, using a scratch buffer of
@@ -19,8 +23,7 @@ impl IntegerSyntax {
             literal: b""[..].into(),
             value: Integer::new(),
             sign: Sign::None,
-            base: Base::Decimal,
-            base_style: self.base_style,
+            base_style: BaseStyle::Decimal,
             leading_zeros: 0,
             has_digit_seps: false,
             errors: EnumSet::empty(),
@@ -40,22 +43,24 @@ impl IntegerSyntax {
             }
         };
         int.sign = sign;
-        let (base, s) = match self.base_style {
-            BaseStyle::C => Base::strip_c(s),
-            BaseStyle::Rust => Base::strip_rust(s),
-            BaseStyle::Palaiologos => {
-                let (base, s) = Base::strip_palaiologos(s);
-                if base == Base::Hexadecimal
-                    && s.first()
-                        .is_some_and(|b| matches!(b, b'a'..=b'f' | b'A'..=b'F'))
-                {
-                    int.errors |= IntegerError::StartsWithHex;
-                }
-                (base, s)
+        let (base_style, s) = if (self.base_styles - BaseStyle::Decimal)
+            .is_subset(BaseStyle::prefix_family())
+        {
+            BaseStyle::strip_prefix(s, self.base_styles.contains(BaseStyle::OctPrefix_0))
+        } else if (self.base_styles - BaseStyle::Decimal).is_subset(BaseStyle::suffix_family()) {
+            let (base_style, s) = BaseStyle::strip_suffix(s);
+            if base_style.base() == Base::Hexadecimal
+                && s.first()
+                    .is_some_and(|b| matches!(b, b'a'..=b'f' | b'A'..=b'F'))
+            {
+                int.errors |= IntegerError::StartsWithHex;
             }
+            (base_style, s)
+        } else {
+            panic!("both prefix and suffix base styles");
         };
-        int.base = base;
-        if !self.bases.contains(base) {
+        int.base_style = base_style;
+        if !self.base_styles.contains(base_style) {
             int.errors |= IntegerError::InvalidBase;
         }
         int.parse_digits(s, digits);
@@ -63,8 +68,8 @@ impl IntegerSyntax {
         if digits.is_empty() && int.leading_zeros == 0 {
             if !int.errors.contains(IntegerError::InvalidDigit) {
                 int.errors |= IntegerError::NoDigits;
-            } else if int.base == Base::Octal && self.base_style == BaseStyle::C {
-                int.base = Base::Decimal;
+            } else if int.base_style == BaseStyle::OctPrefix_0 {
+                int.base_style = BaseStyle::Decimal;
             }
         }
         if int.has_digit_seps && self.digit_sep == DigitSep::None {
@@ -92,7 +97,8 @@ impl IntegerToken<'_> {
         }
 
         digits.reserve(s.len());
-        match self.base {
+        let base = self.base_style.base();
+        match base {
             Base::Decimal => {
                 for &b in s {
                     let digit = b.wrapping_sub(b'0');
@@ -156,11 +162,8 @@ impl IntegerToken<'_> {
         }
         // SAFETY: Digits are constructed to be in range for the base.
         unsafe {
-            self.value.assign_bytes_radix_unchecked(
-                digits,
-                self.base as i32,
-                self.sign == Sign::Neg,
-            );
+            self.value
+                .assign_bytes_radix_unchecked(digits, base as i32, self.sign == Sign::Neg);
         }
     }
 }
@@ -175,30 +178,23 @@ impl Sign {
         }
     }
 }
-impl Base {
+
+impl BaseStyle {
     /// Strips a base prefix from an integer literal with C-like syntax,
     /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
-    /// binary, `0` for octal, and otherwise for decimal.
+    /// binary, `0o`/`0O` and, if enabled, `0` for octal, and otherwise for
+    /// decimal.
     #[inline]
-    pub(super) fn strip_c(s: &[u8]) -> (Self, &[u8]) {
+    pub(super) fn strip_prefix(s: &[u8], octal_0: bool) -> (Self, &[u8]) {
         match s {
-            [b'0', b'x' | b'X', s @ ..] => (Base::Hexadecimal, s),
-            [b'0', b'b' | b'B', s @ ..] => (Base::Binary, s),
-            [b'0', s @ ..] => (Base::Octal, s),
-            s => (Base::Decimal, s),
-        }
-    }
-
-    /// Strips a base prefix from an integer literal with Rust-like syntax,
-    /// specifically a prefix of `0x`/`0X` for hexadecimal, `0b`/`0B` for
-    /// binary, `0o`/`0O` for octal, and otherwise for decimal.
-    #[inline]
-    pub(super) fn strip_rust(s: &[u8]) -> (Self, &[u8]) {
-        match s {
-            [b'0', b'x' | b'X', s @ ..] => (Base::Hexadecimal, s),
-            [b'0', b'b' | b'B', s @ ..] => (Base::Binary, s),
-            [b'0', b'o' | b'O', s @ ..] => (Base::Octal, s),
-            s => (Base::Decimal, s),
+            [b'0', b'b', s @ ..] => (BaseStyle::BinPrefix_0b, s),
+            [b'0', b'B', s @ ..] => (BaseStyle::BinPrefix_0B, s),
+            [b'0', b'o', s @ ..] => (BaseStyle::OctPrefix_0o, s),
+            [b'0', b'O', s @ ..] => (BaseStyle::OctPrefix_0O, s),
+            [b'0', b'x', s @ ..] => (BaseStyle::HexPrefix_0x, s),
+            [b'0', b'X', s @ ..] => (BaseStyle::HexPrefix_0X, s),
+            [b'0', s @ ..] if octal_0 => (BaseStyle::OctPrefix_0, s),
+            _ => (BaseStyle::Decimal, s),
         }
     }
 
@@ -206,12 +202,15 @@ impl Base {
     /// syntax, specifically a suffix of `h`/`H` for hexadecimal, `b`/`B` for
     /// binary, `o`/`O` for octal, and otherwise for decimal.
     #[inline]
-    pub(super) fn strip_palaiologos(s: &[u8]) -> (Self, &[u8]) {
+    pub(super) fn strip_suffix(s: &[u8]) -> (Self, &[u8]) {
         match s.split_last() {
-            Some((b'h' | b'H', s)) => (Base::Hexadecimal, s),
-            Some((b'b' | b'B', s)) => (Base::Binary, s),
-            Some((b'o' | b'O', s)) => (Base::Octal, s),
-            _ => (Base::Decimal, s),
+            Some((b'b', s)) => (BaseStyle::BinSuffix_b, s),
+            Some((b'B', s)) => (BaseStyle::BinSuffix_B, s),
+            Some((b'o', s)) => (BaseStyle::OctSuffix_o, s),
+            Some((b'O', s)) => (BaseStyle::OctSuffix_O, s),
+            Some((b'h', s)) => (BaseStyle::HexSuffix_h, s),
+            Some((b'H', s)) => (BaseStyle::HexSuffix_H, s),
+            _ => (BaseStyle::Decimal, s),
         }
     }
 }
