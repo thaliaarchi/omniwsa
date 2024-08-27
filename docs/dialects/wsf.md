@@ -1,7 +1,7 @@
 # wsf dialect
 
 - Source: [code](https://github.com/thaliaarchi/wslib)
-  (last updated [2024-08-23](https://github.com/thaliaarchi/wslib/commit/77bcd7ab67f24d6f8de72b55ef3890c54166ae35)
+  (last updated [2024-08-27](https://github.com/thaliaarchi/wslib/commit/1d54788e6622cc15aa3ad316a9956c03e4f337d4)
 - Corpus: [whitespace/thaliaarchi-wslib](https://github.com/wspace/corpus/tree/main/whitespace/thaliaarchi-wslib)
 
 wsf (“Whitespace Forth”) is a Whitespace assembly dialect by Thalia Archibald,
@@ -44,10 +44,10 @@ inst ::=
 path ::= "\"" [^"\n#]+ "\""
 string ::= "\"" ([^\\"#] | "\\" [abtnvfre"\\]){,40} "\""
 integer ::=
-    | [-+]? [0-9]+
+    | "-"? [0-9]+
     | "-"? ("0x" | "0X") [0-9 a-f A-F]{2}
     | "-"? ("0b" | "0B") "0"* [01]{1,8}
-    | char
+    | "-"? char
 char ::=
     | "'" ([\ -~] NOT ['\\]) "'"
     | "'\\" [abtnvfre'\\] "'"
@@ -171,6 +171,7 @@ TODO: Expand section.
 - Although `dup` is implicitly allowed, `^` is used exclusively in wslib.
 - `copy` and `slide` with negative indices are explicitly assembled by
   wsf-assemble, but rejected by whitespace-rs.
+- Char literals can be negated.
 - If the final line in the assembled program is not `jmp`, `jz`, `jn`, `ret`, or
   `end`, it exits with an error.
 - wsf uses a [fork](https://github.com/wspace/censoredusername-whitespacers) of

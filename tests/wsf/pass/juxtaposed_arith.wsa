@@ -38,4 +38,44 @@ push 5
 div
 push 6
 mod
+push -1
+add
+push -2
+sub
+push -3
+mul
+push -4
+div
+push -5
+mod
+push -97
+add
+push -98
+sub
+push -99
+mul
+push -100
+div
+push -101
+mod
+push -170
+add
+push -187
+sub
+push -204
+mul
+push -221
+div
+push -238
+mod
+push -2
+add
+push -3
+sub
+push -4
+mul
+push -5
+div
+push -6
+mod
 exit
