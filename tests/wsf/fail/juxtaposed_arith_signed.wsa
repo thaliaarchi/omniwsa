@@ -1,9 +1,0 @@
-push +1+ push +2- push +3* push +4/ push +5%
-push +97+ push +98- push +99* push +100/ push +101%
-push +170+ push +187- push +204* push +221/ push +238%
-push +2+ push +3- push +4* push +5/ push +6%
-push -1+ push -2- push -3* push -4/ push -5%
-push -97+ push -98- push -99* push -100/ push -101%
-push -170+ push -187- push -204* push -221/ push -238%
-push -2+ push -3- push -4* push -5/ push -6%
-exit
