@@ -76,7 +76,7 @@ int_func ::=
 
 comment ::= "#" [^\n]*
 # `sed -E` \s+
-space ::= (" " | "\t" | "\n" | "\v" | "\f" | "\r")+
+space ::= (" " | "\t" | "\v" | "\f" | "\r")+
 ```
 
 Space is not required around strings or chars. The grammar for `sep` is overly
