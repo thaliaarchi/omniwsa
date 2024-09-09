@@ -1,7 +1,7 @@
 # voliva Whitespace assembly
 
 - Source: [code](https://github.com/voliva/wsa)
-  (last updated [2024-08-19](https://github.com/voliva/wsa/pull/1) in fork)
+  (last updated [2024-09-08](https://github.com/voliva/wsa/tree/003933622f9e058a8ec19a42245f29193f6d59ec))
 - Corpus: [typescript/voliva-wsa](https://github.com/wspace/corpus/tree/main/typescript/voliva-wsa)
 
 ## Grammar
@@ -120,3 +120,11 @@ Variables can be reassigned. Unlike the Burghard dialect, `valueinteger` and
 argument must have an integer value and a variable used as a string argument
 must have a string value. A variable used as a label or filename is interpreted
 as a word.
+
+## Bugs in the assembler
+
+- The assembler uses `disassembler`, but disassembler uses `dbg` and that was
+  [decided](https://github.com/voliva/wsa/pull/1#issuecomment-2316998205) to be
+  the canonical mnemonic.
+- Exception handling within the promises is messy and results in poor error
+  messages.
