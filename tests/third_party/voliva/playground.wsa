@@ -1,0 +1,66 @@
+; hello world in 2 stages
+include memory
+include io
+
+push 6
+call malloc
+dup
+storestr hello
+
+push 7
+call malloc
+dup
+storestr world!
+
+swap
+call print_two
+
+call mfree
+pop
+
+push 4
+call malloc
+dup
+storestr hey
+
+call print_two
+
+call mfree
+pop
+
+push 8
+call malloc
+dup
+storestr welcome
+
+push 10
+call malloc
+copy 1
+copy 1
+push 8
+call memcpy
+swap
+
+; args: dest, value, size
+push 5
+push 8
+call memset
+
+call print_two
+
+exit
+
+label print_two
+dup
+call prints
+
+push ' '
+outc
+
+swap
+dup
+call printsln
+
+swap
+ret
+

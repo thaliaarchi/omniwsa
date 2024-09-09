@@ -1,0 +1,26 @@
+jump io_lib_end
+
+label prints
+
+label prints_loop
+dup
+retrieve
+dup
+jumpz prints_end
+outC
+add 1
+jump prints_loop
+
+label prints_end
+pop
+pop
+
+ret
+
+label printsln
+call prints
+push 10
+outC
+ret
+
+label io_lib_end
