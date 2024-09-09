@@ -1,4 +1,5 @@
-ASM = ruby "$$(which whitespace-asm)"
+RUBY = ruby
+ASM = whitespace-asm
 
 WSA = $(shell find . -name '*.wsa')
 WS = $(WSA:.wsa=.ws)
@@ -7,7 +8,7 @@ WS = $(WSA:.wsa=.ws)
 all: $(WS)
 
 %.ws: %.wsa
-	$(ASM) $<
+	$(RUBY) $(ASM) $<
 
 .PHONY: clean
 clean:
