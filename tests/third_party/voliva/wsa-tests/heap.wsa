@@ -1,0 +1,26 @@
+push 3
+push 5
+store
+retrieve 3
+outn
+
+push 5
+store 4
+retrieve 4
+outn
+
+push 3
+store 5
+push 5
+retrieve
+outn
+
+push 100
+store 0
+push 123
+store 101
+retrieve +1
+outn
+
+;EXPECTED
+;553123
