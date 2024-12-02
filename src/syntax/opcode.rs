@@ -110,6 +110,12 @@ opcodes! {
     /// `mod` with constant RHS: `mod n` => `push n / mod`
     /// (Burghard, littleBugHunter, Palaiologos, voliva, Whitelips).
     ModConstRhs(Integer),
+    /// voliva `or` with constant RHS: `or n` => `push n / or`
+    /// (voliva).
+    VolivaOrConstRhs,
+    /// voliva `and` with constant RHS: `and n` => `push n / and`
+    /// (voliva).
+    VolivaAndConstRhs,
     /// `add` with a referenced RHS:
     /// `add var` => `push addr / retrieve / add` (littleBugHunter).
     AddRefRhs(Integer),
@@ -171,7 +177,7 @@ opcodes! {
     /// `mod var1 var2` => `push addr1 / retrieve / push addr2 / retrieve / mod` (littleBugHunter).
     ModRefRef(Integer),
     /// `store` with constant LHS: `store n` => `push n / swap / store`
-    /// (Burghard, littleBugHunter, rdebath-Burghard).
+    /// (Burghard, littleBugHunter, voliva, rdebath-Burghard).
     StoreConstLhs(Integer),
     /// `store` with constant RHS: `store n` => `push n / store`
     /// (Palaiologos).
@@ -180,7 +186,7 @@ opcodes! {
     /// (littleBugHunter, Palaiologos).
     StoreConstConst(Integer, Integer),
     /// `retrieve` with constant: `retrieve n` => `push n / retrieve`
-    /// (Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, Whitelips).
+    /// (Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips).
     RetrieveConst(Integer),
     /// `printc` with constant: `printc n` => `push n / printc`
     /// (Palaiologos).
@@ -257,6 +263,8 @@ opcodes! {
     BurghardInclude(Include),
     /// Respace `@include`.
     RespaceInclude(Include),
+    /// voliva `include`.
+    VolivaInclude(Include),
     /// Whitelips `include`.
     WhitelipsInclude(Include),
 
