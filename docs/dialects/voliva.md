@@ -182,3 +182,4 @@ than lines in the assembled program, any extra decorations are omitted.
   messages.
 - When there are more decoration comments than lines in the assembled program,
   any extra decorations are omitted.
+- `storestr` splits Unicode code points into UTF-16 code units.
