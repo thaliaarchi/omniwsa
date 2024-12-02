@@ -1,0 +1,33 @@
+{
+  "name": "omniwsa-vscode",
+  "displayName": "omniwsa",
+  "description": "Whitespace assembly language server",
+  "author": "Thalia Archibald",
+  "publisher": "thaliaarchi",
+  "license": "MPL-2.0",
+  "version": "0.1.0",
+  "repository": { "type": "git", "url": "https://github.com/thaliaarchi/omniwsa" },
+  "categories": ["Programming Languages"],
+  "keywords": ["Whitespace"],
+  "engines": { "vscode": "^1.95.0" },
+  "main": "client/out/extension",
+  "activationEvents": ["onLanguage:whitespace-assembly"],
+  "contributes": {
+    "languages": [{ "id": "whitespace-assembly", "extensions": [".wsa"], "aliases": ["Whitespace assembly", "wsa"] }]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "lint": "eslint",
+    "postinstall": "cd client && npm install"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.16.0",
+    "@stylistic/eslint-plugin": "^2.11.0",
+    "@types/node": "^22.10.1",
+    "eslint": "^9.16.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.17.0"
+  }
+}
