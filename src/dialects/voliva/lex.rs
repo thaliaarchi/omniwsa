@@ -9,12 +9,12 @@ use crate::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
         integer::{BaseStyle, Sign},
         spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken},
+        string::Encoding,
         Token, WordError, WordToken,
     },
 };
 
 // TODO:
-// - Lex string and char literals.
 // - Create token type for decorator comments.
 // - Handle `_`-variables in parser.
 // - Replace each byte of invalid UTF-8 sequences with the U+FFFD replacement
@@ -50,8 +50,14 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
         }
 
         match scan.next_char() {
-            '"' => todo!(),
-            '\'' => todo!(),
+            '"' => scan
+                .string_lit_oneline()
+                .unescape_simple(unescape_byte(true), Encoding::Utf8)
+                .into(),
+            '\'' => scan
+                .char_lit_oneline()
+                .unescape_simple(unescape_byte(false), Encoding::Utf8)
+                .into(),
             ';' => {
                 let text = scan.bump_until_lf();
                 let mut errors = EnumSet::new();
@@ -106,5 +112,22 @@ fn is_space(ch: char) -> bool {
         | '\u{2007}' | '\u{2008}' | '\u{2009}' | '\u{200a}' | '\u{2028}' | '\u{2029}'
         | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}' => true,
         _ => false,
+    }
+}
+
+/// Resolves a backslash-escaped byte to its represented value.
+#[inline]
+fn unescape_byte(double_quote: bool) -> impl Fn(u8) -> Option<u8> {
+    move |b| match b {
+        b'"' if double_quote => Some(b'"'),
+        b'\'' if !double_quote => Some(b'\''),
+        b'\\' => Some(b'\\'),
+        b'b' => Some(b'\x08'),
+        b'f' => Some(b'\x0c'),
+        b'n' => Some(b'\n'),
+        b'r' => Some(b'\r'),
+        b't' => Some(b'\t'),
+        b'v' => Some(b'\x0b'),
+        _ => None,
     }
 }
