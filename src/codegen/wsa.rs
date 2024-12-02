@@ -115,6 +115,14 @@ impl<'s> WsaInst<'s> {
                 w.write_inst(Inst::Push(self.integer(0)))?;
                 w.write_inst(Inst::Mod)
             }
+            Opcode::VolivaOrConstRhs => {
+                w.write_inst(Inst::Push(self.integer(0)))?;
+                w.write_inst(Inst::VolivaOr)
+            }
+            Opcode::VolivaAndConstRhs => {
+                w.write_inst(Inst::Push(self.integer(0)))?;
+                w.write_inst(Inst::VolivaAnd)
+            }
             Opcode::AddRefRhs => {
                 w.write_inst(Inst::Push(self.integer(0)))?;
                 w.write_inst(Inst::Retrieve)?;
@@ -344,6 +352,7 @@ impl<'s> WsaInst<'s> {
             }
             Opcode::BurghardInclude
             | Opcode::RespaceInclude
+            | Opcode::VolivaInclude
             | Opcode::WhitelipsInclude
             | Opcode::DefineOption
             | Opcode::IfOption

@@ -72,9 +72,9 @@ instruction ::=
     | (?i)"mul" integer?
     | (?i)"div" integer?
     | (?i)"mod" integer?
-    | (?i)"and" integer?
     | (?i)"or" integer?
     | (?i)"not"
+    | (?i)"and" integer?
     | (?i)"store" integer?
     | (?i)"storestr" string
     | (?i)"retrieve" integer?
@@ -93,14 +93,14 @@ instruction ::=
     | (?i)"outc"
     | (?i)"readn"
     | (?i)"readc"
-    | (?i)"valuestring" variable string
     | (?i)"valueinteger" variable integer
+    | (?i)"valuestring" variable string
     | (?i)"debugger"
     | (?i)"include" filename
 
 integer ::= INTEGER | CHAR | VARIABLE
-string ::= STRING | WORD | VARIABLE
 index ::= INTEGER | VARIABLE
+string ::= STRING | WORD | VARIABLE
 label ::= WORD | VARIABLE
 variable ::= VARIABLE
 filename ::= WORD | VARIABLE | STRING
@@ -112,6 +112,16 @@ Programs are decoded as UTF-8 and each invalid *byte* is replaced with the
 U+FFFD replacement character. Thus, the input cannot have unpaired surrogate
 halves. The tokenizer is careful to process UTF-8 code points instead of UTF-16
 code units.
+
+## Types
+
+- Integers can be integer or char literals or variable references.
+- Index integers can be integer literals or variable references.
+- Strings can be quoted or unquoted, with no semantic difference, or variable
+  references.
+- Labels are unquoted words and may start with `_`.
+- Variables are denoted by a prefix of `_`.
+- Filenames can be unquoted or quoted and may start with `_`.
 
 ## Generation
 
@@ -165,9 +175,9 @@ than lines in the assembled program, any extra decorations are omitted.
 
 ## Bugs in the assembler
 
-- The assembler uses `disassembler`, but disassembler uses `dbg` and that was
-  [decided](https://github.com/voliva/wsa/pull/1#issuecomment-2316998205) to be
-  the canonical mnemonic.
+- The assembler uses `disassembler`, but the disassembler uses `dbg` and that
+  was [decided](https://github.com/voliva/wsa/pull/1#issuecomment-2316998205) to
+  be the canonical mnemonic.
 - Exception handling within the promises is messy and results in poor error
   messages.
 - When there are more decoration comments than lines in the assembled program,
