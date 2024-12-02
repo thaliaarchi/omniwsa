@@ -1,4 +1,4 @@
-//! String literal parsing and token.
+//! String and char literal tokens.
 
 use std::{borrow::Cow, str};
 
@@ -97,6 +97,10 @@ pub enum QuoteStyle {
 pub enum StringError {
     /// Has no closing quote.
     Unterminated,
+    /// Invalid escape sequence.
+    InvalidEscape,
+    /// Contains invalid UTF-8.
+    InvalidUtf8,
 }
 
 /// A parse error for a char literal.
@@ -108,6 +112,10 @@ pub enum CharError {
     Empty,
     /// Has more than one char.
     MoreThanOneChar,
+    /// Invalid escape sequence.
+    InvalidEscape,
+    /// Contains invalid UTF-8.
+    InvalidUtf8,
     /// Expected exactly one byte, not a non-ASCII Unicode code point.
     UnexpectedUnicode,
 }

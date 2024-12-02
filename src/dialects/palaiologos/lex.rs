@@ -1,6 +1,5 @@
 //! Lexer for the Palaiologos Whitespace assembly dialect.
 
-use bstr::ByteSlice;
 use enumset::EnumSet;
 
 use crate::{
@@ -15,7 +14,7 @@ use crate::{
             ArgSepStyle, ArgSepToken, EofToken, InstSepStyle, InstSepToken, LineTermStyle,
             LineTermToken, SpaceToken,
         },
-        string::{CharData, CharError, CharToken, Encoding, QuoteStyle, StringError, StringToken},
+        string::Encoding,
         ErrorToken, Token,
     },
 };
@@ -127,8 +126,14 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     errors,
                 })
             }
-            '\'' => scan_char_literal(scan).into(),
-            '"' => scan_string_literal(scan).into(),
+            '\'' => scan
+                .char_lit_oneline()
+                .unescape_simple(unescape_byte, Encoding::Bytes)
+                .into(),
+            '"' => scan
+                .string_lit_oneline()
+                .unescape_simple(unescape_byte, Encoding::Bytes)
+                .into(),
             ';' => {
                 scan.bump_until_lf();
                 Token::from(LineCommentToken {
@@ -186,112 +191,9 @@ fn scan_mnemonic<'s>(s: &'s [u8], dialect: &Palaiologos) -> Option<(&'s [u8], &'
     None
 }
 
-/// Scans a char literal. The scanner must be just after the open `'`.
-fn scan_char_literal<'s>(scan: &mut Scanner<'s>) -> CharToken<'s> {
-    let start = scan.start();
-    let mut errors = EnumSet::empty();
-    let literal = loop {
-        scan.bump_until_ascii(|ch| ch == b'\'' || ch == b'\\' || ch == b'\n');
-        match scan.peek_byte() {
-            Some(b'\'') => {
-                let literal = scan.text();
-                scan.bump_ascii();
-                break literal;
-            }
-            Some(b'\\') if scan.bump_unless_ascii(|b| b == b'\n') => {
-                continue;
-            }
-            _ => {
-                errors |= CharError::Unterminated;
-                scan.backtrack(start);
-                scan.bump_if_ascii(|ch| ch == b'\\');
-                scan.bump_unless_ascii(|ch| ch == b'\n');
-                break scan.text();
-            }
-        }
-    };
-    let data = match literal {
-        [b'\\', b] => CharData::Byte(unescape_byte(*b)),
-        [b] => CharData::Byte(*b),
-        [b'\\', bs @ ..] | bs => {
-            if let Some(&b) = bs.first() {
-                let (ch, size) = bstr::decode_utf8(bs);
-                match ch {
-                    Some(ch) if !ch.is_ascii() => {
-                        errors |= if size == bs.len() {
-                            CharError::UnexpectedUnicode
-                        } else {
-                            CharError::MoreThanOneChar
-                        };
-                        CharData::Unicode(ch)
-                    }
-                    _ if literal[0] == b'\\' => CharData::Byte(unescape_byte(b)),
-                    _ => CharData::Byte(b),
-                }
-            } else {
-                errors |= CharError::Empty;
-                CharData::Byte(0)
-            }
-        }
-    };
-    CharToken {
-        literal: literal.into(),
-        unescaped: data,
-        quotes: QuoteStyle::Single,
-        errors,
-    }
-}
-
-/// Scans a string literal. The scanner must be just after the open `"`.
-fn scan_string_literal<'s>(scan: &mut Scanner<'s>) -> StringToken<'s> {
-    let mut backslashes = 0;
-    let mut errors = EnumSet::empty();
-    let literal = loop {
-        scan.bump_until_ascii(|ch| ch == b'"' || ch == b'\\' || ch == b'\n');
-        let b = scan.peek_byte();
-        if b == Some(b'"') {
-            let literal = scan.text();
-            scan.bump_ascii();
-            break literal;
-        }
-        if b == Some(b'\\') {
-            backslashes += 1;
-            if scan.bump_unless_ascii(|b| b == b'\n') {
-                continue;
-            }
-        }
-        errors |= StringError::Unterminated;
-        break scan.text();
-    };
-    let unescaped = if backslashes == 0 {
-        literal.into()
-    } else {
-        let mut unescaped = Vec::with_capacity(literal.len() - backslashes);
-        let mut s = literal;
-        while let Some(i) = s.find_byte(b'\\') {
-            unescaped.extend_from_slice(&s[..i]);
-            if let Some(&b) = s.get(i + 1) {
-                unescaped.push(unescape_byte(b));
-            } else {
-                break;
-            }
-            s = &s[i + 2..];
-        }
-        unescaped.extend_from_slice(s);
-        unescaped.into()
-    };
-    StringToken {
-        literal: literal.into(),
-        unescaped,
-        encoding: Encoding::Bytes,
-        quotes: QuoteStyle::Double,
-        errors,
-    }
-}
-
 /// Resolves a backslash-escaped byte to its represented value.
-fn unescape_byte(b: u8) -> u8 {
-    match b {
+fn unescape_byte(b: u8) -> Option<u8> {
+    Some(match b {
         b'a' => b'\x07',
         b'b' => b'\x08',
         b'f' => b'\x0c',
@@ -300,5 +202,5 @@ fn unescape_byte(b: u8) -> u8 {
         b't' => b'\t',
         b'v' => b'\x0b',
         _ => b,
-    }
+    })
 }
