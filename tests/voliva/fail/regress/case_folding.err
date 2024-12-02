@@ -1,12 +1,10 @@
-node:internal/process/promises:392
-      new UnhandledPromiseRejection(reason);
-      ^
+file://$WSA/dist/assets/io-CvrHjuyQ.js:771
+    throw new Error(`invalid opcode ${opcode}`);
+          ^
 
-UnhandledPromiseRejection: This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). The promise rejected with the reason "invalid opcode".
-    at throwUnhandledRejectionsMode (node:internal/process/promises:392:7)
-    at processPromiseRejections (node:internal/process/promises:475:17)
-    at process.processTicksAndRejections (node:internal/process/task_queues:106:32) {
-  code: 'ERR_UNHANDLED_REJECTION'
-}
+Error: invalid opcode valuei̇nteger
+    at parseArgs (file://$WSA/dist/assets/io-CvrHjuyQ.js:771:11)
+    at file://$WSA/dist/assets/io-CvrHjuyQ.js:914:45
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
 
-Node.js v22.8.0
+Node.js v23.3.0

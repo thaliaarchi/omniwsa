@@ -1,5 +1,6 @@
 NODE = node
-CLI = dist/cli.js
+WSA_DIR = $(error 'Specify $$WSA_DIR')
+CLI = $(WSA_DIR)/dist/cli.js
 
 PASS = $(shell find . -name '*.wsa' -a ! -name count.wsa)
 FAIL = wsa-tests/count.wsa
@@ -16,7 +17,7 @@ all: $(WS) $(ERR)
 	$(NODE) $(CLI) compile $< $@
 
 %.err: %.wsa
-	! $(NODE) $(CLI) compile $< $(<:.wsa=.ws) 2> $@
+	( ! $(NODE) $(CLI) compile $< $(<:.wsa=.ws) 2>&1 ) | sed "s|$$(realpath $(WSA_DIR))|"'$$WSA|' > $@
 
 .PHONY: clean
 clean:

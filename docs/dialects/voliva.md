@@ -1,7 +1,7 @@
 # voliva Whitespace assembly
 
 - Source: [code](https://github.com/voliva/wsa)
-  (last updated [2024-09-08](https://github.com/voliva/wsa/tree/003933622f9e058a8ec19a42245f29193f6d59ec))
+  (last updated [2024-10-05](https://github.com/voliva/wsa/tree/e632ecfaa11d685364787294599ba542bfacd796))
 - Corpus: [typescript/voliva-wsa](https://github.com/wspace/corpus/tree/main/typescript/voliva-wsa)
 
 ## Grammar
@@ -10,7 +10,7 @@ The program is divided into lines and each line is lexed into tokens:
 
 ```bnf
 program ::= (line "\n")* line?
-line ::= (SPACE? token)* SPACE? LINE_COMMENT?
+line ::= (\s* token)* \s* (DECORATION | LINE_COMMENT)?
 token ::= STRING | CHAR | VARIABLE | INTEGER | WORD
 
 STRING ::= "\"" ([^"\\\n] | \\["\\bfnrtv])* "\""
@@ -18,8 +18,8 @@ CHAR ::= "'" ([^'\\\n] | \\['\\bfnrtv]) "'"
 VARIABLE ::= "_" WORD
 INTEGER ::= BIGINT
 WORD ::= [^\s;"']+
+DECORATION ::= ";#;" " "? [^\n]*
 LINE_COMMENT ::= ";" [^\n]*
-SPACE ::= \s+
 
 # BigInt constructor, without whitespace (ref. https://tc39.es/ecma262/multipage/abstract-operations.html#sec-stringtobigint).
 BIGINT ::=
@@ -27,6 +27,34 @@ BIGINT ::=
     | ("0b" | "0B") [01]+
     | ("0o" | "0O") [0-7]+
     | ("0x" | "0X") [0-9 a-f A-F]+
+
+# RegExp \s (ref. https://tc39.es/ecma262/multipage/text-processing.html#sec-compiletocharset)
+\s ::=
+    | U+0009 # Tab
+    | U+000A # Line feed
+    | U+000B # Vertical tab
+    | U+000C # Form feed
+    | U+000D # Carriage return
+    | U+0020 # Space
+    | U+00A0 # No-break space
+    | U+1680 # Ogham space mark
+    | U+2000 # En quad
+    | U+2001 # Em quad
+    | U+2002 # En space
+    | U+2003 # Em space
+    | U+2004 # Three-per-em space
+    | U+2005 # Four-per-em space
+    | U+2006 # Six-per-em space
+    | U+2007 # Figure space
+    | U+2008 # Punctuation space
+    | U+2009 # Thin space
+    | U+200A # Hair space
+    | U+2028 # Line separator
+    | U+2029 # Paragraph separator
+    | U+202F # Narrow no-break space
+    | U+205F # Medium mathematical space
+    | U+3000 # Ideographic space
+    | U+FEFF # Zero width no-break space
 ```
 
 Each line is then parsed as an instruction:
@@ -121,6 +149,15 @@ argument must have an integer value and a variable used as a string argument
 must have a string value. A variable used as a label or filename is interpreted
 as a word.
 
+Decoration comments (`;#;`) specify a line of text that is to be included in the
+assembled program. The concatenated text of all decoration comments is prepended
+to the first lines in the assembled program (not interspersed with
+Whitespace-syntax whitespace characters). The decoration text is sanitized so
+that space becomes non-breaking space (U+00A0), tab becomes two non-breaking
+spaces, and an optional leading space on each line is stripped. Decorations do
+not apply to the locally adjacent code. When there are more decoration comments
+than lines in the assembled program, any extra decorations are omitted.
+
 ## Bugs in the assembler
 
 - The assembler uses `disassembler`, but disassembler uses `dbg` and that was
@@ -128,3 +165,5 @@ as a word.
   the canonical mnemonic.
 - Exception handling within the promises is messy and results in poor error
   messages.
+- When there are more decoration comments than lines in the assembled program,
+  any extra decorations are omitted.
