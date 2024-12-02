@@ -1,20 +1,17 @@
 //! Parsing for the Palaiologos Whitespace assembly dialect.
 
 use crate::{
-    dialects::palaiologos::parse::Parser,
+    dialects::{dialect::DialectState, palaiologos::parse::Parser, Dialect},
     syntax::{Cst, Opcode},
     tokens::{
         integer::{BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
-        mnemonics::{FoldedStr, MnemonicMap},
+        mnemonics::FoldedStr,
     },
 };
 
-/// State for parsing the Palaiologos Whitespace assembly dialect.
-#[derive(Clone, Debug)]
-pub struct Palaiologos {
-    mnemonics: MnemonicMap,
-    integers: IntegerSyntax,
-}
+/// Palaiologos Whitespace assembly dialect.
+#[derive(Clone, Copy, Debug)]
+pub struct Palaiologos;
 
 macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
     &[$((FoldedStr::ascii($mnemonic), &[$(Opcode::$opcode),+])),+]
@@ -58,33 +55,11 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"rep" => [PalaiologosRep],
 };
 
-impl Palaiologos {
-    pub(super) const MAX_MNEMONIC_LEN: usize = 5;
+impl Dialect for Palaiologos {
+    const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = MNEMONICS;
 
-    /// Constructs state for the Palaiologos dialect. Only one needs to be
-    /// constructed for parsing any number of programs.
-    pub fn new() -> Self {
-        Palaiologos {
-            mnemonics: MnemonicMap::from(MNEMONICS),
-            integers: Self::new_integers(),
-        }
-    }
-
-    /// Parses a Whitespace assembly program in the Palaiologos dialect.
-    pub fn parse<'s>(&self, src: &'s [u8]) -> Cst<'s> {
-        Parser::new(src, &Palaiologos::new()).parse()
-    }
-
-    /// Gets the mnemonic map for this dialect.
-    pub fn mnemonics(&self) -> &MnemonicMap {
-        &self.mnemonics
-    }
-
-    /// Gets the integer syntax description for this dialect.
-    ///
-    /// See [`Palaiologos::new_integers`] for the grammar.
-    pub fn integers(&self) -> &IntegerSyntax {
-        &self.integers
+    fn parse<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Cst<'s> {
+        Parser::new(src, dialect).parse()
     }
 
     /// Constructs an integer syntax description for this dialect.
@@ -98,7 +73,7 @@ impl Palaiologos {
     ///     | "-"? [0-7]+ [oO]
     ///     | "-"? [0-9] [0-9 a-f A-F]* [hH]
     /// ```
-    pub fn new_integers() -> IntegerSyntax {
+    fn make_integers() -> IntegerSyntax {
         IntegerSyntax {
             sign_style: SignStyle::Neg,
             base_styles: BaseStyle::Decimal
@@ -114,3 +89,16 @@ impl Palaiologos {
         }
     }
 }
+
+pub(super) const MAX_MNEMONIC_LEN: usize = {
+    let mut max_len = 0;
+    let mut i = 0;
+    while i < MNEMONICS.len() {
+        let len = MNEMONICS[i].0.s.len();
+        if len > max_len {
+            max_len = len;
+        }
+        i += 1;
+    }
+    max_len
+};

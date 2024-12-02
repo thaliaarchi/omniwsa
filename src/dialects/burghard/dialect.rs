@@ -1,19 +1,24 @@
 //! Parsing for the Burghard Whitespace assembly dialect.
 
 use crate::{
-    dialects::burghard::{option::OptionNester, parse::Parser},
+    dialects::{
+        burghard::{option::OptionNester, parse::Parser},
+        dialect::DialectState,
+        Dialect,
+    },
     syntax::{Cst, Opcode},
-    tokens::mnemonics::{CaseFold, FoldedStr, MnemonicMap},
+    tokens::{
+        integer::IntegerSyntax,
+        mnemonics::{CaseFold, FoldedStr},
+    },
 };
 
 // TODO:
 // - Move Cst macros to syntax.
 
-/// State for parsing the Burghard Whitespace assembly dialect.
-#[derive(Clone, Debug)]
-pub struct Burghard {
-    mnemonics: MnemonicMap,
-}
+/// Burghard Whitespace assembly dialect.
+#[derive(Clone, Copy, Debug)]
+pub struct Burghard;
 
 macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
     &[$((FoldedStr::new_detect($mnemonic, CaseFold::AsciiIK), &[$(Opcode::$opcode),+])),+]
@@ -60,23 +65,15 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"endoption" => [EndOption],
 };
 
-impl Burghard {
-    /// Constructs state for the Burghard dialect. Only one needs to be
-    /// constructed for parsing any number of programs.
-    pub fn new() -> Self {
-        Burghard {
-            mnemonics: MnemonicMap::from(MNEMONICS),
-        }
+impl Dialect for Burghard {
+    const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = MNEMONICS;
+
+    fn parse<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Cst<'s> {
+        OptionNester::new().nest(&mut Parser::new(src, dialect))
     }
 
-    /// Parses a Whitespace assembly program in the Burghard dialect.
-    pub fn parse<'s>(&self, src: &'s [u8]) -> Cst<'s> {
-        OptionNester::new().nest(&mut Parser::new(src, self))
-    }
-
-    /// Gets the mnemonic map for this dialect.
-    pub fn mnemonics(&self) -> &MnemonicMap {
-        &self.mnemonics
+    fn make_integers() -> IntegerSyntax {
+        IntegerSyntax::haskell()
     }
 }
 
@@ -85,7 +82,7 @@ mod tests {
     use enumset::EnumSet;
 
     use crate::{
-        dialects::Burghard,
+        dialects::{Burghard, Dialect as _},
         syntax::{ArgLayout, Cst, Dialect, Inst, InstError, Opcode, OptionBlock},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},

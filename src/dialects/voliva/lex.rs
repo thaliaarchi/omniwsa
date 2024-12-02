@@ -3,7 +3,7 @@
 use enumset::EnumSet;
 
 use crate::{
-    dialects::Voliva,
+    dialects::{dialect::DialectState, Voliva},
     lex::{Lex, Scanner},
     tokens::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
@@ -24,14 +24,14 @@ use crate::{
 /// A lexer for tokens in the voliva Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Lexer<'s, 'd> {
-    dialect: &'d Voliva,
+    dialect: &'d DialectState<Voliva>,
     scan: Scanner<'s>,
     digit_buf: Vec<u8>,
 }
 
 impl<'s, 'd> Lexer<'s, 'd> {
     /// Constructs a new lexer for voliva-dialect source text.
-    pub fn new(src: &'s [u8], dialect: &'d Voliva) -> Self {
+    pub fn new(src: &'s [u8], dialect: &'d DialectState<Voliva>) -> Self {
         Lexer {
             dialect,
             scan: Scanner::new(src),

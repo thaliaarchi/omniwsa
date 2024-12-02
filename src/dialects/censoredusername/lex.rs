@@ -3,7 +3,7 @@
 use enumset::EnumSet;
 
 use crate::{
-    dialects::CensoredUsername,
+    dialects::{dialect::DialectState, CensoredUsername},
     lex::{Lex, Scanner},
     tokens::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
@@ -16,14 +16,14 @@ use crate::{
 /// A lexer for tokens in the CensoredUsername Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Lexer<'s, 'd> {
-    dialect: &'d CensoredUsername,
+    dialect: &'d DialectState<CensoredUsername>,
     scan: Scanner<'s>,
     digit_buf: Vec<u8>,
 }
 
 impl<'s, 'd> Lexer<'s, 'd> {
     /// Constructs a new lexer for CensoredUsername-dialect source text.
-    pub fn new(src: &'s [u8], dialect: &'d CensoredUsername) -> Self {
+    pub fn new(src: &'s [u8], dialect: &'d DialectState<CensoredUsername>) -> Self {
         Lexer {
             dialect,
             scan: Scanner::new(src),

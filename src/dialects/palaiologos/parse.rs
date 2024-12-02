@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{palaiologos::lex::Lexer, Palaiologos},
+    dialects::{dialect::DialectState, palaiologos::lex::Lexer, Palaiologos},
     lex::TokenStream,
     syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
     tokens::{
@@ -36,7 +36,7 @@ pub struct Parser<'s, 'd> {
 
 impl<'s, 'd> Parser<'s, 'd> {
     /// Constructs a new parser for Palaiologos-dialect source text.
-    pub fn new(src: &'s [u8], dialect: &'d Palaiologos) -> Self {
+    pub fn new(src: &'s [u8], dialect: &'d DialectState<Palaiologos>) -> Self {
         Parser {
             toks: TokenStream::new(Lexer::new(src, dialect)),
         }

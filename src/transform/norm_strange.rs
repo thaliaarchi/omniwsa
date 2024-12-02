@@ -54,7 +54,7 @@ mod tests {
     use enumset::EnumSet;
 
     use crate::{
-        dialects::Burghard,
+        dialects::{Burghard, Dialect as _},
         syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
         tokens::{
             comment::{BlockCommentStyle, BlockCommentToken},

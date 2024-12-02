@@ -1,24 +1,19 @@
 //! Parsing for the CensoredUsername Whitespace assembly dialect.
 
-use enumset::enum_set;
-
 use crate::{
-    dialects::censoredusername::lex::Lexer,
+    dialects::{censoredusername::lex::Lexer, dialect::DialectState, Dialect},
     lex::Lex,
-    syntax::Opcode,
+    syntax::{Cst, Opcode},
     tokens::{
         integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
-        mnemonics::{FoldedStr, MnemonicMap},
+        mnemonics::FoldedStr,
         Token,
     },
 };
 
 /// State for parsing the CensoredUsername Whitespace assembly dialect.
-#[derive(Clone, Debug)]
-pub struct CensoredUsername {
-    mnemonics: MnemonicMap,
-    integers: IntegerSyntax,
-}
+#[derive(Clone, Copy, Debug)]
+pub struct CensoredUsername;
 
 macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
     &[$((FoldedStr::exact($mnemonic), &[$(Opcode::$opcode),+])),+]
@@ -50,19 +45,15 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"inum" => [Readi],
 };
 
-impl CensoredUsername {
-    /// Constructs state for the CensoredUsername dialect. Only one needs to be
-    /// constructed for parsing any number of programs.
-    pub fn new() -> Self {
-        CensoredUsername {
-            mnemonics: MnemonicMap::from(MNEMONICS),
-            integers: CensoredUsername::new_integers(),
-        }
+impl Dialect for CensoredUsername {
+    const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = MNEMONICS;
+
+    fn parse<'s>(_src: &'s [u8], _dialect: &DialectState<Self>) -> Cst<'s> {
+        todo!()
     }
 
-    /// Lexes a Whitespace assembly program in the CensoredUsername dialect.
-    pub fn lex<'s>(&self, src: &'s [u8]) -> Vec<Token<'s>> {
-        let mut lex = Lexer::new(src, self);
+    fn lex<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Vec<Token<'s>> {
+        let mut lex = Lexer::new(src, dialect);
         let mut toks = Vec::new();
         loop {
             let tok = lex.next_token();
@@ -74,18 +65,6 @@ impl CensoredUsername {
         toks
     }
 
-    /// Gets the mnemonic map for this dialect.
-    pub fn mnemonics(&self) -> &MnemonicMap {
-        &self.mnemonics
-    }
-
-    /// Gets the integer syntax description for this dialect.
-    ///
-    /// See [`CensoredUsername::new_integers`] for the grammar.
-    pub fn integers(&self) -> &IntegerSyntax {
-        &self.integers
-    }
-
     /// Constructs an integer syntax description for this dialect.
     ///
     /// # Syntax
@@ -93,10 +72,10 @@ impl CensoredUsername {
     /// ```bnf
     /// integer ::= "-"? [0-9]+
     /// ```
-    pub const fn new_integers() -> IntegerSyntax {
+    fn make_integers() -> IntegerSyntax {
         IntegerSyntax {
             sign_style: SignStyle::Neg,
-            base_styles: enum_set!(BaseStyle::Decimal),
+            base_styles: BaseStyle::Decimal.into(),
             digit_sep: DigitSep::None,
             min_value: None,
             max_value: None,

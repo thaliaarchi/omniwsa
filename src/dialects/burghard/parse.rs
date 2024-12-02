@@ -5,11 +5,10 @@ use std::{borrow::Cow, mem};
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{burghard::lex::Lexer, Burghard},
+    dialects::{burghard::lex::Lexer, dialect::DialectState, Burghard},
     lex::TokenStream,
     syntax::{ArgLayout, ArgType, HasError, Inst, InstError, Opcode},
     tokens::{
-        integer::IntegerSyntax,
         label::{LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::Spaces,
@@ -25,14 +24,14 @@ use crate::{
 /// A parser for the Burghard Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Parser<'s, 'd> {
-    dialect: &'d Burghard,
+    dialect: &'d DialectState<Burghard>,
     toks: TokenStream<'s, Lexer<'s>>,
     digit_buf: Vec<u8>,
 }
 
 impl<'s, 'd> Parser<'s, 'd> {
     /// Constructs a new parser for Burghard-dialect source text.
-    pub fn new(src: &'s [u8], dialect: &'d Burghard) -> Self {
+    pub fn new(src: &'s [u8], dialect: &'d DialectState<Burghard>) -> Self {
         Parser {
             dialect,
             toks: TokenStream::new(Lexer::new(src)),
@@ -182,7 +181,10 @@ impl<'s> Parser<'s, '_> {
 
         // Try to parse it as an integer.
         if ty == ArgType::Integer || ty == ArgType::Variable && !quoted {
-            let int = IntegerSyntax::haskell().parse(inner_word.word.clone(), &mut self.digit_buf);
+            let int = self
+                .dialect
+                .integers()
+                .parse(inner_word.word.clone(), &mut self.digit_buf);
             if ty == ArgType::Integer || !int.has_error() {
                 *inner = Token::from(int);
                 return ty == ArgType::Integer;

@@ -1,12 +1,13 @@
 //! Parsing for the wconrad Whitespace assembly dialect.
 
-use enumset::enum_set;
-
 use crate::{
-    syntax::Opcode,
+    dialects::{wconrad::lex::Lexer, Dialect, DialectState},
+    lex::Lex,
+    syntax::{Cst, Opcode},
     tokens::{
         integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
-        mnemonics::{FoldedStr, MnemonicMap},
+        mnemonics::FoldedStr,
+        Token,
     },
 };
 
@@ -16,12 +17,9 @@ use crate::{
 // - Create classes of integers, so that numbers can have signs, but labels
 //   can't.
 
-/// State for parsing the wconrad Whitespace assembly dialect.
-#[derive(Clone, Debug)]
-pub struct WConrad {
-    mnemonics: MnemonicMap,
-    integers: IntegerSyntax,
-}
+/// wconrad Whitespace assembly dialect.
+#[derive(Clone, Copy, Debug)]
+pub struct WConrad;
 
 macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
     &[$((FoldedStr::exact($mnemonic), &[$(Opcode::$opcode),+])),+]
@@ -53,24 +51,27 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"readnum" => [Readi],
 };
 
-impl WConrad {
-    /// Constructs state for the wconrad dialect. Only one needs to be
-    /// constructed for parsing any number of programs.
-    pub fn new() -> Self {
-        WConrad {
-            mnemonics: MnemonicMap::from(MNEMONICS),
-            integers: Self::new_integers(),
+impl Dialect for WConrad {
+    const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = MNEMONICS;
+
+    fn parse<'s>(_src: &'s [u8], _dialect: &DialectState<Self>) -> Cst<'s> {
+        todo!()
+    }
+
+    fn lex<'s>(src: &'s [u8], _dialect: &DialectState<Self>) -> Vec<Token<'s>> {
+        let mut lex = Lexer::new(src);
+        let mut toks = Vec::new();
+        loop {
+            let tok = lex.next_token();
+            if let Token::Eof(_) = tok {
+                break;
+            }
+            toks.push(tok);
         }
+        toks
     }
 
-    /// Gets the integer syntax description for this dialect.
-    ///
-    /// See [`WConrad::new_integers`] for the grammar.
-    pub fn integers(&self) -> &IntegerSyntax {
-        &self.integers
-    }
-
-    /// Gets the integer syntax description for this dialect.
+    /// Constructs an integer syntax description for this dialect.
     ///
     /// # Syntax
     ///
@@ -81,10 +82,10 @@ impl WConrad {
     /// wconrad has no bases, so choose a style close to Ruby, but without `0`
     /// octal. Ruby has `0x`/`0X` for hexadecimal, `0`/`0o`/`0O` for octal,
     /// `0b`/`0B` for binary, and `0d`/`0D` or bare for decimal.
-    pub const fn new_integers() -> IntegerSyntax {
+    fn make_integers() -> IntegerSyntax {
         IntegerSyntax {
             sign_style: SignStyle::NegPos,
-            base_styles: enum_set!(BaseStyle::Decimal),
+            base_styles: BaseStyle::Decimal.into(),
             digit_sep: DigitSep::None,
             min_value: None,
             max_value: None,
