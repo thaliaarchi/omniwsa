@@ -84,9 +84,9 @@ instruction ::=
     | (?i)"jumpz" label
     | (?i)"jumpn" label
     | (?i)"jumpp" label
+    | ((?i)"jumppn" | (?i)"jumpnp") label
     | (?i)"jumpnz" label
     | (?i)"jumppz" label
-    | ((?i)"jumppn" | (?i)"jumpnp") label
     | (?i)"ret"
     | (?i)"exit"
     | (?i)"outn"
@@ -124,9 +124,9 @@ Mnemonics are compared with effectively ASCII case folding.
   `s` and 0
 - `retrieve n` => `push n / retrieve`
 - `jumpp l` => `push 0 / swap / sub / jn l`
+- `jumppn l` or `jumpnp l` => `jz __internal_label_{id} / jmp l / __internal_label_{id}:`
 - `jumpnz l` => `push 1 / sub / jn l`
 - `jumppz l` => `jn __internal_label_{id} / jmp l / __internal_label_{id}:`
-- `jumppn l` => `jz __internal_label_{id} / jmp l / __internal_label_{id}:`
 - `or n` => `push n / or`
 - `and n` => `push n / and`
 - `or` => Whitespace TSLS

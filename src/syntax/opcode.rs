@@ -213,14 +213,14 @@ opcodes! {
     /// __trans__{pc}__0__:
     ///     drop
     /// ```
-    BurghardJmpP(Label),
+    BurghardJmpPos(Label),
     /// Burghard `jumpnp` or `jumppn`. `jumpnp l` =>
     /// ```wsa
     ///     jz __trans__{pc}__1__
     ///     jmp l
     /// __trans__{pc}__1__:
     /// ```
-    BurghardJmpNP(Label),
+    BurghardJmpNonZero(Label),
     /// Burghard `jumpnz`: `jumpnz l` =>
     /// ```wsa
     ///     dup / jn __trans__{pc}__2__
@@ -231,22 +231,22 @@ opcodes! {
     /// __trans__{pc}__3__:
     ///     drop
     /// ```
-    BurghardJmpNZ(Label),
+    BurghardJmpNonPos(Label),
     /// Burghard `jumppz`:
     /// `jumppz l` => `jn __trans__{pc}__4__ / jmp l / __trans__{pc}__4__:`
-    BurghardJmpPZ(Label),
+    BurghardJmpNonNeg(Label),
     /// voliva `jumpp`:
     /// `jumpp l` => `push 0 / swap / sub / jn l`.
-    VolivaJmpP(Label),
+    VolivaJmpPos(Label),
     /// voliva `jumpnp` or `jumppn`:
     /// `jumpnp l` => `jz __internal_label_{id} / jmp l / __internal_label_{id}:`.
-    VolivaJmpNP(Label),
+    VolivaJmpNonZero(Label),
     /// voliva `jumpnz`:
     /// `jumpnz l` => `push 1 / sub / jn l`.
-    VolivaJmpNZ(Label),
+    VolivaJmpNonPos(Label),
     /// voliva `jumppz`:
     /// `jumppz l` => `jn __internal_label_{id} / jmp l / __internal_label_{id}:`.
-    VolivaJmpPZ(Label),
+    VolivaJmpNonNeg(Label),
     /// Burghard `test`:
     /// `test n` => `dup / push n / sub` (Burghard and rdebath-Burghard).
     BurghardTest(Integer),
