@@ -1,0 +1,15 @@
+{
+  "name": "onmiwsa-client",
+  "displayName": "omniwsa client",
+  "description": "Whitespace assembly VS Code extension",
+  "author": "Thalia Archibald",
+  "publisher": "thaliaarchi",
+  "license": "MPL-2.0",
+  "version": "0.1.0",
+  "repository": { "type": "git", "url": "https://github.com/thaliaarchi/omniwsa" },
+  "categories": ["Programming Languages"],
+  "keywords": ["Whitespace"],
+  "engines": { "vscode": "^1.95.0" },
+  "dependencies": { "vscode-languageclient": "^9.0.1" },
+  "devDependencies": { "@types/vscode": "^1.95.0" }
+}
