@@ -3,7 +3,7 @@
 use enumset::EnumSet;
 
 use crate::{
-    dialects::Wsf,
+    dialects::{dialect::DialectState, Wsf},
     lex::{Lex, Scanner},
     tokens::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
@@ -16,14 +16,14 @@ use crate::{
 /// A lexer for tokens in the wsf Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Lexer<'s, 'd> {
-    dialect: &'d Wsf,
+    dialect: &'d DialectState<Wsf>,
     scan: Scanner<'s>,
     digit_buf: Vec<u8>,
 }
 
 impl<'s, 'd> Lexer<'s, 'd> {
     /// Constructs a new lexer for wsf-dialect source text.
-    pub fn new(src: &'s [u8], dialect: &'d Wsf) -> Self {
+    pub fn new(src: &'s [u8], dialect: &'d DialectState<Wsf>) -> Self {
         Lexer {
             dialect,
             scan: Scanner::new(src),

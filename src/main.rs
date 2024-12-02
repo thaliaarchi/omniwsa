@@ -10,7 +10,7 @@ use std::{
 use clap::{Parser, ValueEnum};
 use omniwsa::{
     codegen::{Token, TokenWrite},
-    dialects::{Burghard, Palaiologos},
+    dialects::{Burghard, Dialect as _, Palaiologos},
 };
 
 // TODO:

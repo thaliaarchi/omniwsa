@@ -10,7 +10,7 @@ use bstr::ByteSlice;
 use glob::glob;
 
 use crate::{
-    dialects::{Burghard, Palaiologos},
+    dialects::{Burghard, Dialect as _, Palaiologos},
     syntax::Pretty,
 };
 

@@ -1,14 +1,12 @@
 //! Parsing for the voliva Whitespace assembly dialect.
 
-use enumset::enum_set;
-
 use crate::{
-    dialects::voliva::lex::Lexer,
+    dialects::{dialect::DialectState, voliva::lex::Lexer, Dialect},
     lex::Lex,
-    syntax::Opcode,
+    syntax::{Cst, Opcode},
     tokens::{
         integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
-        mnemonics::{FoldedStr, MnemonicMap},
+        mnemonics::FoldedStr,
         Token,
     },
 };
@@ -16,12 +14,9 @@ use crate::{
 // TODO:
 // - Handle allowing signs for only decimal integer literals in `IntegerSyntax`.
 
-/// State for parsing the voliva Whitespace assembly dialect.
-#[derive(Clone, Debug)]
-pub struct Voliva {
-    mnemonics: MnemonicMap,
-    integers: IntegerSyntax,
-}
+/// voliva Whitespace assembly dialect.
+#[derive(Clone, Copy, Debug)]
+pub struct Voliva;
 
 macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
     &[$((FoldedStr::exact($mnemonic), &[$(Opcode::$opcode),+])),+]
@@ -66,19 +61,15 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"include" => [VolivaInclude],
 };
 
-impl Voliva {
-    /// Constructs state for the voliva dialect. Only one needs to be
-    /// constructed for parsing any number of programs.
-    pub fn new() -> Self {
-        Voliva {
-            mnemonics: MnemonicMap::from(MNEMONICS),
-            integers: Voliva::new_integers(),
-        }
+impl Dialect for Voliva {
+    const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = MNEMONICS;
+
+    fn parse<'s>(_src: &'s [u8], _dialect: &DialectState<Self>) -> Cst<'s> {
+        todo!()
     }
 
-    /// Lexes a Whitespace assembly program in the voliva dialect.
-    pub fn lex<'s>(&self, src: &'s [u8]) -> Vec<Token<'s>> {
-        let mut lex = Lexer::new(src, self);
+    fn lex<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Vec<Token<'s>> {
+        let mut lex = Lexer::new(src, dialect);
         let mut toks = Vec::new();
         loop {
             let tok = lex.next_token();
@@ -88,18 +79,6 @@ impl Voliva {
             toks.push(tok);
         }
         toks
-    }
-
-    /// Gets the mnemonic map for this dialect.
-    pub fn mnemonics(&self) -> &MnemonicMap {
-        &self.mnemonics
-    }
-
-    /// Gets the integer syntax description for this dialect.
-    ///
-    /// See [`Voliva::new_integers`] for the grammar.
-    pub fn integers(&self) -> &IntegerSyntax {
-        &self.integers
     }
 
     /// Constructs an integer syntax description for this dialect.
@@ -113,19 +92,17 @@ impl Voliva {
     ///     | ("0o" | "0O") [0-7]+
     ///     | ("0x" | "0X") [0-9 a-f A-F]+
     /// ```
-    pub const fn new_integers() -> IntegerSyntax {
+    fn make_integers() -> IntegerSyntax {
         IntegerSyntax {
             // Explicit signs are only allowed for decimal.
             sign_style: SignStyle::NegPos,
-            base_styles: enum_set!(
-                BaseStyle::Decimal
-                    | BaseStyle::BinPrefix_0b
-                    | BaseStyle::BinPrefix_0B
-                    | BaseStyle::OctPrefix_0o
-                    | BaseStyle::OctPrefix_0O
-                    | BaseStyle::HexPrefix_0x
-                    | BaseStyle::HexPrefix_0X
-            ),
+            base_styles: BaseStyle::Decimal
+                | BaseStyle::BinPrefix_0b
+                | BaseStyle::BinPrefix_0B
+                | BaseStyle::OctPrefix_0o
+                | BaseStyle::OctPrefix_0O
+                | BaseStyle::HexPrefix_0x
+                | BaseStyle::HexPrefix_0X,
             digit_sep: DigitSep::None,
             min_value: None,
             max_value: None,
