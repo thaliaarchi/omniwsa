@@ -108,6 +108,11 @@ filename ::= WORD | VARIABLE | STRING
 
 Mnemonics are compared with effectively ASCII case folding.
 
+Programs are decoded as UTF-8 and each invalid *byte* is replaced with the
+U+FFFD replacement character. Thus, the input cannot have unpaired surrogate
+halves. The tokenizer is careful to process UTF-8 code points instead of UTF-16
+code units.
+
 ## Generation
 
 - `add 0` => nothing
