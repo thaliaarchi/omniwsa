@@ -19,6 +19,12 @@ all: $(WSA) $(WS) $(ERR)
 %.err: %.wsa
 	! $(WSC) -t -f asm $< 2> $@
 
+fail/hash_in_import.wsa fail/hash_in_export.wsa: fail/path\#with_hash.wsf
+
+.INTERMEDIATE: fail/path\#with_hash.wsf
+fail/path\#with_hash.wsf:
+	touch $@
+
 .PHONY: clean
 clean:
 	rm -f $(WSA) $(WS) $(ERR)

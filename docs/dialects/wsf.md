@@ -42,7 +42,7 @@ inst ::=
     | "readi"
 
 path ::= "\"" [^"\n#]+ "\""
-string ::= "\"" ([^\\"#] | "\\" [abtnvfre"\\]){,40} "\""
+string ::= "\"" ([^"\\#] | "\\" [abtnvfre"\\]){,40} "\""
 integer ::=
     | "-"? [0-9]+
     | "-"? ("0x" | "0X") [0-9 a-f A-F]{2}
@@ -181,7 +181,7 @@ TODO: Expand section.
 ## Bugs in the assembler
 
 - Non-space whitespace characters in strings and chars are replaced with space.
-- `#` cannot appear in strings.
+- `#` cannot appear in strings or paths.
 - Strings are limited to 40 characters.
 - Many features are limited to a fixed number of occurrences per line.
 - Separation between tokens is suspect.
