@@ -177,6 +177,13 @@ impl<'s> Scanner<'s> {
         self.has_invalid_utf8 |= ch.is_none();
     }
 
+    /// Consumes the next ASCII character. The caller must guarantee that the
+    /// next character is ASCII.
+    #[inline]
+    pub fn bump_ascii(&mut self) {
+        self.end.move_ascii(self.src[self.end.offset])
+    }
+
     /// Consumes the next character. The caller must guarantee that the next
     /// character is not LF.
     pub fn bump_char_no_lf(&mut self) {
@@ -185,13 +192,6 @@ impl<'s> Scanner<'s> {
         self.end.offset += size;
         self.end.column = self.end.column.saturating_add(1);
         self.has_invalid_utf8 |= ch.is_none();
-    }
-
-    /// Consumes the next ASCII character. The caller must guarantee that the
-    /// next character is ASCII.
-    #[inline]
-    pub fn bump_ascii(&mut self) {
-        self.end.move_ascii(self.src[self.end.offset])
     }
 
     /// Consumes a number of ASCII characters. The caller must guarantee that
@@ -210,8 +210,20 @@ impl<'s> Scanner<'s> {
         self.end.column = self.end.column.saturating_add(count as u32);
     }
 
+    /// Consumes the next character if it is valid UTF-8 and matches the
+    /// predicate.
+    pub fn bump_if_char<F: FnOnce(char) -> bool>(&mut self, predicate: F) -> bool {
+        let (ch, size) = bstr::decode_utf8(self.rest());
+        if ch.is_some_and(|ch| predicate(ch)) {
+            self.end.move_char(ch, size);
+            true
+        } else {
+            false
+        }
+    }
+
     /// Consumes the next character if it is ASCII and matches the predicate.
-    pub fn bump_if_ascii<F: FnMut(u8) -> bool>(&mut self, mut predicate: F) -> bool {
+    pub fn bump_if_ascii<F: FnOnce(u8) -> bool>(&mut self, predicate: F) -> bool {
         if self
             .peek_byte()
             .is_some_and(|b| b.is_ascii() && predicate(b))
@@ -223,16 +235,58 @@ impl<'s> Scanner<'s> {
         }
     }
 
+    /// Consumes the next character if it is not valid UTF-8 or does not match
+    /// the predicate.
+    pub fn bump_unless_char<F: FnOnce(char) -> bool>(&mut self, predicate: F) -> bool {
+        let (ch, size) = bstr::decode_utf8(self.rest());
+        match ch {
+            Some(ch) if predicate(ch) => false,
+            None if size == 0 => false,
+            _ => {
+                self.end.move_char(ch, size);
+                true
+            }
+        }
+    }
+
+    /// Consumes the next character if it is not ASCII or does not match the
+    /// predicate.
+    pub fn bump_unless_ascii<F: FnOnce(u8) -> bool>(&mut self, predicate: F) -> bool {
+        let Some(b) = self.peek_byte() else {
+            return false;
+        };
+        if b.is_ascii() {
+            if predicate(b) {
+                return false;
+            }
+            self.bump_ascii();
+        } else {
+            self.bump_char_no_lf();
+        }
+        true
+    }
+
+    /// Consumes characters that are valid UTF-8 and match the predicate and
+    /// returns the consumed text.
+    pub fn bump_while_char<F: FnMut(char) -> bool>(&mut self, mut predicate: F) -> &'s [u8] {
+        let start = self.end.offset;
+        while self.bump_if_char(&mut predicate) {}
+        &self.src[start..self.end.offset]
+    }
+
     /// Consumes characters that are ASCII and match the predicate and returns
     /// the consumed text.
     pub fn bump_while_ascii<F: FnMut(u8) -> bool>(&mut self, mut predicate: F) -> &'s [u8] {
         let start = self.end.offset;
-        while self
-            .peek_byte()
-            .is_some_and(|b| b.is_ascii() && predicate(b))
-        {
-            self.bump_ascii();
-        }
+        while self.bump_if_ascii(&mut predicate) {}
+        &self.src[start..self.end.offset]
+    }
+
+    /// Consumes characters, stopping before the first character that is valid
+    /// UTF-8 and matches the predicate, and returns the consumed text.
+    pub fn bump_until_char<F: FnMut(char) -> bool>(&mut self, mut predicate: F) -> &'s [u8] {
+        let start = self.end.offset;
+        while self.bump_unless_char(&mut predicate) {}
         &self.src[start..self.end.offset]
     }
 
@@ -240,16 +294,7 @@ impl<'s> Scanner<'s> {
     /// and matches the predicate, and returns the consumed text.
     pub fn bump_until_ascii<F: FnMut(u8) -> bool>(&mut self, mut predicate: F) -> &'s [u8] {
         let start = self.end.offset;
-        while let Some(b) = self.peek_byte() {
-            if b.is_ascii() {
-                if predicate(b) {
-                    break;
-                }
-                self.bump_ascii();
-            } else {
-                self.bump_char_no_lf();
-            }
-        }
+        while self.bump_unless_ascii(&mut predicate) {}
         &self.src[start..self.end.offset]
     }
 
@@ -284,6 +329,7 @@ impl Pos {
     /// Moves the position by the width of the char.
     #[inline(always)]
     fn move_char(&mut self, ch: Option<char>, size: usize) {
+        debug_assert_ne!(size, 0);
         self.offset += size;
         self.column = self.column.saturating_add(1);
         if ch == Some('\n') {

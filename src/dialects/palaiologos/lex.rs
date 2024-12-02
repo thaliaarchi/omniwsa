@@ -198,14 +198,14 @@ fn scan_char_literal<'s>(scan: &mut Scanner<'s>) -> CharToken<'s> {
                 scan.bump_ascii();
                 break literal;
             }
-            Some(b'\\') if scan.bump_if_ascii(|b| b != b'\n') => {
+            Some(b'\\') if scan.bump_unless_ascii(|b| b == b'\n') => {
                 continue;
             }
             _ => {
                 errors |= CharError::Unterminated;
                 scan.backtrack(start);
                 scan.bump_if_ascii(|ch| ch == b'\\');
-                scan.bump_if_ascii(|ch| ch != b'\n');
+                scan.bump_unless_ascii(|ch| ch == b'\n');
                 break scan.text();
             }
         }
@@ -256,7 +256,7 @@ fn scan_string_literal<'s>(scan: &mut Scanner<'s>) -> StringToken<'s> {
         }
         if b == Some(b'\\') {
             backslashes += 1;
-            if scan.bump_if_ascii(|b| b != b'\n') {
+            if scan.bump_unless_ascii(|b| b == b'\n') {
                 continue;
             }
         }
