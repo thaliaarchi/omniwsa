@@ -281,23 +281,23 @@ impl<'s> WsaInst<'s> {
                 w.write_inst(Inst::Push(Integer::ONE.into()))?;
                 w.write_inst(Inst::Add)
             }),
-            Opcode::BurghardJmpP
-            | Opcode::BurghardJmpNP
-            | Opcode::BurghardJmpNZ
-            | Opcode::BurghardJmpPZ => todo!(),
-            Opcode::VolivaJmpP => {
+            Opcode::BurghardJmpPos
+            | Opcode::BurghardJmpNonZero
+            | Opcode::BurghardJmpNonPos
+            | Opcode::BurghardJmpNonNeg => todo!(),
+            Opcode::VolivaJmpPos => {
                 w.write_inst(Inst::Push((&Integer::ZERO).into()))?;
                 w.write_inst(Inst::Swap)?;
                 w.write_inst(Inst::Sub)?;
                 w.write_inst(Inst::Jn(self.label(0)))
             }
-            Opcode::VolivaJmpNP => todo!(),
-            Opcode::VolivaJmpNZ => {
+            Opcode::VolivaJmpNonZero => todo!(),
+            Opcode::VolivaJmpNonPos => {
                 w.write_inst(Inst::Push(Integer::ONE.into()))?;
                 w.write_inst(Inst::Sub)?;
                 w.write_inst(Inst::Jn(self.label(0)))
             }
-            Opcode::VolivaJmpPZ => todo!(),
+            Opcode::VolivaJmpNonNeg => todo!(),
             Opcode::BurghardTest => {
                 w.write_inst(Inst::Dup)?;
                 w.write_inst(Inst::Push(self.integer(0)))?;
