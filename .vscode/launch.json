@@ -2,14 +2,66 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
-      "name": "Launch Client",
       "runtimeExecutable": "${execPath}",
-      "args": ["--extensionDevelopmentPath=${workspaceRoot}"],
-      "outFiles": ["${workspaceRoot}/omniwsa-vscode/client/out/**/*.js"],
-      "autoAttachChildProcesses": true,
-      "preLaunchTask": { "type": "npm", "script": "watch" }
+      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/omniwsa-vscode"],
+      "outFiles": ["${workspaceFolder}/omniwsa-vscode/client/out/**/*.js"],
+      "preLaunchTask": "Build Server and Extension",
+      "skipFiles": ["<node_internals>/**/*.js"],
+      "env": { "OMNIWSA_LS_DEBUG_PATH": "${workspaceFolder}/target/debug/omniwsa-ls" }
+    },
+    {
+      "name": "Run Extension (Release Build)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/omniwsa-vscode"],
+      "outFiles": ["${workspaceFolder}/omniwsa-vscode/client/out/**/*.js"],
+      "preLaunchTask": "Build Server (Release) and Extension",
+      "skipFiles": ["<node_internals>/**/*.js"],
+      "env": { "OMNIWSA_LS_DEBUG_PATH": "${workspaceFolder}/target/release/omniwsa-ls" }
+    },
+    {
+      "name": "Run With Extensions",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--disable-extension",
+        "thaliaarchi.omniwsa",
+        "--extensionDevelopmentPath=${workspaceFolder}/omniwsa-vscode"
+      ],
+      "outFiles": ["${workspaceFolder}/omniwsa-vscode/client/out/**/*.js"],
+      "preLaunchTask": "Build Server and Extension",
+      "skipFiles": ["<node_internals>/**/*.js"],
+      "env": { "OMNIWSA_LS_DEBUG_PATH": "${workspaceFolder}/target/debug/omniwsa-ls" }
+    },
+    {
+      "name": "Run With Extensions (Release Build)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--disable-extension",
+        "thaliaarchi.omniwsa",
+        "--extensionDevelopmentPath=${workspaceFolder}/omniwsa-vscode"
+      ],
+      "outFiles": ["${workspaceFolder}/omniwsa-vscode/client/out/**/*.js"],
+      "preLaunchTask": "Build Server (Release) and Extension",
+      "skipFiles": ["<node_internals>/**/*.js"],
+      "env": { "OMNIWSA_LS_DEBUG_PATH": "${workspaceFolder}/target/release/omniwsa-ls" }
+    },
+    {
+      "name": "Run Installed Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/omniwsa-vscode"],
+      "outFiles": ["${workspaceFolder}/omniwsa-vscode/client/out/**/*.js"],
+      "preLaunchTask": "Build Extension",
+      "skipFiles": ["<node_internals>/**/*.js"]
     }
   ]
 }
