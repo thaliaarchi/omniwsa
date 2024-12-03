@@ -105,7 +105,8 @@ impl<'s> Scanner<'s> {
     /// Backtracks to an earlier position in the current token.
     #[inline]
     pub fn backtrack(&mut self, end: Pos) {
-        debug_assert!(self.start <= end && end <= self.end);
+        debug_assert!(self.start <= end, "backtracked before start");
+        debug_assert!(end <= self.end, "backtracked after end");
         self.end = end;
     }
 
@@ -362,7 +363,7 @@ impl PartialOrd for Pos {
         match self.offset.cmp(&other.offset) {
             Ordering::Less
                 if self.line < other.line
-                    || self.line == other.line && self.column < other.line =>
+                    || self.line == other.line && self.column < other.column =>
             {
                 Some(Ordering::Less)
             }
@@ -375,7 +376,7 @@ impl PartialOrd for Pos {
             {
                 Some(Ordering::Greater)
             }
-            _ => panic!("compared positions from different sources"),
+            _ => panic!("compared positions from different sources: {self:?} and {other:?}"),
         }
     }
 }
