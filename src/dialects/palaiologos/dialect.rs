@@ -1,11 +1,18 @@
 //! Parsing for the Palaiologos Whitespace assembly dialect.
 
 use crate::{
-    dialects::{define_mnemonics, dialect::DialectState, palaiologos::parse::Parser, Dialect},
+    dialects::{
+        define_mnemonics,
+        dialect::DialectState,
+        palaiologos::{lex::Lexer, parse::Parser},
+        Dialect,
+    },
+    lex::Lex,
     syntax::{Cst, Opcode},
     tokens::{
         integer::{BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
         mnemonics::FoldedStr,
+        Token,
     },
 };
 
@@ -56,6 +63,19 @@ impl Dialect for Palaiologos {
 
     fn parse<'s>(src: &'s [u8], dialect: &DialectState<Palaiologos>) -> Cst<'s> {
         Parser::new(src, dialect).parse()
+    }
+
+    fn lex<'s>(src: &'s [u8], dialect: &DialectState<Palaiologos>) -> Vec<Token<'s>> {
+        let mut lex = Lexer::new(src, dialect);
+        let mut toks = Vec::new();
+        loop {
+            let tok = lex.next_token();
+            if let Token::Eof(_) = tok {
+                break;
+            }
+            toks.push(tok);
+        }
+        toks
     }
 
     /// Constructs an integer syntax description for this dialect.
