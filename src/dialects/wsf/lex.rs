@@ -9,9 +9,15 @@ use crate::{
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
         label::LabelColonToken,
         spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken},
+        string::Encoding,
         ErrorToken, Token, WordToken,
     },
 };
+
+// TODO:
+// - Lex words and fused tokens.
+// - Handle \x char escapes. Change `unescape_byte` to return
+//   `enum Escape { Byte(u8), Hex2, Invalid }`.
 
 /// A lexer for tokens in the wsf Whitespace assembly dialect.
 #[derive(Clone, Debug)]
@@ -58,6 +64,14 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                     .parse(scan.text().into(), &mut self.digit_buf)
                     .into()
             }
+            '"' => scan
+                .string_lit_oneline()
+                .unescape_simple(unescape_byte(true), Encoding::Bytes)
+                .into(),
+            '\'' => scan
+                .char_lit_oneline()
+                .unescape_simple(unescape_byte(false), Encoding::Bytes)
+                .into(),
             ':' => LabelColonToken.into(),
             '#' => {
                 let text = scan.bump_until_lf();
@@ -97,5 +111,24 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
                 Token::from(ErrorToken::from(scan.text()))
             }
         }
+    }
+}
+
+/// Resolves a backslash-escaped byte to its represented value.
+#[inline]
+fn unescape_byte(double_quote: bool) -> impl Fn(u8) -> Option<u8> {
+    move |b| match b {
+        b'"' if double_quote => Some(b'"'),
+        b'\'' if !double_quote => Some(b'\''),
+        b'\\' => Some(b'\\'),
+        b'a' => Some(b'\x07'),
+        b'b' => Some(b'\x08'),
+        b'e' => Some(b'\x1b'),
+        b'f' => Some(b'\x0c'),
+        b'n' => Some(b'\n'),
+        b'r' => Some(b'\r'),
+        b't' => Some(b'\t'),
+        b'v' => Some(b'\x0b'),
+        _ => None,
     }
 }
