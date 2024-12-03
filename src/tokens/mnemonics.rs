@@ -200,9 +200,21 @@ impl CaseFold {
 
     /// Detects the minimum case folding features needed for this byte string.
     const fn detect(&self, s: &[u8]) -> CaseFold {
-        if matches!(self, CaseFold::Exact) {
-            return CaseFold::Exact;
+        match self {
+            CaseFold::Exact => return CaseFold::Exact,
+            CaseFold::Ascii => {
+                let mut i = 0;
+                while i < s.len() {
+                    if s[i].is_ascii_alphabetic() {
+                        return CaseFold::Ascii;
+                    }
+                    i += 1;
+                }
+                return CaseFold::Exact;
+            }
+            _ => {}
         }
+
         let mut has_ascii = false;
         let mut has_i = false;
         let mut has_k = false;
