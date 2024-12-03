@@ -1,12 +1,11 @@
 //! Parsing for the wconrad Whitespace assembly dialect.
 
 use crate::{
-    dialects::{wconrad::lex::Lexer, Dialect, DialectState},
+    dialects::{define_mnemonics, wconrad::lex::Lexer, Dialect, DialectState},
     lex::Lex,
-    syntax::{Cst, Opcode},
+    syntax::Cst,
     tokens::{
         integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
-        mnemonics::FoldedStr,
         Token,
     },
 };
@@ -21,38 +20,34 @@ use crate::{
 #[derive(Clone, Copy, Debug)]
 pub struct WConrad;
 
-macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
-    &[$((FoldedStr::exact($mnemonic), &[$(Opcode::$opcode),+])),+]
-}}
-static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
-    b"push" => [Push],
-    b"dup" => [Dup],
-    b"copy" => [Copy],
-    b"swap" => [Swap],
-    b"discard" => [Drop],
-    b"slide" => [Slide],
-    b"add" => [Add],
-    b"sub" => [Sub],
-    b"mul" => [Mul],
-    b"div" => [Div],
-    b"mod" => [Mod],
-    b"store" => [Store],
-    b"retrieve" => [Retrieve],
-    b"label" => [Label],
-    b"call" => [Call],
-    b"jump" => [Jmp],
-    b"jz" => [Jz],
-    b"jn" => [Jn],
-    b"ret" => [Ret],
-    b"exit" => [End],
-    b"outchar" => [Printc],
-    b"outnum" => [Printi],
-    b"readchar" => [Readc],
-    b"readnum" => [Readi],
-};
-
 impl Dialect for WConrad {
-    const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = MNEMONICS;
+    define_mnemonics! {
+        fold = Exact,
+        b"push" => [Push],
+        b"dup" => [Dup],
+        b"copy" => [Copy],
+        b"swap" => [Swap],
+        b"discard" => [Drop],
+        b"slide" => [Slide],
+        b"add" => [Add],
+        b"sub" => [Sub],
+        b"mul" => [Mul],
+        b"div" => [Div],
+        b"mod" => [Mod],
+        b"store" => [Store],
+        b"retrieve" => [Retrieve],
+        b"label" => [Label],
+        b"call" => [Call],
+        b"jump" => [Jmp],
+        b"jz" => [Jz],
+        b"jn" => [Jn],
+        b"ret" => [Ret],
+        b"exit" => [End],
+        b"outchar" => [Printc],
+        b"outnum" => [Printi],
+        b"readchar" => [Readc],
+        b"readnum" => [Readi],
+    }
 
     fn parse<'s>(_src: &'s [u8], _dialect: &DialectState<Self>) -> Cst<'s> {
         todo!()

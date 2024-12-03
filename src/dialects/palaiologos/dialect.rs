@@ -1,62 +1,55 @@
 //! Parsing for the Palaiologos Whitespace assembly dialect.
 
 use crate::{
-    dialects::{dialect::DialectState, palaiologos::parse::Parser, Dialect},
-    syntax::{Cst, Opcode},
-    tokens::{
-        integer::{BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
-        mnemonics::FoldedStr,
-    },
+    dialects::{define_mnemonics, dialect::DialectState, palaiologos::parse::Parser, Dialect},
+    syntax::Cst,
+    tokens::integer::{BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
 };
 
 /// Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Copy, Debug)]
 pub struct Palaiologos;
 
-macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
-    &[$((FoldedStr::ascii($mnemonic), &[$(Opcode::$opcode),+])),+]
-}}
-static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
-    b"psh" => [Push, Push0],
-    b"push" => [Push, Push0],
-    b"dup" => [Dup],
-    b"copy" => [Copy],
-    b"take" => [Copy],
-    b"pull" => [Copy],
-    b"xchg" => [Swap],
-    b"swp" => [Swap],
-    b"swap" => [Swap],
-    b"drop" => [Drop],
-    b"dsc" => [Drop],
-    b"slide" => [Slide],
-    b"add" => [Add, AddConstRhs],
-    b"sub" => [Sub, SubConstRhs],
-    b"mul" => [Mul, MulConstRhs],
-    b"div" => [Div, DivConstRhs],
-    b"mod" => [Mod, ModConstRhs],
-    b"sto" => [Store, StoreConstRhs, StoreConstConst],
-    b"rcl" => [Retrieve, RetrieveConst],
-    b"call" => [Call],
-    b"gosub" => [Call],
-    b"jsr" => [Call],
-    b"jmp" => [Jmp],
-    b"j" => [Jmp],
-    b"b" => [Jmp],
-    b"jz" => [Jz],
-    b"bz" => [Jz],
-    b"jltz" => [Jn],
-    b"bltz" => [Jn],
-    b"ret" => [Ret],
-    b"end" => [End],
-    b"putc" => [Printc, PrintcConst],
-    b"putn" => [Printi, PrintiConst],
-    b"getc" => [Readc, ReadcConst],
-    b"getn" => [Readi, ReadiConst],
-    b"rep" => [PalaiologosRep],
-};
-
 impl Dialect for Palaiologos {
-    const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = MNEMONICS;
+    define_mnemonics! {
+        fold = Ascii,
+        b"psh" => [Push, Push0],
+        b"push" => [Push, Push0],
+        b"dup" => [Dup],
+        b"copy" => [Copy],
+        b"take" => [Copy],
+        b"pull" => [Copy],
+        b"xchg" => [Swap],
+        b"swp" => [Swap],
+        b"swap" => [Swap],
+        b"drop" => [Drop],
+        b"dsc" => [Drop],
+        b"slide" => [Slide],
+        b"add" => [Add, AddConstRhs],
+        b"sub" => [Sub, SubConstRhs],
+        b"mul" => [Mul, MulConstRhs],
+        b"div" => [Div, DivConstRhs],
+        b"mod" => [Mod, ModConstRhs],
+        b"sto" => [Store, StoreConstRhs, StoreConstConst],
+        b"rcl" => [Retrieve, RetrieveConst],
+        b"call" => [Call],
+        b"gosub" => [Call],
+        b"jsr" => [Call],
+        b"jmp" => [Jmp],
+        b"j" => [Jmp],
+        b"b" => [Jmp],
+        b"jz" => [Jz],
+        b"bz" => [Jz],
+        b"jltz" => [Jn],
+        b"bltz" => [Jn],
+        b"ret" => [Ret],
+        b"end" => [End],
+        b"putc" => [Printc, PrintcConst],
+        b"putn" => [Printi, PrintiConst],
+        b"getc" => [Readc, ReadcConst],
+        b"getn" => [Readi, ReadiConst],
+        b"rep" => [PalaiologosRep],
+    }
 
     fn parse<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Cst<'s> {
         Parser::new(src, dialect).parse()
@@ -93,8 +86,8 @@ impl Dialect for Palaiologos {
 pub(super) const MAX_MNEMONIC_LEN: usize = {
     let mut max_len = 0;
     let mut i = 0;
-    while i < MNEMONICS.len() {
-        let len = MNEMONICS[i].0.s.len();
+    while i < Palaiologos::MNEMONICS.len() {
+        let len = Palaiologos::MNEMONICS[i].0.s.len();
         if len > max_len {
             max_len = len;
         }
