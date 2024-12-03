@@ -62,7 +62,7 @@ impl<'s> Scanner<'s> {
     /// Scans a single-line character literal. The scanner must be just after
     /// the open `'`.
     pub fn char_lit_oneline(&mut self) -> CharScan<'s> {
-        let start = self.start();
+        let start = self.end();
         let mut errors = EnumSet::empty();
         let literal = loop {
             self.bump_until_ascii(|ch| ch == b'\'' || ch == b'\\' || ch == b'\n');
