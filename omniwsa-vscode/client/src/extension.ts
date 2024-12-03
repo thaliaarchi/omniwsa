@@ -1,4 +1,4 @@
-import * as path from "path";
+import { env } from "process";
 import { ExtensionContext } from "vscode";
 
 import {
@@ -11,15 +11,10 @@ import {
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
+  const command = env.OMNIWSA_LS_DEBUG_PATH ?? "omniwsa-ls";
   const serverOptions: ServerOptions = {
-    run: {
-      command: context.asAbsolutePath(path.join("..", "target", "release", "omniwsa-ls")),
-      transport: TransportKind.stdio
-    },
-    debug: {
-      command: context.asAbsolutePath(path.join("..", "target", "debug", "omniwsa-ls")),
-      transport: TransportKind.stdio
-    },
+    run: { command, transport: TransportKind.stdio },
+    debug: { command, transport: TransportKind.stdio },
   };
 
   const clientOptions: LanguageClientOptions = {
