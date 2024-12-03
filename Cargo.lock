@@ -331,8 +331,10 @@ dependencies = [
 name = "omniwsa-ls"
 version = "0.1.0"
 dependencies = [
+ "bstr",
  "lsp-server",
  "lsp-types",
+ "omniwsa",
  "serde",
  "serde_json",
 ]
