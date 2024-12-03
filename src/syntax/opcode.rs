@@ -88,7 +88,7 @@ opcodes! {
     VolivaNot,
     /// voliva `and`.
     VolivaAnd,
-    /// voliva `debugger`.
+    /// voliva `dbg`.
     VolivaBreakpoint,
 
     // Standard instructions with overloaded arguments:
@@ -205,11 +205,11 @@ opcodes! {
     /// Whitelips `push` with a string: `push s` => `push c` for each character
     /// in `s` in reverse order.
     PushString(String),
-    /// Burghard `pushs`: `pushs s` => `push c` for each character in `s` and 0
-    /// in reverse order.
+    /// Burghard `pushs`: `pushs s` => `push c` for each character in `s` with a
+    /// terminating 0, in reverse order.
     PushString0(String),
     /// voliva `storestr`: `storestr s` => `dup / push c / store / push 1 / add`
-    /// for each character in `s` and 0.
+    /// for each character in `s` with a terminating 0.
     StoreString0(String),
     /// Burghard `jumpp`: `jumpp l` =>
     /// ```wsa
