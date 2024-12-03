@@ -7,9 +7,9 @@ use std::{
 use lsp_server::{Connection, Message, Request, Response};
 use lsp_types::{
     request::{Request as _, SemanticTokensFullRequest},
-    InitializeParams, SemanticToken, SemanticTokens, SemanticTokensFullOptions,
-    SemanticTokensLegend, SemanticTokensOptions, SemanticTokensParams, SemanticTokensResult,
-    SemanticTokensServerCapabilities, ServerCapabilities, WorkDoneProgressOptions,
+    InitializeParams, SemanticToken, SemanticTokenModifier, SemanticTokenType, SemanticTokens,
+    SemanticTokensFullOptions, SemanticTokensLegend, SemanticTokensOptions, SemanticTokensParams,
+    SemanticTokensResult, SemanticTokensServerCapabilities, ServerCapabilities,
 };
 use serde_json::{from_value as from_json, to_value as to_json};
 
@@ -36,12 +36,19 @@ fn server_capabilities() -> ServerCapabilities {
     ServerCapabilities {
         semantic_tokens_provider: Some(SemanticTokensServerCapabilities::SemanticTokensOptions(
             SemanticTokensOptions {
-                work_done_progress_options: WorkDoneProgressOptions {
-                    work_done_progress: Some(true), // TODO
-                },
+                work_done_progress_options: Default::default(),
                 legend: SemanticTokensLegend {
-                    token_types: vec![],     // TODO
-                    token_modifiers: vec![], // TODO
+                    token_types: vec![
+                        SemanticTokenType::FUNCTION,
+                        SemanticTokenType::KEYWORD,
+                        SemanticTokenType::COMMENT,
+                        SemanticTokenType::STRING,
+                        SemanticTokenType::NUMBER,
+                    ],
+                    token_modifiers: vec![
+                        SemanticTokenModifier::DECLARATION,
+                        SemanticTokenModifier::DEFINITION,
+                    ],
                 },
                 range: Some(false),
                 full: Some(SemanticTokensFullOptions::Bool(true)),

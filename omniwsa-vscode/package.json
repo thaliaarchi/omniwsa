@@ -16,8 +16,8 @@
     "languages": [{ "id": "whitespace-assembly", "extensions": [".wsa"], "aliases": ["Whitespace assembly", "wsa"] }]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -b",
+    "vscode:prepublish": "npm run build",
+    "build": "tsc -b",
     "watch": "tsc -b -w",
     "lint": "eslint",
     "postinstall": "cd client && npm install"
