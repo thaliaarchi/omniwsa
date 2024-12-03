@@ -32,7 +32,7 @@ impl<'s> Scanner<'s> {
     pub fn string_lit_oneline(&mut self) -> StringScan<'s> {
         let mut backslashes = 0;
         let mut errors = EnumSet::empty();
-        let literal = loop {
+        let text = loop {
             self.bump_until_ascii(|ch| ch == b'"' || ch == b'\\' || ch == b'\n');
             let b = self.peek_byte();
             if b == Some(b'"') {
@@ -41,6 +41,7 @@ impl<'s> Scanner<'s> {
                 break literal;
             }
             if b == Some(b'\\') {
+                self.bump_ascii();
                 backslashes += 1;
                 if self.bump_unless_ascii(|b| b == b'\n') {
                     continue;
@@ -53,7 +54,7 @@ impl<'s> Scanner<'s> {
             errors |= StringError::InvalidUtf8;
         }
         StringScan {
-            literal,
+            literal: text[1..].into(),
             backslashes,
             errors,
         }
@@ -204,6 +205,23 @@ mod tests {
     use enumset::enum_set;
 
     use super::*;
+
+    #[test]
+    fn scan_string() {
+        let mut scan = Scanner::new(b"\"abc\\n123\\\"456\"rest");
+        assert!(scan.bump_if_ascii(|b| b == b'"'));
+        let s = scan.string_lit_oneline();
+        assert_eq!(scan.text(), b"\"abc\\n123\\\"456\"");
+        assert_eq!(scan.rest(), b"rest");
+        assert_eq!(
+            s,
+            StringScan {
+                literal: b"abc\\n123\\\"456",
+                backslashes: 2,
+                errors: EnumSet::empty()
+            },
+        );
+    }
 
     #[test]
     fn unescape_char() {
