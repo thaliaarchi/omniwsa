@@ -71,3 +71,27 @@ impl<D: Dialect> DialectState<D> {
         &self.integers
     }
 }
+
+macro_rules! define_mnemonics {
+    (fold = $default_folding:ident, $($($folding:ident)? $mnemonic:literal => [$($opcode:ident),+],)+) => {
+        const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = {
+            static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = &[
+                $((
+                    $crate::tokens::mnemonics::FoldedStr::new_detect(
+                        $mnemonic,
+                        define_mnemonics!(@fold $($folding)?, $default_folding)
+                    ),
+                    &[$(Opcode::$opcode),+],
+                )),+
+            ];
+            MNEMONICS
+        };
+    };
+    (@fold , $default_folding:ident) => {
+        $crate::tokens::mnemonics::CaseFold::$default_folding
+    };
+    (@fold $folding:ident, $default_folding:ident) => {
+        $crate::tokens::mnemonics::CaseFold::$folding
+    };
+}
+pub(crate) use define_mnemonics;
