@@ -1,7 +1,7 @@
 # Respace Whitespace assembly
 
-- Source: [code](https://github.com/thaliaarchi/respace/blob/master/programs/preprocess.sh)
-  (last updated [2018-05-20](https://github.com/thaliaarchi/respace/blob/57b1313484880261c623dc5e371bbdd2b39b520f/programs/preprocess.sh))
+- Source: [https://github.com/thaliaarchi/respace](https://github.com/thaliaarchi/respace/blob/master/programs/preprocess.sh)
+  (last updated [2018-05-20](https://github.com/thaliaarchi/respace/commit/57b1313484880261c623dc5e371bbdd2b39b520f))
 - Corpus: [cpp/thaliaarchi-respace](https://github.com/wspace/corpus/tree/main/cpp/thaliaarchi-respace)
 
 ## Grammar

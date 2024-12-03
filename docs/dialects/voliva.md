@@ -1,7 +1,7 @@
 # voliva Whitespace assembly
 
-- Source: [code](https://github.com/voliva/wsa)
-  (last updated [2024-12-02](https://github.com/voliva/wsa/tree/dd86212a335faaff28ce53fc54bd60a8f7364d85))
+- Source: <https://github.com/voliva/wsa>
+  (last updated [2024-12-02](https://github.com/voliva/wsa/commit/dd86212a335faaff28ce53fc54bd60a8f7364d85))
 - Corpus: [typescript/voliva-wsa](https://github.com/wspace/corpus/tree/main/typescript/voliva-wsa)
 
 ## Grammar

@@ -1,6 +1,6 @@
 # wconrad
 
-- Source: [code](https://github.com/wspace/wconrad-ruby)
+- Source: <https://github.com/wspace/wconrad-ruby>
   (last updated [2021-10-23](https://github.com/wspace/wconrad-ruby/commit/406a09e80f5fd6b6f2beb8e9d9f039536bc8db23))
 - Corpus: [ruby/wconrad](https://github.com/wspace/corpus/tree/main/ruby/wconrad)
 

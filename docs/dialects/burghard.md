@@ -1,8 +1,8 @@
 # Burghard Whitespace assembly
 
-- Source: [code](https://github.com/wspace/burghard-wsa/blob/main/trans.hs),
-  [docs](https://github.com/wspace/burghard-wsa/blob/main/intro.md)
-  (last updated [2023-02-20](https://github.com/wspace/burghard-wsa/tree/9f463d027f9e59238382adb69a1af9bc294c1f6a))
+- Source: <https://github.com/wspace/burghard-wsa>
+  [[docs](https://github.com/wspace/burghard-wsa/blob/main/intro.md)]
+  (last updated [2023-06-26](https://github.com/wspace/burghard-wsa/commit/82b12552dd7a17124f4d5288b7a4e300a32f4086))
 - Corpus: [haskell/burghard-wsa](https://github.com/wspace/corpus/tree/main/haskell/burghard-wsa)
 
 Oliver Burghard's assembler is the second assembler for Whitespace. It was

@@ -3,6 +3,7 @@
 ## Whitespace assembly dialects
 
 - [Burghard](dialects/burghard.md) (haskell/burghard-wsa)
+- [CensoredUsername](dialects/censoredusername.md) (rust/censoredusername-whitespacers)
 - [Lime](dialects/lime.md) (c/manarice)
 - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
 - [omniwsa](dialects/omniwsa.md) (rust/thaliaarchi-omniwsa)
