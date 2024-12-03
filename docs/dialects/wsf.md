@@ -1,7 +1,7 @@
 # wsf dialect
 
-- Source: [code](https://github.com/thaliaarchi/wslib)
-  (last updated [2024-08-27](https://github.com/thaliaarchi/wslib/commit/8e6090f8fb6b14e6b2f0f494c26b494525ea2ff4)
+- Source: <https://github.com/thaliaarchi/wslib>
+  (last updated [2024-11-20](https://github.com/thaliaarchi/wslib/commit/8e1c1050c824a6797e4a398d4be436e1c63262cb)
 - Corpus: [whitespace/thaliaarchi-wslib](https://github.com/wspace/corpus/tree/main/whitespace/thaliaarchi-wslib)
 
 wsf (“Whitespace Forth”) is a Whitespace assembly dialect by Thalia Archibald,
