@@ -70,10 +70,8 @@ pub enum Inst<'a> {
     VolivaNot,
     /// voliva `and` (TSLL).
     VolivaAnd,
-    /// voliva `debugger` (LLS).
+    /// voliva `dbg` (LLS).
     VolivaBreakpoint,
-    /// voliva `debugger` alternate encoding (LLT).
-    VolivaBreakpointAlt,
 }
 
 /// A signed integer value for code generation, encoded with explicit leading

@@ -1,7 +1,7 @@
 # voliva Whitespace assembly
 
 - Source: [code](https://github.com/voliva/wsa)
-  (last updated [2024-10-05](https://github.com/voliva/wsa/tree/e632ecfaa11d685364787294599ba542bfacd796))
+  (last updated [2024-12-02](https://github.com/voliva/wsa/tree/dd86212a335faaff28ce53fc54bd60a8f7364d85))
 - Corpus: [typescript/voliva-wsa](https://github.com/wspace/corpus/tree/main/typescript/voliva-wsa)
 
 ## Grammar
@@ -95,7 +95,7 @@ instruction ::=
     | (?i)"readc"
     | (?i)"valueinteger" variable integer
     | (?i)"valuestring" variable string
-    | (?i)"debugger"
+    | (?i)"dbg"
     | (?i)"include" filename
 
 integer ::= INTEGER | CHAR | VARIABLE
@@ -135,8 +135,8 @@ code units.
 - `div n` => `push n / div`
 - `mod n` => `push n / mod`
 - `store n` => `push n / swap / store`
-- `storestr s` => `dup / push c / store / push 1 / add` for each character in
-  `s` and 0
+- `storestr s` => `dup / push c / store / push 1 / add` for each Unicode code
+  point in `s` with a terminating 0
 - `retrieve n` => `push n / retrieve`
 - `jumpp l` => `push 0 / swap / sub / jn l`
 - `jumppn l` or `jumpnp l` => `jz __internal_label_{id} / jmp l / __internal_label_{id}:`
@@ -147,7 +147,7 @@ code units.
 - `or` => Whitespace TSLS
 - `not` => Whitespace TSLT
 - `and` => Whitespace TSLL
-- `debugger` => Whitespace LLS
+- `dbg` => Whitespace LLS
 
 Labels are assigned integers by first use (definitions and references), starting
 at 0. Labels are not encoded with a leading S (positive) sign.
@@ -175,11 +175,7 @@ than lines in the assembled program, any extra decorations are omitted.
 
 ## Bugs in the assembler
 
-- The assembler uses `disassembler`, but the disassembler uses `dbg` and that
-  was [decided](https://github.com/voliva/wsa/pull/1#issuecomment-2316998205) to
-  be the canonical mnemonic.
 - Exception handling within the promises is messy and results in poor error
   messages.
 - When there are more decoration comments than lines in the assembled program,
   any extra decorations are omitted.
-- `storestr` splits Unicode code points into UTF-16 code units.

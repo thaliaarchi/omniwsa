@@ -57,7 +57,6 @@ pub trait TokenWrite {
             Inst::VolivaNot => (&[T, S, L, T], None),
             Inst::VolivaAnd => (&[T, S, L, L], None),
             Inst::VolivaBreakpoint => (&[L, L, S], None),
-            Inst::VolivaBreakpointAlt => (&[L, L, T], None),
         };
         for &token in tokens {
             self.write_token(token)?;

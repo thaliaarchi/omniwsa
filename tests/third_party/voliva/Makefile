@@ -2,8 +2,8 @@ NODE = node
 WSA_DIR = $(error 'Specify $$WSA_DIR')
 CLI = $(WSA_DIR)/dist/cli.js
 
-PASS = $(shell find . -name '*.wsa' -a ! -name count.wsa)
-FAIL = wsa-tests/count.wsa
+PASS = $(filter-out $(FAIL), $(shell find . -name '*.wsa'))
+FAIL =
 WS = $(PASS:.wsa=.ws)
 ERR = $(FAIL:.wsa=.err)
 
@@ -11,7 +11,7 @@ ERR = $(FAIL:.wsa=.err)
 all: $(WS) $(ERR)
 
 %.extensions.ws: %.extensions.wsa
-	$(NODE) $(CLI) compile --debugger $< $@
+	$(NODE) $(CLI) compile --extensions $< $@
 
 %.ws: %.wsa
 	$(NODE) $(CLI) compile $< $@

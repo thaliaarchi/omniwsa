@@ -1,0 +1,3 @@
+push '🚇'
+; Codepoints in storestr were split into UTF-16 code units.
+storestr 🚇
