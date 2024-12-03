@@ -1,8 +1,8 @@
 # rdebath Whitespace assembly
 
-- Source: [code](https://github.com/wspace/rdebath-c)
-  (last updated [2023-06-16](https://github.com/wspace/rdebath-c/tree/31315a56a064029e5486eececf144bc833b526cb)),
-  [upstream](https://github.com/rdebath/whitespace)
+- Source: <https://github.com/rdebath/whitespace>
+  (last updated [2015-08-22](https://github.com/rdebath/whitespace/commit/eeabf4ed507cd1c70d91caf8aeddc5707de6b4b2),
+  fork last updated [2023-06-16](https://github.com/wspace/rdebath-c/commit/646b907b0c33292816d95d030f37871cdf65a049))
 - Corpus: [c/rdebath](https://github.com/wspace/corpus/tree/main/c/rdebath)
 
 ## wsa.l
@@ -45,7 +45,7 @@ label_def ::=
 number ::=
     | space [0-9]+
     | space? "-" [0-9]+
-    | space? "'" [^\\\n'] "'"
+    | space? "'" [^\\] "'"
     | space? "'\\" [ntab'] "'"
 label ::=
     | space [0-9]+
@@ -58,6 +58,11 @@ comment ::=
 space ::= [ \t]+
 lf ::= "\n"
 ```
+
+### Bugs in assembler
+
+- Char literals with unescaped `'` (`'''`) or a literal LF are allowed (fixed in
+  fork).
 
 ## wsa.sed
 
@@ -125,6 +130,7 @@ lf ::= "\n"
 ### Bugs in assembler
 
 - Only the I/O mnemonics are case-insensitive.
+- Tabs may only appear before an instruction.
 
 ## Mnemonics
 
