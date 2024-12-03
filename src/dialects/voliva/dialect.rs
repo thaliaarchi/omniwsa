@@ -57,7 +57,7 @@ static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
     b"readc" => [Readc],
     b"valueinteger" => [VolivaValueInteger],
     b"valuestring" => [VolivaValueString],
-    b"debugger" => [VolivaBreakpoint],
+    b"dbg" => [VolivaBreakpoint],
     b"include" => [VolivaInclude],
 };
 
