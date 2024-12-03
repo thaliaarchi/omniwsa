@@ -3,14 +3,12 @@
 use crate::{
     dialects::{
         burghard::{option::OptionNester, parse::Parser},
+        define_mnemonics,
         dialect::DialectState,
         Dialect,
     },
-    syntax::{Cst, Opcode},
-    tokens::{
-        integer::IntegerSyntax,
-        mnemonics::{CaseFold, FoldedStr},
-    },
+    syntax::Cst,
+    tokens::integer::IntegerSyntax,
 };
 
 // TODO:
@@ -20,53 +18,49 @@ use crate::{
 #[derive(Clone, Copy, Debug)]
 pub struct Burghard;
 
-macro_rules! mnemonics{($($mnemonic:literal => [$($opcode:ident),+],)+) => {
-    &[$((FoldedStr::new_detect($mnemonic, CaseFold::AsciiIK), &[$(Opcode::$opcode),+])),+]
-}}
-static MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = mnemonics! {
-    b"push" => [Push],
-    b"pushs" => [PushString0],
-    b"doub" => [Dup],
-    b"swap" => [Swap],
-    b"pop" => [Drop],
-    b"add" => [Add, AddConstRhs],
-    b"sub" => [Sub, SubConstRhs],
-    b"mul" => [Mul, MulConstRhs],
-    b"div" => [Div, DivConstRhs],
-    b"mod" => [Mod, ModConstRhs],
-    b"store" => [Store, StoreConstLhs],
-    b"retrive" => [Retrieve, RetrieveConst],
-    b"label" => [Label],
-    b"call" => [Call],
-    b"jump" => [Jmp],
-    b"jumpz" => [Jz],
-    b"jumpn" => [Jn],
-    b"jumpp" => [BurghardJmpPos],
-    b"jumpnp" => [BurghardJmpNonZero],
-    b"jumppn" => [BurghardJmpNonZero],
-    b"jumpnz" => [BurghardJmpNonPos],
-    b"jumppz" => [BurghardJmpNonNeg],
-    b"ret" => [Ret],
-    b"exit" => [End],
-    b"outC" => [Printc],
-    b"outN" => [Printi],
-    b"inC" => [Readc],
-    b"inN" => [Readi],
-    b"debug_printstack" => [BurghardPrintStack],
-    b"debug_printheap" => [BurghardPrintHeap],
-    b"test" => [BurghardTest],
-    b"valueinteger" => [BurghardValueInteger],
-    b"valuestring" => [BurghardValueString],
-    b"include" => [BurghardInclude],
-    b"option" => [DefineOption],
-    b"ifoption" => [IfOption],
-    b"elseifoption" => [ElseIfOption],
-    b"elseoption" => [ElseOption],
-    b"endoption" => [EndOption],
-};
-
 impl Dialect for Burghard {
-    const MNEMONICS: &[(FoldedStr<'_>, &[Opcode])] = MNEMONICS;
+    define_mnemonics! {
+        fold = AsciiIK,
+        b"push" => [Push],
+        b"pushs" => [PushString0],
+        b"doub" => [Dup],
+        b"swap" => [Swap],
+        b"pop" => [Drop],
+        b"add" => [Add, AddConstRhs],
+        b"sub" => [Sub, SubConstRhs],
+        b"mul" => [Mul, MulConstRhs],
+        b"div" => [Div, DivConstRhs],
+        b"mod" => [Mod, ModConstRhs],
+        b"store" => [Store, StoreConstLhs],
+        b"retrive" => [Retrieve, RetrieveConst],
+        b"label" => [Label],
+        b"call" => [Call],
+        b"jump" => [Jmp],
+        b"jumpz" => [Jz],
+        b"jumpn" => [Jn],
+        b"jumpp" => [BurghardJmpPos],
+        b"jumpnp" => [BurghardJmpNonZero],
+        b"jumppn" => [BurghardJmpNonZero],
+        b"jumpnz" => [BurghardJmpNonPos],
+        b"jumppz" => [BurghardJmpNonNeg],
+        b"ret" => [Ret],
+        b"exit" => [End],
+        b"outC" => [Printc],
+        b"outN" => [Printi],
+        b"inC" => [Readc],
+        b"inN" => [Readi],
+        b"debug_printstack" => [BurghardPrintStack],
+        b"debug_printheap" => [BurghardPrintHeap],
+        b"test" => [BurghardTest],
+        b"valueinteger" => [BurghardValueInteger],
+        b"valuestring" => [BurghardValueString],
+        b"include" => [BurghardInclude],
+        b"option" => [DefineOption],
+        b"ifoption" => [IfOption],
+        b"elseifoption" => [ElseIfOption],
+        b"elseoption" => [ElseOption],
+        b"endoption" => [EndOption],
+    }
 
     fn parse<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Cst<'s> {
         OptionNester::new().nest(&mut Parser::new(src, dialect))
