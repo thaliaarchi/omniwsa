@@ -2,13 +2,14 @@
 
 use crate::{
     dialects::{
-        burghard::{option::OptionNester, parse::Parser},
+        burghard::{lex::Lexer, option::OptionNester, parse::Parser},
         define_mnemonics,
         dialect::DialectState,
         Dialect,
     },
+    lex::Lex,
     syntax::Cst,
-    tokens::integer::IntegerSyntax,
+    tokens::{integer::IntegerSyntax, Token},
 };
 
 // TODO:
@@ -64,6 +65,19 @@ impl Dialect for Burghard {
 
     fn parse<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Cst<'s> {
         OptionNester::new().nest(&mut Parser::new(src, dialect))
+    }
+
+    fn lex<'s>(src: &'s [u8], _dialect: &DialectState<Self>) -> Vec<Token<'s>> {
+        let mut lex = Lexer::new(src);
+        let mut toks = Vec::new();
+        loop {
+            let tok = lex.next_token();
+            if let Token::Eof(_) = tok {
+                break;
+            }
+            toks.push(tok);
+        }
+        toks
     }
 
     fn make_integers() -> IntegerSyntax {

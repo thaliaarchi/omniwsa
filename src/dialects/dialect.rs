@@ -34,9 +34,7 @@ pub trait Dialect {
     fn parse<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Cst<'s>;
 
     /// Lexes a Whitespace assembly program in the dialect.
-    fn lex<'s>(_src: &'s [u8], _dialect: &DialectState<Self>) -> Vec<Token<'s>> {
-        unimplemented!();
-    }
+    fn lex<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Vec<Token<'s>>;
 
     /// Constructs an integer syntax description for this dialect.
     fn make_integers() -> IntegerSyntax;
