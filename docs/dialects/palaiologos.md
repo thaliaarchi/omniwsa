@@ -1,7 +1,7 @@
 # Palaiologos Whitespace assembly
 
 - Source: <https://github.com/kspalaiologos/asm2ws>
-  (last updated [2024-08-21](https://github.com/kspalaiologos/asm2ws/commit/89054a73a8ac3766f222a1b2438c63b64952a445))
+  (last updated [2024-12-04](https://github.com/kspalaiologos/asm2ws/commit/536d9eb1b2d6dc6c0da1d300cfd9aba579e5b067))
 - Corpus: [c/kspalaiologos-asm2ws](https://github.com/wspace/corpus/tree/main/c/kspalaiologos-asm2ws)
 
 ## Grammar
