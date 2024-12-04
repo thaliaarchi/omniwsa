@@ -127,6 +127,18 @@ pub enum QuotedError {
     Unterminated,
 }
 
+impl Encoding {
+    /// Returns the character to use for representing invalid sequences: either
+    /// U+FFFD replacement character for `Utf8` or U+001A substitute (SUB) for
+    /// `Bytes`.
+    pub const fn replacement(&self) -> char {
+        match self {
+            Encoding::Utf8 => '\u{fffd}',
+            Encoding::Bytes => '\x1a',
+        }
+    }
+}
+
 impl QuoteStyle {
     /// The opening and closing quote.
     pub const fn quote(&self) -> &'static str {

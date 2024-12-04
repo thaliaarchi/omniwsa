@@ -1,4 +1,4 @@
-use bstr::ByteSlice;
+use bstr::{ByteSlice, ByteVec};
 use derive_more::derive::Debug as DebugCustom;
 use enumset::EnumSet;
 
@@ -8,6 +8,14 @@ use crate::{
         CharData, CharError, CharToken, Encoding, QuoteStyle, StringError, StringToken,
     },
 };
+
+// TODO:
+// - For invalid escape error recovery, a fallback unescaping algorithm should
+//   be tried which handles the union of common escapes.
+// - Unescape callbacks only need ASCII, not a char.
+// - Single-character unescape callbacks should be changed to an ASCII-to-char
+//   table: a perfect hash table or a 128-bit bitset with a dense array indexed
+//   by popcnt.
 
 /// A string literal which has been scanned, but not yet parsed.
 #[derive(Clone, DebugCustom, PartialEq, Eq)]
@@ -93,9 +101,9 @@ impl<'s> Scanner<'s> {
 }
 
 impl<'s> StringScan<'s> {
-    /// Unescapes the string literal, only handling single-byte escape
+    /// Unescapes the string literal, only handling single-char escape
     /// sequences.
-    pub fn unescape_simple<F: Fn(u8) -> Option<u8>>(
+    pub fn unescape_simple<F: Fn(char) -> Option<char>>(
         &self,
         unescape: F,
         encoding: Encoding,
@@ -111,15 +119,16 @@ impl<'s> StringScan<'s> {
             let mut s = self.literal;
             while let Some(i) = s.find_byte(b'\\') {
                 unescaped.extend_from_slice(&s[..i]);
-                if let Some(&b) = s.get(i + 1) {
-                    unescaped.push(unescape(b).unwrap_or_else(|| {
-                        errors |= StringError::InvalidEscape;
-                        b
-                    }));
+                let (ch, size) = bstr::decode_utf8(&s[i + 1..]);
+                if let Some(unescaped_ch) = ch.and_then(|ch| unescape(ch)) {
+                    unescaped.push_char(unescaped_ch);
                 } else {
-                    break;
+                    // Drop the `\` for an invalid escape sequence like C
+                    // `printf`.
+                    errors |= StringError::InvalidEscape;
+                    unescaped.extend_from_slice(&s[i + 1..i + 1 + size]);
                 }
-                s = &s[i + 2..];
+                s = &s[i + 1 + size..];
             }
             unescaped.extend_from_slice(s);
             unescaped.into()
@@ -136,8 +145,8 @@ impl<'s> StringScan<'s> {
 
 impl<'s> CharScan<'s> {
     /// Unescapes the character literal with UTF-8 encoding, only handling
-    /// single-byte ASCII escape sequences.
-    pub fn unescape_simple<F: Fn(u8) -> Option<u8>>(
+    /// single-char escape sequences.
+    pub fn unescape_simple<F: Fn(char) -> Option<char>>(
         &self,
         unescape: F,
         encoding: Encoding,
@@ -150,10 +159,7 @@ impl<'s> CharScan<'s> {
             errors |= CharError::Empty;
         }
         let (bs, escaped) = match self.literal {
-            [b'\\', bs @ ..] => {
-                errors |= CharError::InvalidEscape;
-                (bs, true)
-            }
+            [b'\\', bs @ ..] => (bs, true),
             bs => (bs, false),
         };
         let (ch, size) = bstr::decode_utf8(bs);
@@ -163,11 +169,11 @@ impl<'s> CharScan<'s> {
         let data = match ch {
             Some(mut ch) => {
                 // TODO: Use if-let chain once stabilized.
-                if escaped && ch.is_ascii() {
-                    if let Some(unescaped) = unescape(ch as u8) {
-                        debug_assert!(unescaped.is_ascii());
-                        ch = unescaped as char;
-                        errors -= CharError::InvalidEscape;
+                if escaped {
+                    if let Some(unescaped) = unescape(ch) {
+                        ch = unescaped;
+                    } else {
+                        errors |= CharError::InvalidEscape;
                     }
                 }
                 match encoding {
@@ -179,15 +185,22 @@ impl<'s> CharScan<'s> {
                     }
                 }
             }
-            None => match encoding {
-                Encoding::Utf8 => CharData::Unicode(if bs.is_empty() { '\0' } else { '\u{fffd}' }),
-                Encoding::Bytes => {
-                    if size > 1 {
-                        errors |= CharError::MoreThanOneChar;
-                    }
-                    CharData::Byte(if bs.is_empty() { 0 } else { bs[0] })
+            None => {
+                if escaped {
+                    errors |= CharError::InvalidEscape;
                 }
-            },
+                match encoding {
+                    Encoding::Utf8 => {
+                        CharData::Unicode(if bs.is_empty() { '\0' } else { '\u{fffd}' })
+                    }
+                    Encoding::Bytes => {
+                        if size > 1 {
+                            errors |= CharError::MoreThanOneChar;
+                        }
+                        CharData::Byte(if bs.is_empty() { b'\0' } else { bs[0] })
+                    }
+                }
+            }
         };
         CharToken {
             literal: self.literal.into(),
@@ -224,29 +237,81 @@ mod tests {
     }
 
     #[test]
+    fn unescape_string() {
+        #[track_caller]
+        fn test(
+            literal: &[u8],
+            encoding: Encoding,
+            expect_unescaped: &[u8],
+            expect_errors: EnumSet<StringError>,
+        ) {
+            let mut errors = EnumSet::empty();
+            if str::from_utf8(literal).is_err() {
+                errors |= StringError::InvalidUtf8;
+            }
+            let scanned = StringScan {
+                literal,
+                backslashes: literal.iter().filter(|&&b| b == b'\\').count(),
+                errors,
+            };
+            let expect = StringToken {
+                literal: literal.into(),
+                unescaped: expect_unescaped.into(),
+                encoding,
+                quotes: QuoteStyle::Double,
+                errors: expect_errors,
+            };
+            let tok = scanned.unescape_simple(unescape, encoding);
+            assert_eq!(tok, expect);
+        }
+        macro_rules! test(($escaped:expr, $encoding:expr => $unescaped:expr $(, $($errors:tt)+)?) => {
+            test($escaped, $encoding, $unescaped, enum_set!($($($errors)+)?))
+        });
+
+        use {Encoding::*, StringError::*};
+        test!(b"", Bytes => b"");
+        test!(b"", Utf8 => b"");
+        test!(b"abc", Bytes => b"abc");
+        test!(b"abc", Utf8 => b"abc");
+        test!(b"\\", Bytes => b"", InvalidEscape);
+        test!(b"\\", Utf8 => b"", InvalidEscape);
+        test!(b"\\\\", Bytes => b"\\");
+        test!(b"\\\\", Utf8 => b"\\");
+        test!(b"\\n", Bytes => b"\n");
+        test!(b"\\n", Utf8 => b"\n");
+        test!(b"\\a", Bytes => b"a", InvalidEscape);
+        test!(b"\\a", Utf8 => b"a", InvalidEscape);
+        test!("\\ß".as_bytes(), Bytes => "ß".as_bytes(), InvalidEscape);
+        test!("\\ß".as_bytes(), Utf8 => "ß".as_bytes(), InvalidEscape);
+        test!(b"\\\xff", Bytes => b"\xff", InvalidEscape);
+        test!(b"\\\xff", Utf8 => b"\xff", InvalidEscape | InvalidUtf8);
+        test!(b"\\\xf0\x9f\x9a", Bytes => b"\xf0\x9f\x9a", InvalidEscape);
+        test!(b"\\\xf0\x9f\x9a", Utf8 => b"\xf0\x9f\x9a", InvalidEscape | InvalidUtf8);
+        test!(b"\\\xed\xa0\x80", Bytes => b"\xed\xa0\x80", InvalidEscape);
+        test!(b"\\\xed\xa0\x80", Utf8 => b"\xed\xa0\x80", InvalidEscape | InvalidUtf8);
+    }
+
+    #[test]
     fn unescape_char() {
         #[track_caller]
         fn test(
-            escaped: &[u8],
+            literal: &[u8],
             encoding: Encoding,
             expect_unescaped: CharData,
             expect_errors: EnumSet<CharError>,
         ) {
             let mut errors = EnumSet::empty();
-            if str::from_utf8(escaped).is_err() {
+            if str::from_utf8(literal).is_err() {
                 errors |= CharError::InvalidUtf8;
             }
-            let scanned = CharScan {
-                literal: escaped,
-                errors,
-            };
+            let scanned = CharScan { literal, errors };
             let expect = CharToken {
-                literal: escaped.into(),
+                literal: literal.into(),
                 unescaped: expect_unescaped,
                 quotes: QuoteStyle::Single,
                 errors: expect_errors,
             };
-            let tok = scanned.unescape_simple(unescape_byte, encoding);
+            let tok = scanned.unescape_simple(unescape, encoding);
             assert_eq!(tok, expect);
         }
         macro_rules! test(($escaped:expr, $encoding:expr => $unescaped:expr $(, $($errors:tt)+)?) => {
@@ -257,47 +322,48 @@ mod tests {
         // b"\xf0\x9f\x9a" is the encoding for 🚇 (U+1F687) without its final
         // byte b'\x87'. b"\xed\xa0\x80" is an unpaired surrogate half (U+D800).
 
-        test!(b"", Encoding::Bytes => CharData::Byte(0), CharError::Empty);
-        test!(b"", Encoding::Utf8 => CharData::Unicode('\0'), CharError::Empty);
-        test!(b"a", Encoding::Bytes => CharData::Byte(b'a'));
-        test!(b"a", Encoding::Utf8 => CharData::Unicode('a'));
-        test!(b"ab", Encoding::Bytes => CharData::Byte(b'a'), CharError::MoreThanOneChar);
-        test!(b"ab", Encoding::Utf8 => CharData::Unicode('a'), CharError::MoreThanOneChar);
-        test!(b"a\\", Encoding::Bytes => CharData::Byte(b'a'), CharError::MoreThanOneChar);
-        test!(b"a\\", Encoding::Utf8 => CharData::Unicode('a'), CharError::MoreThanOneChar);
-        test!("ß".as_bytes(), Encoding::Bytes => CharData::Unicode('ß'), CharError::UnexpectedUnicode);
-        test!("ß".as_bytes(), Encoding::Utf8 => CharData::Unicode('ß'));
-        test!(b"\xff", Encoding::Bytes => CharData::Byte(b'\xff'));
-        test!(b"\xff", Encoding::Utf8 => CharData::Unicode('\u{fffd}'), CharError::InvalidUtf8);
-        test!(b"\xf0\x9f\x9a", Encoding::Bytes => CharData::Byte(b'\xf0'), CharError::MoreThanOneChar);
-        test!(b"\xf0\x9f\x9a", Encoding::Utf8 => CharData::Unicode('\u{fffd}'), CharError::InvalidUtf8);
-        test!(b"\xed\xa0\x80", Encoding::Bytes => CharData::Byte(b'\xed'), CharError::MoreThanOneChar);
-        test!(b"\xed\xa0\x80", Encoding::Utf8 => CharData::Unicode('\u{fffd}'), CharError::MoreThanOneChar | CharError::InvalidUtf8);
-        test!(b"\\", Encoding::Bytes => CharData::Byte(0), CharError::InvalidEscape);
-        test!(b"\\", Encoding::Utf8 => CharData::Unicode('\0'), CharError::InvalidEscape);
-        test!(b"\\\\", Encoding::Bytes => CharData::Byte(b'\\'));
-        test!(b"\\\\", Encoding::Utf8 => CharData::Unicode('\\'));
-        test!(b"\\n", Encoding::Bytes => CharData::Byte(b'\n'));
-        test!(b"\\n", Encoding::Utf8 => CharData::Unicode('\n'));
-        test!(b"\\a", Encoding::Bytes => CharData::Byte(b'a'), CharError::InvalidEscape);
-        test!(b"\\a", Encoding::Utf8 => CharData::Unicode('a'), CharError::InvalidEscape);
-        test!("\\ß".as_bytes(), Encoding::Bytes => CharData::Unicode('ß'), CharError::InvalidEscape | CharError::UnexpectedUnicode);
-        test!("\\ß".as_bytes(), Encoding::Utf8 => CharData::Unicode('ß'), CharError::InvalidEscape);
-        test!(b"\\\xff", Encoding::Bytes => CharData::Byte(b'\xff'), CharError::InvalidEscape);
-        test!(b"\\\xff", Encoding::Utf8 => CharData::Unicode('\u{fffd}'), CharError::InvalidEscape | CharError::InvalidUtf8);
-        test!(b"\\\xf0\x9f\x9a", Encoding::Bytes => CharData::Byte(b'\xf0'), CharError::InvalidEscape | CharError::MoreThanOneChar);
-        test!(b"\\\xf0\x9f\x9a", Encoding::Utf8 => CharData::Unicode('\u{fffd}'), CharError::InvalidEscape | CharError::InvalidUtf8);
-        test!(b"\\\xed\xa0\x80", Encoding::Bytes => CharData::Byte(b'\xed'), CharError::InvalidEscape | CharError::MoreThanOneChar);
-        test!(b"\\\xed\xa0\x80", Encoding::Utf8 => CharData::Unicode('\u{fffd}'), CharError::InvalidEscape | CharError::MoreThanOneChar | CharError::InvalidUtf8);
+        use {CharData::*, CharError::*, Encoding::*};
+        test!(b"", Bytes => Byte(b'\0'), Empty);
+        test!(b"", Utf8 => Unicode('\0'), Empty);
+        test!(b"a", Bytes => Byte(b'a'));
+        test!(b"a", Utf8 => Unicode('a'));
+        test!(b"ab", Bytes => Byte(b'a'), MoreThanOneChar);
+        test!(b"ab", Utf8 => Unicode('a'), MoreThanOneChar);
+        test!(b"a\\", Bytes => Byte(b'a'), MoreThanOneChar);
+        test!(b"a\\", Utf8 => Unicode('a'), MoreThanOneChar);
+        test!("ß".as_bytes(), Bytes => Unicode('ß'), UnexpectedUnicode);
+        test!("ß".as_bytes(), Utf8 => Unicode('ß'));
+        test!(b"\xff", Bytes => Byte(b'\xff'));
+        test!(b"\xff", Utf8 => Unicode('\u{fffd}'), InvalidUtf8);
+        test!(b"\xf0\x9f\x9a", Bytes => Byte(b'\xf0'), MoreThanOneChar);
+        test!(b"\xf0\x9f\x9a", Utf8 => Unicode('\u{fffd}'), InvalidUtf8);
+        test!(b"\xed\xa0\x80", Bytes => Byte(b'\xed'), MoreThanOneChar);
+        test!(b"\xed\xa0\x80", Utf8 => Unicode('\u{fffd}'), MoreThanOneChar | InvalidUtf8);
+        test!(b"\\", Bytes => Byte(b'\0'), InvalidEscape);
+        test!(b"\\", Utf8 => Unicode('\0'), InvalidEscape);
+        test!(b"\\\\", Bytes => Byte(b'\\'));
+        test!(b"\\\\", Utf8 => Unicode('\\'));
+        test!(b"\\n", Bytes => Byte(b'\n'));
+        test!(b"\\n", Utf8 => Unicode('\n'));
+        test!(b"\\a", Bytes => Byte(b'a'), InvalidEscape);
+        test!(b"\\a", Utf8 => Unicode('a'), InvalidEscape);
+        test!("\\ß".as_bytes(), Bytes => Unicode('ß'), InvalidEscape | UnexpectedUnicode);
+        test!("\\ß".as_bytes(), Utf8 => Unicode('ß'), InvalidEscape);
+        test!(b"\\\xff", Bytes => Byte(b'\xff'), InvalidEscape);
+        test!(b"\\\xff", Utf8 => Unicode('\u{fffd}'), InvalidEscape | InvalidUtf8);
+        test!(b"\\\xf0\x9f\x9a", Bytes => Byte(b'\xf0'), InvalidEscape | MoreThanOneChar);
+        test!(b"\\\xf0\x9f\x9a", Utf8 => Unicode('\u{fffd}'), InvalidEscape | InvalidUtf8);
+        test!(b"\\\xed\xa0\x80", Bytes => Byte(b'\xed'), InvalidEscape | MoreThanOneChar);
+        test!(b"\\\xed\xa0\x80", Utf8 => Unicode('\u{fffd}'), InvalidEscape | MoreThanOneChar | InvalidUtf8);
     }
 
-    fn unescape_byte(b: u8) -> Option<u8> {
+    fn unescape(b: char) -> Option<char> {
         match b {
-            b'\'' => Some(b'\''),
-            b'\\' => Some(b'\\'),
-            b'n' => Some(b'\n'),
-            b'r' => Some(b'\r'),
-            b't' => Some(b'\t'),
+            '\'' => Some('\''),
+            '\\' => Some('\\'),
+            'n' => Some('\n'),
+            'r' => Some('\r'),
+            't' => Some('\t'),
             _ => None,
         }
     }
