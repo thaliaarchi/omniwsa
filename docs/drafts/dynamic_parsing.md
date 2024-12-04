@@ -16,7 +16,8 @@ instructions.
 
 Identifier first and follow sets vary, so need to be dynamically encoded. For
 ASCII-only a 128-bit bitset would work and for Unicode a perfect hash table
-would work. At this point, it resembles the tables produced by parser
-generators. I want to be able to write wsa grammars at a higher level than
-yacc/lex grammars, so that common things are simplified; however, it could lower
-to a more general purpose parser generator.
+would work. An ASCII-to-char table could be a perfect hash table or a 128-bit
+bitset with a dense table indexed by popcnt. At this point, it resembles the
+tables produced by parser generators. I want to be able to write wsa grammars at
+a higher level than yacc/lex grammars, so that common things are simplified;
+however, it could lower to a more general purpose parser generator.

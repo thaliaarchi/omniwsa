@@ -128,11 +128,11 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             }
             '\'' => scan
                 .char_lit_oneline()
-                .unescape_simple(unescape_byte, Encoding::Bytes)
+                .unescape_simple(unescape, Encoding::Bytes)
                 .into(),
             '"' => scan
                 .string_lit_oneline()
-                .unescape_simple(unescape_byte, Encoding::Bytes)
+                .unescape_simple(unescape, Encoding::Bytes)
                 .into(),
             ';' => {
                 scan.bump_until_lf();
@@ -194,16 +194,16 @@ fn scan_mnemonic<'s>(
     None
 }
 
-/// Resolves a backslash-escaped byte to its represented value.
-fn unescape_byte(b: u8) -> Option<u8> {
+/// Resolves a backslash-escaped char to its represented value.
+fn unescape(b: char) -> Option<char> {
     Some(match b {
-        b'a' => b'\x07',
-        b'b' => b'\x08',
-        b'f' => b'\x0c',
-        b'n' => b'\n',
-        b'r' => b'\r',
-        b't' => b'\t',
-        b'v' => b'\x0b',
+        'a' => '\x07',
+        'b' => '\x08',
+        'f' => '\x0c',
+        'n' => '\n',
+        'r' => '\r',
+        't' => '\t',
+        'v' => '\x0b',
         _ => b,
     })
 }

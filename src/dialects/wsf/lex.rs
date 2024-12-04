@@ -66,11 +66,11 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
             }
             '"' => scan
                 .string_lit_oneline()
-                .unescape_simple(unescape_byte(true), Encoding::Bytes)
+                .unescape_simple(unescape(true), Encoding::Bytes)
                 .into(),
             '\'' => scan
                 .char_lit_oneline()
-                .unescape_simple(unescape_byte(false), Encoding::Bytes)
+                .unescape_simple(unescape(false), Encoding::Bytes)
                 .into(),
             ':' => LabelColonToken.into(),
             '#' => {
@@ -114,21 +114,21 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
     }
 }
 
-/// Resolves a backslash-escaped byte to its represented value.
+/// Resolves a backslash-escaped char to its represented value.
 #[inline]
-fn unescape_byte(double_quote: bool) -> impl Fn(u8) -> Option<u8> {
+fn unescape(double_quote: bool) -> impl Fn(char) -> Option<char> {
     move |b| match b {
-        b'"' if double_quote => Some(b'"'),
-        b'\'' if !double_quote => Some(b'\''),
-        b'\\' => Some(b'\\'),
-        b'a' => Some(b'\x07'),
-        b'b' => Some(b'\x08'),
-        b'e' => Some(b'\x1b'),
-        b'f' => Some(b'\x0c'),
-        b'n' => Some(b'\n'),
-        b'r' => Some(b'\r'),
-        b't' => Some(b'\t'),
-        b'v' => Some(b'\x0b'),
+        '"' if double_quote => Some('"'),
+        '\'' if !double_quote => Some('\''),
+        '\\' => Some('\\'),
+        'a' => Some('\x07'),
+        'b' => Some('\x08'),
+        'e' => Some('\x1b'),
+        'f' => Some('\x0c'),
+        'n' => Some('\n'),
+        'r' => Some('\r'),
+        't' => Some('\t'),
+        'v' => Some('\x0b'),
         _ => None,
     }
 }
