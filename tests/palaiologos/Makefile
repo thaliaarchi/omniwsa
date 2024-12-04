@@ -12,11 +12,17 @@ all: $(WS) $(ERR) $(TIMEOUT)
 
 %.ws: %.asm
 	$(WSI) --masm $< > $@
+%.ws: %.bak
+	$(WSI) --masm $< > $@
 
 %.err: %.asm
 	! $(WSI) --masm $< 2> $@
+%.err: %.bak
+	! $(WSI) --masm $< 2> $@
 
 %.timeout: %.asm
+	! timeout 2 $(WSI) --masm $< >/dev/null && touch $@
+%.timeout: %.bak
 	! timeout 2 $(WSI) --masm $< >/dev/null && touch $@
 
 .PHONY: clean
