@@ -30,7 +30,11 @@ with its signature.
 The mnemonic is included in the signature, so that mnemonic-less push can be
 represented.
 
-## `Void` token
+## Missing and skipped tokens
 
-Add a void token for errors when a value is not present, e.g., to denote a
-missing argument between multiple `,` separators.
+Add error tokens tokens [like Tolerant PHP Parser](https://github.com/microsoft/tolerant-php-parser/blob/main/docs/HowItWorks.md#error-tokens):
+`Missing` is for a token expected to be present, but is not. `Skipped` is for an
+extra token that can't be dealt with.
+
+For example, a missing argument multiple `,` separators could use `Missing` for
+the hole or `Skipped` for the comma.
