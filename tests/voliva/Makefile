@@ -14,7 +14,9 @@ all: $(WS) $(ERR)
 	$(NODE) $(CLI) compile --extensions $< $@
 
 %.err: %.wsa
-	( ! $(NODE) $(CLI) compile --extensions $< $(<:.wsa=.ws) 2>&1 ) | sed "s|$$(realpath $(WSA_DIR))|"'$$WSA|' > $@
+	! $(NODE) $(CLI) compile --extensions $< $(<:.wsa=.ws) 2> $@ >&2
+	@sed -i.bak "s|$$(realpath $(WSA_DIR))|"'$$WSA|' $@
+	@rm $@.bak
 
 .PHONY: clean
 clean:
