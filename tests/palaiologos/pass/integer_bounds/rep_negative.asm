@@ -1,0 +1,9 @@
+rep dup -1
+rep drop -1
+rep add -1
+rep sub -1
+rep mul -1
+rep div -1
+rep mod -1
+rep putc -1
+rep putn -1

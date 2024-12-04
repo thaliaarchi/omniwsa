@@ -1,0 +1,9 @@
+rep dup -80000000h
+rep drop -80000000h
+rep add -80000000h
+rep sub -80000000h
+rep mul -80000000h
+rep div -80000000h
+rep mod -80000000h
+rep putc -80000000h
+rep putn -80000000h

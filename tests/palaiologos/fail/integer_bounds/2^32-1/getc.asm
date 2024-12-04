@@ -1,0 +1,1 @@
+getc 0ffffffffh
