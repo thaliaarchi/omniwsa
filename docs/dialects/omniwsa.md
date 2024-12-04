@@ -1,7 +1,10 @@
 # DRAFT: omniwsa assembly
 
 - Source: <https://github.com/thaliaarchi/omniwsa>
-- Corpus: TBD
+- Corpus: [rust/thaliaarchi-omniwsa](https://github.com/wspace/corpus/tree/main/rust/thaliaarchi-omniwsa)
+
+A draft for an unimplemented wsa dialect in omniwsa which interoperates with
+most features.
 
 ## Grammar
 
