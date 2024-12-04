@@ -1,4 +1,4 @@
-WSA = wsa
+WSA = $(error 'Specify $$WSA')
 
 PASS = $(shell find pass -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')
