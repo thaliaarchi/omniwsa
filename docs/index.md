@@ -1,6 +1,9 @@
-# omniwsa
+# omniwsa documentation
 
 ## Whitespace assembly dialects
+
+Specifications for Whitespace assembly dialects following their implementations,
+including grammar, semantics, code generation, and bugs.
 
 - [Burghard](dialects/burghard.md) (haskell/burghard-wsa)
 - [CensoredUsername](dialects/censoredusername.md) (rust/censoredusername-whitespacers)
@@ -18,8 +21,15 @@
 
 ## Design drafts
 
+Design drafts describing features and goals before implementing them in omniwsa.
+They have not (yet) been updated to document the implementation, but provide a
+good intuition. Listed reverse-chronologically.
+
+- [Configurable dynamic lexing and parsing](drafts/dynamic_parsing.md)
+- [Conventionally UTF-8 scanner](drafts/scanner.md)
 - [Revamp of CST for Palaiologos](drafts/cst_revamp.md)
+- [omniwsa assembly](dialects/omniwsa.md)
 - [An interoperable CST for Whitespace assembly](drafts/interop_cst.md)
 - [Whitespace assembly Macros](drafts/macros.md)
-- [Parsing any Whitespace assembly dialect](drafts/parsing.md)
 - [List of Whitespace assembly mnemonics](drafts/mnemonics.md)
+- [Parsing any Whitespace assembly dialect](drafts/parsing.md)
