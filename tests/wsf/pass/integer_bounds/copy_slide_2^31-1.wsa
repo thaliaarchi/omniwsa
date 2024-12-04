@@ -1,0 +1,4 @@
+; Passes on push 32-bit (and push 64-bit) machines
+copy 2147483647
+slide 2147483647
+exit

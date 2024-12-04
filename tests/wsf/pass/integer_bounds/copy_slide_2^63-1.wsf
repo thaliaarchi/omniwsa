@@ -1,0 +1,4 @@
+; Passes on 64-bit (but not 32-bit) machines
+^9223372036854775807
+9223372036854775807slide
+end

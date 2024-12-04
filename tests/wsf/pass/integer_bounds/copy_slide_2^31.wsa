@@ -1,0 +1,4 @@
+; Fails on push 32-bit (but not push 64-bit) machines
+copy 2147483648
+slide 2147483648
+exit

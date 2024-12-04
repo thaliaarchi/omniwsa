@@ -76,6 +76,11 @@ valid_op ::=
     | "inum"
 ```
 
+## Semantics
+
+The argument to `push` is arbitrary precision. The argument to `copy` and
+`slide` is Rust `isize`.
+
 ## Disassembler
 
 The disassembler prints instructions with 4-space indentation, except for
