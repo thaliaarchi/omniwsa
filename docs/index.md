@@ -25,6 +25,7 @@ Design drafts describing features and goals before implementing them in omniwsa.
 They have not (yet) been updated to document the implementation, but provide a
 good intuition. Listed reverse-chronologically.
 
+- [Syntax inference through fuzzing](drafts/fuzz_syntax.md)
 - [Configurable dynamic lexing and parsing](drafts/dynamic_parsing.md)
 - [Conventionally UTF-8 scanner](drafts/scanner.md)
 - [Revamp of CST for Palaiologos](drafts/cst_revamp.md)
