@@ -1,0 +1,9 @@
+rep dup -7fffffffh
+rep drop -7fffffffh
+rep add -7fffffffh
+rep sub -7fffffffh
+rep mul -7fffffffh
+rep div -7fffffffh
+rep mod -7fffffffh
+rep putc -7fffffffh
+rep putn -7fffffffh
