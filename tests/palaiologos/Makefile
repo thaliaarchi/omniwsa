@@ -1,4 +1,4 @@
-WSI = wsi
+WSI = $(error 'Specify $$WSI')
 
 PASS = $(shell find pass -name '*.asm' -o -name '*.bak')
 FAIL = $(shell find fail -name '*.asm' -o -name '*.bak')

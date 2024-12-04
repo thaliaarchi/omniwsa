@@ -1,4 +1,4 @@
-WSC = wsc
+WSC = $(error 'Specify $$WSC')
 
 PASS = $(shell find pass -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')

@@ -1,5 +1,5 @@
 RUBY = ruby
-ASM = whitespace-asm
+ASM = $(error 'Specify $$ASM')
 
 WSA = $(shell find . -name '*.wsa')
 WS = $(WSA:.wsa=.ws)
