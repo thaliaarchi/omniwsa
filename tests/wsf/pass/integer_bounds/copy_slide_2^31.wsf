@@ -1,0 +1,4 @@
+; Fails on 32-bit (but not 64-bit) machines
+^2147483648
+2147483648slide
+end

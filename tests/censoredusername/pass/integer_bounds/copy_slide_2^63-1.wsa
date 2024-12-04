@@ -1,0 +1,3 @@
+; Passes on 64-bit (but not 32-bit) machines
+copy 9223372036854775807
+slide 9223372036854775807

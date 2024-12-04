@@ -1,0 +1,3 @@
+; Fails on push 64-bit (and push 32-bit) machines
+copy 9223372036854775808
+exit

@@ -43,9 +43,9 @@ fn codegen() {
     let mut ws_generated = String::new();
     for path in [
         "tests/palaiologos/pass/juxtapose.asm",
-        "tests/palaiologos/pass/push_-2^31+1.asm",
-        "tests/palaiologos/pass/push_-2^31.asm",
-        "tests/palaiologos/pass/push_2^31-1.asm",
+        "tests/palaiologos/pass/integer_bounds/push_-2^31+1.asm",
+        "tests/palaiologos/pass/integer_bounds/push_-2^31.asm",
+        "tests/palaiologos/pass/integer_bounds/push_2^31-1.asm",
         "tests/third_party/palaiologos/ws-build-run/rep_putn.asm",
         "tests/third_party/palaiologos/ws-rebuild/copy.bak",
         "tests/third_party/palaiologos/ws-rebuild/slide.bak",
