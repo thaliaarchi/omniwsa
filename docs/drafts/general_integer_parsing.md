@@ -198,6 +198,10 @@ Other bases up to 62 would require a prefix and could not be inferred.
 
 ## Fused mnemonics
 
+A fused mnemonic begins at the first ASCII letter or the first underscore,
+whichever is first. However, only if what would be the mnemonic has a digit
+invalid for the base.
+
 Fused mnemonics cannot start with an ASCII digit. A mnemonic that starts with an
 ASCII letter can only be used with decimal integers.
 

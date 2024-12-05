@@ -7,7 +7,10 @@ use crate::{lex::Scanner, tokens::integer::BaseStyle};
 
 // TODO:
 // - Implement remainder of parsing, particularly digits.
-// - Handle `0b`/`0B` prefix as digits for `h`/`H` suffix.
+// - Handle digit separator position errors.
+// - Handle `0` octal prefix and `0b`/`0B` prefix as digits for `h`/`H` suffix.
+//   These have consequences for digit separator position errors and
+//   `suffix_decimal_first`.
 // - Make set of allowed whitespace characters configurable with enum, but parse
 //   the union of them anyways.
 // - Make a stripped down scanner for parsing integers which maintains less
@@ -152,22 +155,29 @@ pub enum SpaceLocation {
 
 /// A parser for integer literals with configurable syntax.
 #[derive(Debug)]
-struct IntegerParser<'s, 'scan, 'syntax> {
-    scan: &'scan mut Scanner<'s>,
-    syntax: &'syntax Syntax,
+struct IntegerParser<'s, 'a> {
+    scan: &'a mut Scanner<'s>,
+    syntax: &'a Syntax,
     cfg: ParseConfig,
     errors: EnumSet<IntegerError>,
+    digit_buf: &'a mut Vec<u8>,
 }
 
-impl<'s, 'scan, 'syntax> IntegerParser<'s, 'scan, 'syntax> {
+impl<'s, 'a> IntegerParser<'s, 'a> {
     /// Constructs a new integer parser reading from the scanner with the given
     /// configuration and scratch digit buffer.
-    fn new(scan: &'scan mut Scanner<'s>, syntax: &'syntax Syntax, cfg: ParseConfig) -> Self {
+    fn new(
+        scan: &'a mut Scanner<'s>,
+        syntax: &'a Syntax,
+        cfg: ParseConfig,
+        digit_buf: &'a mut Vec<u8>,
+    ) -> Self {
         IntegerParser {
             scan,
             syntax,
             cfg,
             errors: EnumSet::empty(),
+            digit_buf,
         }
     }
 
@@ -177,7 +187,14 @@ impl<'s, 'scan, 'syntax> IntegerParser<'s, 'scan, 'syntax> {
         let open_parens = self.open_parens();
 
         let (negative, sign_style) = self.sign();
-        let base_prefix = self.base_prefix();
+        let mut base_style = self.base_prefix();
+        self.digits();
+        if base_style == BaseStyle::Decimal {
+            base_style = self.base_suffix();
+        }
+        if !self.syntax.base_styles.contains(base_style) {
+            self.errors |= IntegerError::BaseStyle;
+        }
 
         // TODO
 
@@ -188,7 +205,7 @@ impl<'s, 'scan, 'syntax> IntegerParser<'s, 'scan, 'syntax> {
             value: Integer::new(),
             negative,
             sign_style,
-            base_style: base_prefix,
+            base_style,
             digit_seps: EnumSet::empty(),
             errors: self.errors,
         }
@@ -282,4 +299,67 @@ impl<'s, 'scan, 'syntax> IntegerParser<'s, 'scan, 'syntax> {
             BaseStyle::Decimal
         }
     }
+
+    /// Consumes digits and parses them to `self.digit_buf`.
+    fn digits(&mut self) {
+        let digits = &mut *self.digit_buf;
+        digits.clear();
+        let mut largest_digit = 0;
+
+        while let Some(b) = self.scan.peek_byte() {
+            let digit10 = b.wrapping_sub(b'0');
+            let digit16 = (b | 0x20).wrapping_sub(b'a');
+            let digit = if digit10 < 10 {
+                digit10
+            } else if digit16 < 6 {
+                digit16 + 10
+            } else {
+                unlikely();
+                let digit_sep = if b == b'_' {
+                    DigitSep::Underscore
+                } else if b == b'\'' && self.cfg.quote_digit_sep {
+                    DigitSep::SingleQuote
+                } else {
+                    break;
+                };
+                if !self.syntax.digit_seps.contains(digit_sep) {
+                    self.errors |= IntegerError::DigitSep;
+                }
+                continue;
+            };
+            digits.push(digit);
+            largest_digit = largest_digit.max(digit);
+            self.scan.bump_ascii_no_lf(1);
+        }
+    }
+
+    /// Consumes and returns a base suffix.
+    fn base_suffix(&mut self) -> BaseStyle {
+        let base_suffix = match self.scan.peek_byte() {
+            Some(b'o') => BaseStyle::OctSuffix_o,
+            Some(b'O') => BaseStyle::OctSuffix_O,
+            Some(b'h') => BaseStyle::HexSuffix_h,
+            Some(b'H') => BaseStyle::HexSuffix_H,
+            _ => return BaseStyle::Decimal,
+        };
+        if matches!(
+            self.scan.peek_byte_at(1),
+            Some(b'0'..=b'9' | b'a'..=b'z' | b'A'..=b'Z' | b'_' | b'\'')
+        ) {
+            return BaseStyle::Decimal;
+        }
+        self.scan.bump_ascii_no_lf(1);
+        if self.syntax.suffix_decimal_first
+            && matches!(base_suffix, BaseStyle::HexSuffix_h | BaseStyle::HexSuffix_H)
+            && self.digit_buf.get(0).is_some_and(|&digit| digit > 9)
+        {
+            self.errors |= IntegerError::StartsWithHex;
+        }
+        base_suffix
+    }
 }
+
+/// Mark a branch as unlikely to the optimizer.
+#[cold]
+#[inline]
+fn unlikely() {}
