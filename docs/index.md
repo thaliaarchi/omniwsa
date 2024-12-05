@@ -25,6 +25,7 @@ Design drafts describing features and goals before implementing them in omniwsa.
 They have not (yet) been updated to document the implementation, but provide a
 good intuition. Listed reverse-chronologically.
 
+- [Generalized integer parsing](drafts/general_integer_parsing.md)
 - [Generalized string parsing](drafts/general_string_parsing.md)
 - [Test case packer](drafts/testpack.md)
 - [Syntax inference through fuzzing](drafts/fuzz_syntax.md)
