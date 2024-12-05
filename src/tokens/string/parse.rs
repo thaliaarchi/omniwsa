@@ -1,5 +1,5 @@
 use bstr::{ByteSlice, ByteVec};
-use derive_more::derive::Debug as DebugCustom;
+use derive_more::Debug as DebugCustom;
 use enumset::EnumSet;
 
 use crate::{

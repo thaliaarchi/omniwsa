@@ -8,34 +8,41 @@ while scanning.
 
 ## Algorithm
 
+TODO: Change it to forbidding digit separators when juxtaposition is enabled and
+using the first "_" to resolve ambiguity. This also enables base suffixes with
+juxtaposition (e.g., `111b_slide`).
+
+TODO: Handle "0b"/"0B" as digits for "h"/"H" suffix.
+
 **Leading whitespace**
 
-- If strip whitespace: Error unless `space_positions` includes `Leading`.
+- If strip whitespace: Error unless `space_locations` includes `Leading`.
 
 **Open parens**
 
 - Initialize open count to 0.
-- If `enable_parens` in config:
+- If `parens` in config:
   - While bump '(':
     - Increment open count.
-    - If strip whitespace: Error unless `space_positions` includes `BetweenParens`.
+    - If strip whitespace: Error unless `space_locations` includes `BetweenParens`.
 
 **Signs**
 
-- Initialize sign to `None` in `enum { None, Neg, Pos }`
+- Initialize negative to false.
+- Initialize sign to `None` in `enum { None, Neg, Pos, Multiple }`
 - Initialize sign count to 0.
 - Loop:
   - If bump '-':
-    - Set sign to: Match sign: Case `None` or `Pos`: `Neg`; Case `Neg`: `Pos`.
+    - Set negative to not negative.
+    - Set sign to: Match sign: Case `None`: `Neg`; Otherwise: `Multiple`.
     - Error unless `signs` includes `Neg`.
   - Else if bump '+':
-    - Set sign to: Match sign: Case `None` or `Pos`: `Pos`; Case `Neg`: `Neg`.
+    - Set sign to: Match sign: Case `None`: `Pos`; Otherwise: `Multiple`.
     - Error unless `signs` includes `Pos`.
-  - Else:
-    - If sign count > 1: Error unless `signs` includes `Repeated`.
-    - Break.
+  - Else: Break.
   - Increment sign count.
-  - If strip whitespace: Error unless `space_positions` includes `AfterSign`.
+  - If strip whitespace: Error unless `space_locations` includes `AfterSign`.
+- If sign count > 1: Error unless `signs` includes `Multiple`.
 
 **Base prefix**
 
@@ -70,19 +77,21 @@ while scanning.
         - If first letter pos is `None`: Set first letter pos to current pos - 1.
     - Case '_' or '\'':
       - If ch is '_': Error unless `digit_sep` includes `Underscore`.
-      - If ch is '\'': Error unless `digit_sep` includes `SingleQuote`.
+      - If ch is '\'':
+        - If `quote_digit_sep` not in config: Backtrack 1. Break.
+        - Error unless `digit_sep` includes `SingleQuote`.
       - If digits array is empty:
         - If base style is `None`: Error.
-        - Else: Error unless `digit_sep_positions` includes `AfterBasePrefix`.
+        - Else: Error unless `digit_sep_location` includes `AfterBasePrefix`.
       - Else if `leading_zero_octal` in config and digits array is [0]:
         - Set digit sep after octal zero to true.
-      - If last was digit sep: Error unless `digit_sep_positions` includes `Repeated`.
+      - If last was digit sep: Error unless `digit_sep_location` includes `MultipleAdjacent`.
       - Continue.
     - Default:
       - Backtrack 1. Break.
   - Push ch to digits array.
 - If last was digit sep and digits is not empty:
-  - Error unless `digit_sep_positions` includes `Trailing`.
+  - Error unless `digit_sep_location` includes `AfterDigits`.
 
 **Base suffix**
 
@@ -91,11 +100,14 @@ while scanning.
   and peek after is not any of '0' to '9', 'a' to 'z', 'A' to 'Z', '_', or '\'':
   - Bump.
   - Set base style to "o", "O", "h", or "H" suffix. Set marked base to 8 or 16.
+- If base style is "h" or "H" suffix
+  and first element of digits array is in 'a' to 'f' or 'A' to 'F':
+  - Error if `suffix_decimal_first`.
 - Error unless `base_styles` includes base style.
 
-**Fused mnemonic**
+**Juxtaposed word**
 
-- If `enable_fused_mnemonics` in config
+- If `juxtapose_word` in config
   and base style is `None`
   and peek is 'a' to 'z' or 'A' to 'Z':
   - Backtrack to first letter pos. Pop excess from digits array.
@@ -110,7 +122,7 @@ while scanning.
   - Else:
     - Pop front of digits array.
     - Set base style to '0' prefix. Set marked base to 8.
-    - If digit sep after octal zero: Error unless `digit_sep_positions` includes `AfterOctalLeadingZero`.
+    - If digit sep after octal zero: Error unless `digit_sep_location` includes `AfterOctalLeadingZero`.
 
 **Suffix and empty prefix conflict**
 
@@ -130,15 +142,15 @@ while scanning.
 **Close parens**
 
 - Initialize close count to 0.
-- If `enable_parens` in config:
+- If `parens` in config:
   - While close count < open count:
-    - If strip whitespace: Error unless `space_positions` includes `BetweenParens`.
+    - If strip whitespace: Error unless `space_locations` includes `BetweenParens`.
     - If bump ')': Increment close count.
     - Else: Error with unclosed parens. Break.
 
 **Trailing whitespace**
 
-- If strip whitespace: Error unless `space_positions` includes `Trailing`.
+- If strip whitespace: Error unless `space_locations` includes `Trailing`.
 
 ## Common case algorithm
 
@@ -149,16 +161,16 @@ and leading zero count.
 
 ## Fields for `IntegerSyntax`
 
-- `signs: EnumSet<SignStyle>` with `enum SignStyle { Neg, Pos, Repeated }`.
+- `signs: EnumSet<SignStyle>` with `enum SignStyle { Neg, Pos, Multiple }`.
 - `base_styles: EnumSet<BaseStyle>` as currently.
+- `suffix_decimal_first: bool`.
 - `digit_seps: EnumSet<DigitSep>` with `enum DigitSep { Underscore, SingleQuote }`.
-- `digit_sep_positions: EnumSet<DigitSepPosition>` with
-  `enum DigitSepPosition { AfterBasePrefix, AfterOctalLeadingZero, Trailing, Repeated }`.
-- `parens: bool`. Implies `enable_parens` in the parser config.
+- `digit_sep_location: EnumSet<DigitSepLocation>` with
+  `enum DigitSepLocation { AfterBasePrefix, AfterOctalLeadingZero, AfterDigits, MultipleAdjacent }`.
 - `spaces` configures the whitespace characters allowed. Probably an enum set,
   since everything will use a subset of Unicode whitespace plus NUL.
-- `space_positions: EnumSet<SpacePosition>` with
-  `enum SpacePosition { Leading, AfterSign, Trailing, BetweenParens }`.
+- `space_locations: EnumSet<SpaceLocation>` with
+  `enum SpaceLocation { Leading, AfterSign, Trailing, BetweenParens }`.
 
 This algorithm only works if `base_styles` includes `Decimal` (i.e.,
 unprefixed).
@@ -168,16 +180,18 @@ unprefixed).
 Only these three options affect the parsing behavior; the rest above determine
 which constructs are errors.
 
-- `enable_fused_mnemonics: bool`, when enabled, prefers the shortest valid
+- `leading_zero_octal: bool` determines whether a leading '0' denotes octal.
+- `quote_digit_sep: bool` determines whether to parse single quote '\'' digit
+  separators.
+- `juxtapose_word: bool`, when enabled, prefers the shortest valid
   decimal integer interpretation if there is trailing text. This is for
   supporting integers fused to a mnemonic as in wsf.
-- `enable_parens: bool` determines whether to parse parens.
-- `leading_zero_octal: bool` determines whether a leading '0' denotes octal.
+- `parens: bool` determines whether to parse parens.
 
 ## Extensions
 
-An 'r' (or 'R') suffix would be compatible with all integer syntaxes. It could
-denote a "raw" integer, where the leading zeros are significant in the binary
+An 'r'/'R' suffix would be compatible with all integer syntaxes. It could denote
+a "raw" integer, where the leading zeros are significant in the binary
 serialization. Add field `raw_suffix: bool` to `IntegerSyntax`.
 
 Other bases up to 62 would require a prefix and could not be inferred.

@@ -64,7 +64,7 @@ pub enum Base {
 pub enum IntegerError {
     /// An invalid digit.
     InvalidDigit,
-    /// No digits, excluding a possible base prefix.
+    /// No digits, excluding a base prefix.
     NoDigits,
     /// Value out of range.
     Range,
