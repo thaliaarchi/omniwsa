@@ -33,7 +33,7 @@ space ::= (" " | "\t")+
 eof ::= EOF
 ```
 
-It is then parsed into labels and ops.
+It is then parsed into labels and ops with comma-separated arguments.
 
 ```bnf
 program ::= line*
@@ -44,8 +44,7 @@ op ::= name (arg (comma arg)*)?
 arg ::= name | integer
 ```
 
-Ops are then validated. The integer arguments to `copy` and `slide` must be
-non-negative. Mnemonics are matched case-sensitively.
+Ops are then validated.
 
 ```bnf
 valid_op ::=
@@ -78,14 +77,18 @@ valid_op ::=
 
 ## Semantics
 
-The argument to `push` is arbitrary precision. The argument to `copy` and
-`slide` is Rust `isize`.
+The argument to `push` has arbitrary precision. The arguments to `copy` and
+`slide` are also parsed as arbitrary precision, but are required to fit in Rust
+`isize` and be non-negative. Negative zero generates equivalent code to zero and
+counts as non-negative. Positive zero generates no sign space token.
+
+Mnemonics and labels are case-sensitive.
 
 ## Disassembler
 
 The disassembler prints instructions with 4-space indentation, except for
-labels, and opcodes that take an argument are right-padded with spaces to match
-the width of the longest mnemonic (`slide`), so that all arguments start at
-column 11. Labels are printed with colon syntax, using the identifier from
-assembly, if available, otherwise `_` followed by the integer value. Each line
-is terminated with LF.
+labels. Opcodes that take an argument are right-padded with spaces to match the
+width of the longest mnemonic (`slide`), so that all arguments start at column
+11. Labels are printed with colon syntax, using the identifier from assembly, if
+available, otherwise `_` followed by the integer value. Each line is terminated
+with LF.
