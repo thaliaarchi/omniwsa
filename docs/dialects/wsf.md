@@ -174,7 +174,7 @@ TODO: Expand section.
 - Char literals can be negated.
 - If the final line in the assembled program is not `jmp`, `jz`, `jn`, `ret`, or
   `end`, it exits with an error.
-- wsf uses a [fork](https://github.com/wspace/censoredusername-whitespacers) of
+- wsf uses a [fork](https://github.com/wspace/censoredusername-whitespace-rs) of
   whitespace-rs, which changes it emit a positive sign for 0 and to exit with
   nonzero on error.
 
