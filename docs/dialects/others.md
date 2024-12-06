@@ -39,8 +39,6 @@
 - ruby/bossiernesto
 - ruby/collidedscope-spitewaste
 - ruby/shimo-yukicoder
-- ruby/wconrad
-- rust/censoredusername-whitespacers
 - rust/faultier-albino
 - rust/faultier-whitebase
 - scala/dashlambda-eso

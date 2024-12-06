@@ -2,7 +2,7 @@
 
 - Source: <https://github.com/CensoredUsername/whitespace-rs>
   (last updated [2024-04-24](https://github.com/CensoredUsername/whitespace-rs/commit/f52bd3d27f8dd2094d700c5f7ae0e8880c5fdc79))
-- Corpus: [rust/censoredusername-whitespacers](https://github.com/wspace/corpus/tree/main/rust/censoredusername-whitespacers)
+- Corpus: [rust/censoredusername-whitespace-rs](https://github.com/wspace/corpus/tree/main/rust/censoredusername-whitespace-rs)
 
 The Whitespace assembly dialect of CensoredUsername's whitespace-rs JIT and
 assembler.

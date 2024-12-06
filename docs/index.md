@@ -6,7 +6,7 @@ Specifications for Whitespace assembly dialects following their implementations,
 including grammar, semantics, code generation, and bugs.
 
 - [Burghard](dialects/burghard.md) (haskell/burghard-wsa)
-- [CensoredUsername](dialects/censoredusername.md) (rust/censoredusername-whitespacers)
+- [CensoredUsername](dialects/censoredusername.md) (rust/censoredusername-whitespace-rs)
 - [Lime](dialects/lime.md) (c/manarice)
 - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
 - [omniwsa](dialects/omniwsa.md) (rust/thaliaarchi-omniwsa)
