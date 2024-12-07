@@ -13,13 +13,16 @@ encodings of those. All of that, and it should be compact.
 - Extension tokens: GrassMudHorse river crab (in addition to standard), szm
   tokens (instead of standard)
 
-## Tagged bytes
+## Token source
 
-Let's try to fit the CST into a byte array. In the common case, there are six
-tokens: space, tab, line feed, comment, invalid UTF-8, and invalid token. This
-fits into 3 bits, leaving space for 2 more variants. One of those could denote
-that it is some extension token and the other can remain reserved for now. That
-leaves 5 bits, or 32 values, to be used.
+For lexing and later reference in the CST, a sequence of tokens in the source
+should be maintained.
+
+Let's try to fit the token source into a byte array. In the common case, there
+are six tokens: space, tab, line feed, comment, invalid UTF-8, and invalid
+token. This fits into 3 bits, leaving space for 2 more variants. One of those
+could denote that it is some extension token and the other can remain reserved
+for now. That leaves 5 bits, or 32 values, to be used.
 
 Since some token encodings represent tokens with regular expressions, the number
 of unique lexemes is infinite, but typically only a few are used. An out of band
@@ -40,13 +43,29 @@ Store the lexeme in the 5 bits as in standard tokens. Store the token kind as an
 8-bit index in the following byte (before the large lexeme index). 256 possible
 custom token kinds seems sufficient, even composing all known extensions.
 
-This byte encoding is not synchronizing like UTF-8.
+This byte encoding is not synchronizing like UTF-8 and cannot be iterated in
+reverse. Tokens are referenced by their byte offset in the token source.
 
 Spans aren't stored. However, they can be reconstructed on the fly from lengths
 like done by incremental compilation systems.
 
 As an aside, token encoding is a better term than token mapping for denoting a
 custom lexical format of tokens. A token decoder lexes and a token encoder
-serializes to the canonical representation for each token. Layered onto that is
-a prefix tree decoder for most dialects; this would even work for szm
-(java/azige).
+serializes to the canonical representation for each token.
+
+## Multiple files
+
+Tokens in a token source all belong to a single dialect. Even with imports,
+it would be nonsensical to simply concatenate token sources of different
+dialects, as it could not be parsed back. If you're joining them into what is
+actually a union of the two dialects, this should be intentionally handled.
+
+## Syntax tree
+
+The CST references tokens in the token source by their byte offset within the
+sequence.
+
+After lexing into a token source, most dialects parse tokens with a prefix tree
+encoding. Since dialects extensibly define their own token kinds, the prefix
+tree parser should be fully dynamic; this would even work for szm (java/azige),
+which uses its own tokens and prefix tree.
