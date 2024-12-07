@@ -35,15 +35,10 @@ Errors need to store the erroneous sequence. This can be stored inline just like
 comments.
 
 Extension tokens need to represent both the token kind and the text. Clients
-should be able to dynamically construct new token kinds for dialects to use. The
-5 bits would be the short token kind index. The following byte would be the
-short lexeme index. If the short token kind is 31, the next 4 bytes after that
-are the 32-bit token kind index. If the short lexeme index is 255, the next 4
-bytes after that are the 32-bit interned lexeme index. If both the token kind
-and lexeme index are long, the long token kind precedes the long lexeme index;
-both follow the short lexeme index byte. The slightly larger space for the
-inline lexeme index compensates for cramming all extension tokens into one
-variant.
+should be able to dynamically construct new token kinds for dialects to use.
+Store the lexeme in the 5 bits as in standard tokens. Store the token kind as an
+8-bit index in the following byte (before the large lexeme index). 256 possible
+custom token kinds seems sufficient, even composing all known extensions.
 
 This byte encoding is not synchronizing like UTF-8.
 
