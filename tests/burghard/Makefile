@@ -17,4 +17,5 @@ all: $(WS) $(ERR)
 
 .PHONY: clean
 clean:
-	rm -f $(WS) $(ERR)
+	@echo rm -f '**.ws' '**.err'
+	@rm -f $(WS) $(ERR)

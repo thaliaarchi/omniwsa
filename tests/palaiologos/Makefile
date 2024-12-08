@@ -28,4 +28,5 @@ all: $(WS) $(ERR) $(TIMEOUT)
 
 .PHONY: clean
 clean:
-	rm -f $(WS) $(ERR) $(TIMEOUT)
+	@echo rm -f '**.ws' '**.err' '**.timeout'
+	@rm -f $(WS) $(ERR) $(TIMEOUT)
