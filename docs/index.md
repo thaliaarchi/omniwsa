@@ -7,6 +7,7 @@ including grammar, semantics, code generation, and bugs.
 
 - [Burghard](dialects/burghard.md) (haskell/burghard-wsa)
 - [CensoredUsername](dialects/censoredusername.md) (rust/censoredusername-whitespace-rs)
+- [Esotope](dialects/esotope.md) (python/lifthrasiir-esotope-ws, ocaml/lifthrasiir-esotope)
 - [Lime](dialects/lime.md) (c/manarice)
 - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
 - [omniwsa](dialects/omniwsa.md) (rust/thaliaarchi-omniwsa)
