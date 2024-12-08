@@ -27,4 +27,5 @@ fail/path\#with_hash.wsf:
 
 .PHONY: clean
 clean:
-	rm -f $(WSA) $(WS) $(ERR)
+	@echo rm -f '**.wsa' '**.ws' '**.err'
+	@rm -f $(WSA) $(WS) $(ERR)

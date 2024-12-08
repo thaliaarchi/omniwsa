@@ -12,4 +12,5 @@ all: $(WS)
 
 .PHONY: clean
 clean:
-	rm -f $(WS)
+	@echo rm -f '**.ws'
+	@rm -f $(WS)
