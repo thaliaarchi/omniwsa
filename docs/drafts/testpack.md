@@ -39,3 +39,6 @@ Two examples of it:
 
 TypeScript also has fourslash tests for IDE integration tests, e.g.,
 [`fourslash/addAllMissingImportsNoCrash.ts`](https://github.com/microsoft/TypeScript/blob/main/tests/cases/fourslash/addAllMissingImportsNoCrash.ts).
+
+[`insta`](https://docs.rs/insta/latest/insta/) is a snapshot testing library for
+Rust. As an example, it is used by [if-to-let-chain](https://github.com/Alexendoo/if-to-let-chain/tree/master/src/snapshots).
