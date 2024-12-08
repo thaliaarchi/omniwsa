@@ -19,7 +19,7 @@ fn roundtrip_burghard() {
     let dialect = Burghard::new();
     let mut src = Vec::new();
     let mut pretty = Vec::new();
-    for path in glob("tests/third_party/burghard/*.wsa").unwrap() {
+    for path in glob("tests/burghard/**/*.wsa").unwrap() {
         let path = path.unwrap();
         src.clear();
         File::open(&path).unwrap().read_to_end(&mut src).unwrap();
@@ -43,9 +43,9 @@ fn codegen() {
     let mut ws_generated = String::new();
     for path in [
         "tests/palaiologos/pass/juxtapose.asm",
-        "tests/third_party/palaiologos/ws-build-run/rep_putn.asm",
-        "tests/third_party/palaiologos/ws-rebuild/copy.bak",
-        "tests/third_party/palaiologos/ws-rebuild/slide.bak",
+        "tests/palaiologos/wild/ws-build-run/rep_putn.asm",
+        "tests/palaiologos/wild/ws-rebuild/copy.bak",
+        "tests/palaiologos/wild/ws-rebuild/slide.bak",
     ] {
         let path = Path::new(path);
         src.clear();
