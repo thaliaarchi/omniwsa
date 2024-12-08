@@ -1,6 +1,5 @@
-NODE = node
-WSA_DIR = $(error 'Specify $$WSA_DIR')
-CLI = $(WSA_DIR)/dist/cli.js
+-include ../config.mk
+-include ../config.tmpl.mk
 
 PASS = $(shell find pass -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')
@@ -11,11 +10,11 @@ ERR = $(FAIL:.wsa=.err)
 all: $(WS) $(ERR)
 
 %.ws: %.wsa
-	$(NODE) $(CLI) compile --extensions $< $@
+	$(NODE) $(VOLIVA_CLI) compile --extensions $< $@
 
 %.err: %.wsa
-	! $(NODE) $(CLI) compile --extensions $< $(<:.wsa=.ws) 2> $@ >&2
-	@sed -i.bak "s|$$(realpath $(WSA_DIR))|"'$$WSA|' $@
+	! $(NODE) $(VOLIVA_CLI) compile --extensions $< $(<:.wsa=.ws) 2> $@ >&2
+	@sed -i.bak "s|$$(realpath $(VOLIVA_WSA_DIR))|"'$$WSA|' $@
 	@rm $@.bak
 
 .PHONY: clean

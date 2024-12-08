@@ -1,5 +1,5 @@
-WSF = wsf-assemble
-WSC = wsc-fork
+-include ../config.mk
+-include ../config.tmpl.mk
 
 PASS = $(shell find pass -name '*.wsf')
 FAIL = $(shell find fail -name '*.wsf')
@@ -11,13 +11,13 @@ ERR = $(FAIL:.wsf=.err)
 all: $(WSA) $(WS) $(ERR)
 
 %.wsa: %.wsf
-	$(WSF) $< $@
+	$(WSF_ASSEMBLE) $< $@
 
 %.ws: %.wsa
-	$(WSC) -t -f asm -o $@ $<
+	$(WSF_WSC) -t -f asm -o $@ $<
 
 %.err: %.wsa
-	! $(WSC) -t -f asm $< 2> $@
+	! $(WSF_WSC) -t -f asm $< 2> $@
 
 fail/hash_in_import.wsa fail/hash_in_export.wsa: fail/path\#with_hash.wsf
 

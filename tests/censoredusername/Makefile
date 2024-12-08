@@ -1,4 +1,5 @@
-WSC = $(error 'Specify $$WSC')
+-include ../config.mk
+-include ../config.tmpl.mk
 
 PASS = $(shell find pass -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')
@@ -9,11 +10,11 @@ ERR = $(FAIL:.wsa=.err)
 all: $(WS) $(ERR)
 
 %.ws: %.wsa
-	$(WSC) -t -f asm -o $@ $<
+	$(CENSOREDUSERNAME_WSC) -t -f asm -o $@ $<
 
 # Test for empty stdout, since wsc always exits with 0 unless it panics.
 %.err: %.wsa
-	! $(WSC) -t -f asm $< 2> $@ > $<.out || ! test -s $<.out && rm $<.out
+	! $(CENSOREDUSERNAME_WSC) -t -f asm $< 2> $@ > $<.out || ! test -s $<.out && rm $<.out
 
 .PHONY: all
 clean:

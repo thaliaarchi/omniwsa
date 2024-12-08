@@ -1,4 +1,5 @@
-WSI = $(error 'Specify $$WSI')
+-include ../../config.mk
+-include ../../config.tmpl.mk
 
 ASM = $(shell find . -name '*.asm' -o -name '*.bak')
 WS = $(patsubst %.asm, %.ws, $(patsubst %.bak, %.ws, $(ASM)))
@@ -7,9 +8,9 @@ WS = $(patsubst %.asm, %.ws, $(patsubst %.bak, %.ws, $(ASM)))
 all: $(WS)
 
 %.ws: %.asm
-	$(WSI) --masm $< > $@
+	$(PALAIOLOGOS_WSI) --masm $< > $@
 %.ws: %.bak
-	$(WSI) --masm $< > $@
+	$(PALAIOLOGOS_WSI) --masm $< > $@
 
 .PHONY: clean
 clean:

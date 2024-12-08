@@ -1,4 +1,5 @@
-WSI = $(error 'Specify $$WSI')
+-include ../config.mk
+-include ../config.tmpl.mk
 
 PASS = $(shell find pass -name '*.asm' -o -name '*.bak')
 FAIL = $(shell find fail -name '*.asm' -o -name '*.bak')
@@ -11,19 +12,19 @@ TIMEOUT = $(patsubst %.asm, %.timeout, $(patsubst %.bak, %.timeout, $(TIMEOUT_AS
 all: $(WS) $(ERR) $(TIMEOUT)
 
 %.ws: %.asm
-	$(WSI) --masm $< > $@
+	$(PALAIOLOGOS_WSI) --masm $< > $@
 %.ws: %.bak
-	$(WSI) --masm $< > $@
+	$(PALAIOLOGOS_WSI) --masm $< > $@
 
 %.err: %.asm
-	! $(WSI) --masm $< 2> $@
+	! $(PALAIOLOGOS_WSI) --masm $< 2> $@
 %.err: %.bak
-	! $(WSI) --masm $< 2> $@
+	! $(PALAIOLOGOS_WSI) --masm $< 2> $@
 
 %.timeout: %.asm
-	! timeout 2 $(WSI) --masm $< >/dev/null && touch $@
+	! timeout $(TIMEOUT_SECS) $(PALAIOLOGOS_WSI) --masm $< >/dev/null && touch $@
 %.timeout: %.bak
-	! timeout 2 $(WSI) --masm $< >/dev/null && touch $@
+	! timeout $(TIMEOUT_SECS) $(PALAIOLOGOS_WSI) --masm $< >/dev/null && touch $@
 
 .PHONY: clean
 clean:
