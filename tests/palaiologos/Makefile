@@ -1,5 +1,4 @@
--include ../config.mk
--include ../config.tmpl.mk
+include ../base.mk
 
 PASS = $(shell find pass wild -name '*.asm' -o -name '*.bak')
 FAIL = $(shell find fail -name '*.asm' -o -name '*.bak')

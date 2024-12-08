@@ -1,5 +1,4 @@
--include ../config.mk
--include ../config.tmpl.mk
+include ../base.mk
 
 PASS = $(shell find pass -name '*.wsf')
 FAIL = $(shell find fail -name '*.wsf')
