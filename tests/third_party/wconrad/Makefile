@@ -1,5 +1,5 @@
-RUBY = ruby
-ASM = $(error 'Specify $$ASM')
+-include ../../config.mk
+-include ../../config.tmpl.mk
 
 WSA = $(shell find . -name '*.wsa')
 WS = $(WSA:.wsa=.ws)
@@ -8,7 +8,7 @@ WS = $(WSA:.wsa=.ws)
 all: $(WS)
 
 %.ws: %.wsa
-	$(RUBY) $(ASM) $<
+	$(RUBY) $(WCONRAD_ASM) $<
 
 .PHONY: clean
 clean:

@@ -1,4 +1,5 @@
-WSA = $(error 'Specify $$WSA')
+-include ../config.mk
+-include ../config.tmpl.mk
 
 PASS = $(shell find pass -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')
@@ -9,10 +10,10 @@ ERR = $(FAIL:.wsa=.err)
 all: $(WS) $(ERR)
 
 %.ws: %.wsa
-	$(WSA) --ext-syntax --ended $< > $@
+	$(BURGHARD_WSA) --ext-syntax --ended $< > $@
 
 %.err: %.wsa
-	! $(WSA) --ext-syntax --ended $< 2> $@
+	! $(BURGHARD_WSA) --ext-syntax --ended $< 2> $@
 
 .PHONY: clean
 clean:
