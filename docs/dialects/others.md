@@ -34,7 +34,6 @@
 - python/ryndvs-aoc
 - python/smithers-bluespace
 - python/stephenchappell
-- python/tokigun-esotope-ws
 - ruby/angelp57
 - ruby/bossiernesto
 - ruby/collidedscope-spitewaste
