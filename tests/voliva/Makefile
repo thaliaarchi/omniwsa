@@ -1,5 +1,4 @@
--include ../config.mk
--include ../config.tmpl.mk
+include ../base.mk
 
 PASS = $(shell find pass wild -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')

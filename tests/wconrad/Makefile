@@ -1,5 +1,4 @@
--include ../config.mk
--include ../config.tmpl.mk
+include ../base.mk
 
 WSA = $(shell find . -name '*.wsa')
 WS = $(WSA:.wsa=.ws)
