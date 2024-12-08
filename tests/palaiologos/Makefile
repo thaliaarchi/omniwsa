@@ -1,7 +1,7 @@
 -include ../config.mk
 -include ../config.tmpl.mk
 
-PASS = $(shell find pass -name '*.asm' -o -name '*.bak')
+PASS = $(shell find pass wild -name '*.asm' -o -name '*.bak')
 FAIL = $(shell find fail -name '*.asm' -o -name '*.bak')
 TIMEOUT_ASM = $(shell find timeout -name '*.asm' -o -name '*.bak')
 WS = $(patsubst %.asm, %.ws, $(patsubst %.bak, %.ws, $(PASS)))
