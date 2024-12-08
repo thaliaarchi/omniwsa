@@ -83,7 +83,8 @@ Space is not required around strings or chars. The grammar for `sep` is overly
 restrictive.
 
 `\s` in GNU sed (via Gnulib) [defers to](https://git.savannah.gnu.org/cgit/gnulib.git/tree/lib/regcomp.c?id=38b5fabdfcf0ddd516fdd9105ccb1b2ac38cb62c#n3515)
-`isspace` from `<ctype.h>`.
+[`isspace`](https://en.cppreference.com/w/c/string/byte/isspace) from
+`<ctype.h>`.
 
 ## Generation
 
