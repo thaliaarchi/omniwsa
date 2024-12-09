@@ -1,4 +1,4 @@
-SUBDIRS := burghard censoredusername langs palaiologos voliva wconrad wsf
+SUBDIRS := c haskell javascript
 
 .PHONY: all clean
 all: $(SUBDIRS:%=%.all)
