@@ -10,6 +10,8 @@ WCONRAD_ASM ?= $(error 'Configure $$WCONRAD_ASM in config.mk')
 WSF_ASSEMBLE ?= $(error 'Configure $$WSF_ASSEMBLE in config.mk')
 WSC_WSF ?= $(error 'Configure $$WSC_WSF in config.mk')
 
+CC ?= gcc
+GHC ?= ghc
 NODE ?= node
 RUBY ?= ruby
 
