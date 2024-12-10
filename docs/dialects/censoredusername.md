@@ -1,7 +1,7 @@
 # CensoredUsername Whitespace assembly
 
 - Source: <https://github.com/CensoredUsername/whitespace-rs>
-  (last updated [2024-04-24](https://github.com/CensoredUsername/whitespace-rs/commit/f52bd3d27f8dd2094d700c5f7ae0e8880c5fdc79))
+  (last updated [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/9acc85f4c4b6bb5ef35f2e4747955d43e8c2599e))
 - Corpus: [rust/censoredusername-whitespace-rs](https://github.com/wspace/corpus/tree/main/rust/censoredusername-whitespace-rs)
 
 The Whitespace assembly dialect of CensoredUsername's whitespace-rs JIT and
@@ -28,8 +28,8 @@ integer ::= "-"? [0-9]+
 colon ::= ":"
 comma ::= ","
 comment ::= ";" [^\n]*
-newline ::= "\n" ("\n" | " " | "\t")*
-space ::= (" " | "\t")+
+newline ::= "\n" ("\n" | space)*
+space ::= (" " | "\t" | "\f" | "\r")+
 eof ::= EOF
 ```
 
@@ -79,10 +79,18 @@ valid_op ::=
 
 The argument to `push` has arbitrary precision. The arguments to `copy` and
 `slide` are also parsed as arbitrary precision, but are required to fit in Rust
-`isize` and be non-negative. Negative zero generates equivalent code to zero and
-counts as non-negative. Positive zero generates no sign space token.
+`isize` and be non-negative. Zero (and positive and negative zero) are encoded
+with a positive sign space token. Negative zero counts as a non-negative
+argument.
 
 Mnemonics and labels are case-sensitive.
+
+### History
+
+- Until [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/35d4aa422867f9bd0e4eaf43437deeb0157fab33),
+  zero was encoded without a sign.
+- Until [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/3ad9036a4cf17bd578f38ac0aca3fff30b316689),
+  the recognized whitespace characters were only space and tab.
 
 ## Disassembler
 

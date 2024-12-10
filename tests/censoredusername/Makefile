@@ -11,9 +11,8 @@ all: $(WS) $(ERR)
 %.ws: %.wsa
 	$(CENSOREDUSERNAME_WSC) -t -f asm -o $@ $<
 
-# Test for empty stdout, since wsc always exits with 0 unless it panics.
 %.err: %.wsa
-	! $(CENSOREDUSERNAME_WSC) -t -f asm $< 2> $@ > $<.out || ! test -s $<.out && rm $<.out
+	! $(CENSOREDUSERNAME_WSC) -t -f asm -o $*.ws $< 2> $@
 
 .PHONY: all
 clean:
