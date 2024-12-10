@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "esotope-ws", line 67, in <module>
+    ""                  "" ""                                           ""    ""    +""                "--source']==argv[1"
+  File "<string>", line 3, in <module>
+  File "<string>", line 21, in <module>
+ValueError: 'invalid' is not in list

@@ -8,8 +8,8 @@
 ## Grammar
 
 ```bnf
-program ::= (trim_space? (inst | comment)? trim_space? line_break)*
-            trim_space? (inst | comment)? trim_space? line_break?
+program ::= (trim_space? (inst | comment)? trim_space? line_term)*
+            trim_space? (inst | comment)? trim_space? line_term?
 inst ::=
     | "push" space (number | variable)
     | "dup"
@@ -50,9 +50,9 @@ label ::= "." .*?
 variable ::= "*" .*?
 comment ::= "//" .*?
 
-line_break ::= "\n" | "\r" | "\r\n"
+line_term ::= "\n" | "\r" | "\r\n"
 space ::= [ \t]+
-trim_space ::= (Char.IsWhiteSpace NOT line_break)+
+trim_space ::= (Char.IsWhiteSpace NOT line_term)+
 ```
 
 Opcodes are matched case-insensitively.
