@@ -16,7 +16,7 @@ all: $(WSA) $(WS) $(ERR)
 	$(WSF_WSC) -t -f asm -o $@ $<
 
 %.err: %.wsa
-	! $(WSF_WSC) -t -f asm $< 2> $@
+	! $(WSF_WSC) -t -f asm -o $*.ws $< 2> $@
 
 fail/hash_in_import.wsa fail/hash_in_export.wsa: fail/path\#with_hash.wsf
 
