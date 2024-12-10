@@ -1,9 +1,13 @@
 push 5
 push 97
 push 7
+push 7
+push 255
 push 255
 push -5
 push -97
 push -7
+push -7
+push -255
 push -255
 exit

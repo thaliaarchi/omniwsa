@@ -15,86 +15,91 @@ including two for Whitespace: [esotope-ws](https://github.com/wspace/lifthrasiir
 implements several esolangs including a Whitespace interpreter. esotope-ws is an
 early assembler.
 
-The following describes the assembly syntax of esotope-ws. Esotope also has a
-function `string_of_node` to format instructions with the same assembly syntax,
-but it is unused.
+## Assembler
 
-## Grammar
+The following describes the assembly syntax of the esotope-ws assembler.
+
+### Grammar
 
 ```bnf
+program ::= (line line_term)* line?
+line ::=
+    | space* ((label_def space+)? inst junk? | label_def)? space* comment?
 inst ::=
-    | "push"
-    | "dup"
-    | "copy"
-    | "swap"
-    | "pop"
-    | "slide"
-    | "add"
-    | "sub"
-    | "mul"
-    | "div"
-    | "mod"
-    | "store"
-    | "retrieve"
-    | [^;]* ":"
-    | "call"
-    | "jmp"
-    | "jz"
-    | "jn"
-    | "ret"
-    | "halt"
-    | "putchar"
-    | "putint"
-    | "getchar"
-    | "getint"
-comment ::= ";" …*
+    | (?i)"push" space+ int
+    | (?i)"dup"
+    | (?i)"copy" space+ int
+    | (?i)"swap"
+    | (?i)"pop"
+    # BUG: No argument is taken
+    | (?i)"slide"
+    | (?i)"add"
+    | (?i)"sub"
+    | (?i)"mul"
+    | (?i)"div"
+    | (?i)"mod"
+    | (?i)"store"
+    | (?i)"retrieve"
+    | (?i)"call" space+ label_ref
+    | (?i)"jmp" space+ label_ref
+    | (?i)"jz" space+ label_ref
+    | (?i)"jn" space+ label_ref
+    | (?i)"ret"
+    | (?i)"halt"
+    | (?i)"putchar"
+    | (?i)"putint"
+    | (?i)"getchar"
+    | (?i)"getint"
+label_def ::= word? ":"
+label_ref ::= word
+int ::= ("-" | "+")? [0-9]+
+comment ::= ";" [^\n\r]*
+# BUG: Ignored text
+junk ::= (space+ word)+
+word ::= [^ \t\n\v\f\r;]+
 
-space ::= …
-isspace ::= " " | "\t" | "\n" | "\v" | "\f" | "\r"
-iswspace ::=
-  | U+0009..U+000D | U+0020 | U+1680 | U+180E | U+2000..U+2006
-  | U+2008..U+200A | U+2028 | U+2029 | U+205F | U+3000
-_PyUnicode_IsWhitespace :=
-  | U+0009..U+000D | U+001C..U+001F | U+0020 | U+0085 | U+00A0 | U+1680
-  | U+2000..U+200B | U+2028 | U+2029 | U+202F | U+205F | U+3000
+line_term ::= "\n" | "\r" | "\r\n"
+space ::= " " | "\t" | "\v" | "\f"
 ```
 
-Mnemonics are compared case-insensitively.
+Mnemonics are compared ASCII case-insensitively.
+
+esotope-ws operates on `str` objects, which use Latin-1, not `unicode` objects.
+No UTF-8 decoding or validation is performed.
+
+### Generation
+
+- Zero (including negative zero) is encoded without a sign.
+- `slide` is encoded without an argument or its terminating LF.
+- Labels are encoded as the bits of the byte text, most significant bit first.
+
+### Bugs in assembler
+
+- `slide` does not take an argument.
+- Extra trailing words on a line are ignored.
+- Empty labels definitions (`:`) are allowed, but not empty label references.
+
+### Python 2 reference
 
 esotope-ws was created 2004-12-08, so likely was written with [Python 2.3.4](https://www.python.org/downloads/release/python-234/)
 (released 2004-05-27) or [Python 2.4.0](https://www.python.org/downloads/release/python-240/)
 (released 2004-11-30).
 
-[`string.split`](https://github.com/python/cpython/blob/v2.4/Objects/stringobject.c#L1306)
-with the default separator splits a string into words separated by whitespace
-using [`isspace`](https://en.cppreference.com/w/c/string/byte/isspace) from
-`<ctype.h>`. [`unicode.split`](https://github.com/python/cpython/blob/v2.4/Objects/unicodeobject.c#L4225)
-splits likewise, but using [`Py_UNICODE_ISSPACE`](https://github.com/python/cpython/blob/v2.4/Include/unicodeobject.h#L303-L326),
-which is either [`iswspace`](https://en.cppreference.com/w/c/string/wide/iswspace)
-from `<wctype.h>` or [`_PyUnicode_IsWhitespace`](https://github.com/python/cpython/blob/v2.4/Objects/unicodectype.c#L327-L335).
-`_PyUnicode_IsWhitespace` considers Unicode characters with the bidirectional
-type WS, B, or, S or the category Zs to be whitespace.
-
-[`ord`](https://github.com/python/cpython/blob/v2.4/Python/bltinmodule.c#L1226).
-
-### TODO
-
-- Is `string` or `unicode` used?
-- What line separators does string `splitlines` consider?
-- What whitespace does string `split` consider?
-- What case folding does string `tolower` use?
-- What about NUL? `string.split` seems to allow it as a character.
-- How are encoding errors handled?
-- How is negative zero handled?
-- Does `ord` in label generation use bytes or codepoints or code units? If not
-  bytes, then bits are not included in generation.
-
-### Generation
-
-Zero is encoded without a sign. Labels are encoded as the bits of the text, most
-significant bit first.
+- [`int(s)`](https://github.com/python/cpython/blob/v2.4/Objects/intobject.c#L875)
+  with a string argument and no base parses it in base 10 to an int.
+- [`string.split`](https://github.com/python/cpython/blob/v2.4/Objects/stringobject.c#L1306)
+  with the default separator splits a string into words separated by whitespace
+  using [`isspace`](https://en.cppreference.com/w/c/string/byte/isspace) from
+  `<ctype.h>`.
+- [`string.splitlines`](https://github.com/python/cpython/blob/v2.4/Objects/stringobject.c#L3193):
+  splits by LF, CR, and CRLF.
+- [`ord`](https://github.com/python/cpython/blob/v2.4/Python/bltinmodule.c#L1226)
 
 ## Disassembler
+
+The following describes the assembly syntax of the esotope-ws disassembler.
+Esotope also has a function `string_of_node` to format instructions with the
+same assembly syntax, but it is unused.
 
 ```bnf
 inst ::=
@@ -124,3 +129,5 @@ inst ::=
     | "getchar"
     | "getint"
 ```
+
+TODO: Document disassemblers.

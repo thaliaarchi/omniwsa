@@ -1,0 +1,9 @@
+push 0
+push -0
+push +0
+push 42
+push -42
+push +42
+push 042
+push -042
+push +042
