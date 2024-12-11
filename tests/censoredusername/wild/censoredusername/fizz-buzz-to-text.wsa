@@ -1,0 +1,29 @@
+    push  0
+loop:
+    dup
+    push  0
+    dup
+    ichr
+    get
+    push  32
+    sub
+    dup
+    jz    space
+    push  38
+    sub
+    jz    fizz
+    push  1
+    add
+fizz:
+    push  0
+    dup
+    dup
+    ichr
+    ichr
+    ichr
+    add
+    jmp   loop
+space:
+    swap
+    pchr
+    jmp   loop

@@ -1,0 +1,14 @@
+loop:
+    push 32
+     dup
+      dup
+       dup
+        ichr
+       get
+       sub
+      jn not_32
+     dup
+      add
+not_32:
+     pchr
+    jmp loop
