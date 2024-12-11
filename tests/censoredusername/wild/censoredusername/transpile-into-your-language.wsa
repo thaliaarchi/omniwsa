@@ -1,0 +1,56 @@
+early:
+    call S
+    call S
+    call N
+start:
+    push  0
+    dup
+    ichr
+    get
+    push  35
+    sub
+    dup
+    jz    hash
+    push  24
+    sub
+    jz    semi
+    jmp   start
+hash:
+    pop
+    call SSS
+    call TTT
+    call TTT
+    call T
+    call N
+    call T
+    call S
+    call TTT
+    call N
+    call S
+    call S
+    jmp   early
+semi:
+    call SSS
+    call T
+    call N
+    call T
+    call SSS
+    jmp   start
+N:
+    push 10
+    pchr
+    ret
+SSS:
+    call S
+    call S
+S:
+    push 32
+    pchr
+    ret
+TTT:
+    call T
+    call T
+T:
+    push 9
+    pchr
+    ret

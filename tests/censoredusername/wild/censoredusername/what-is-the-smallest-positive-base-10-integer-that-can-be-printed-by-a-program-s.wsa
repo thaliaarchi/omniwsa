@@ -1,0 +1,8 @@
+     push -38
+loop:
+     push 1
+      dup
+       pnum
+      add
+     dup
+      jn loop
