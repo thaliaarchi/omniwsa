@@ -9,6 +9,7 @@ including grammar, semantics, code generation, and bugs.
 - [CensoredUsername](dialects/censoredusername.md) (rust/censoredusername-whitespace-rs)
 - [Esotope](dialects/esotope.md) (python/lifthrasiir-esotope-ws, ocaml/lifthrasiir-esotope)
 - [Lime](dialects/lime.md) (c/manarice)
+- [Leah Hirst](dialects/liahhirst.md) (typescript/leahhirst-nospace)
 - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
 - [omniwsa](dialects/omniwsa.md) (rust/thaliaarchi-omniwsa)
 - [Palaiologos](dialects/palaiologos.md) (c/kspalaiologos-asm2ws)
