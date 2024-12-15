@@ -28,7 +28,7 @@ BIGINT ::=
     | ("0o" | "0O") [0-7]+
     | ("0x" | "0X") [0-9 a-f A-F]+
 
-# RegExp \s (ref. https://tc39.es/ecma262/multipage/text-processing.html#sec-compiletocharset)
+# RegExp \s (ref. https://tc39.es/ecma262/multipage/text-processing.html#sec-compiletocharset).
 \s ::=
     | U+0009 # Tab
     | U+000A # Line feed
