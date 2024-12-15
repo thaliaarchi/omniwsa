@@ -9,4 +9,4 @@ UnhandledPromiseRejection: This error originated either by throwing inside of an
   code: 'ERR_UNHANDLED_REJECTION'
 }
 
-Node.js v23.3.0
+Node.js v23.4.0
