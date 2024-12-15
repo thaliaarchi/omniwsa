@@ -146,8 +146,8 @@ label ::= word
 Where `"_":word` denotes a word that starts with `_`. The rest after the prefix
 may be empty.
 
-Integer literals are parsed with `read :: Integer`, so it follows the same
-grammar as `readi` in the reference interpreter.
+Integer literals are parsed with `read :: String -> Integer`, so it follows the
+same grammar as `readi` in the reference interpreter.
 
 ## Generating
 
