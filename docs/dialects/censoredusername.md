@@ -1,7 +1,7 @@
 # CensoredUsername Whitespace assembly
 
 - Source: <https://github.com/CensoredUsername/whitespace-rs>
-  (last updated [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/9acc85f4c4b6bb5ef35f2e4747955d43e8c2599e))
+  (last updated [2024-12-12](https://github.com/CensoredUsername/whitespace-rs/commit/9028eba04b40af4a23f99dac058b3ac06c5967ff))
 - Corpus: [rust/censoredusername-whitespace-rs](https://github.com/wspace/corpus/tree/main/rust/censoredusername-whitespace-rs)
 
 The Whitespace assembly dialect of CensoredUsername's whitespace-rs JIT and
@@ -83,6 +83,11 @@ The argument to `push` has arbitrary precision. The arguments to `copy` and
 with a positive sign space token. Negative zero counts as a non-negative
 argument.
 
+Labels are encoded as the ASCII representation of the text with 8 bits per byte
+(big-endian), except for labels matching the pattern `_[01]*`, which are encoded
+as their binary representation (big-endian). Both styles are minified when
+`--minify` is passed.
+
 Mnemonics and labels are case-sensitive.
 
 ### History
@@ -94,9 +99,13 @@ Mnemonics and labels are case-sensitive.
 
 ## Disassembler
 
-The disassembler prints instructions with 4-space indentation, except for
-labels. Opcodes that take an argument are right-padded with spaces to match the
-width of the longest mnemonic (`slide`), so that all arguments start at column
-11. Labels are printed with colon syntax, using the identifier from assembly, if
-available, otherwise `_` followed by the integer value. Each line is terminated
-with LF.
+The disassembler prints instructions with 4-space indentation. Opcodes that take
+an argument are right-padded with spaces to match the width of the longest
+mnemonic (`slide`), so that all arguments start at column 11. Labels are printed
+as ASCII if the representation consists of 8-bit bytes in `[a-zA-Z_]`; otherwise
+as `_` followed by binary digits. Labels use colon syntax and are not indented.
+Every line is terminated with LF.
+
+### Bugs
+
+- Labels are not disassembled as ASCII if they contain `[0-9]`.
