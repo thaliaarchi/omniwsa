@@ -75,7 +75,7 @@ valid_op ::=
     | "inum"
 ```
 
-## Semantics
+### Semantics
 
 The argument to `push` has arbitrary precision. The arguments to `copy` and
 `slide` are also parsed as arbitrary precision, but are required to fit in Rust
@@ -85,8 +85,10 @@ argument.
 
 Labels are encoded as the ASCII representation of the text with 8 bits per byte
 (big-endian), except for labels matching the pattern `_[01]*`, which are encoded
-as their binary representation (big-endian). Both styles are minified when
-`--minify` is passed.
+as their binary representation (big-endian). Both styles are minified.
+
+When `--minify` is passed, labels are minified by replacing them with minimal
+bit sequences, including leading zeros.
 
 Mnemonics and labels are case-sensitive.
 
@@ -96,6 +98,11 @@ Mnemonics and labels are case-sensitive.
   zero was encoded without a sign.
 - Until [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/3ad9036a4cf17bd578f38ac0aca3fff30b316689),
   the recognized whitespace characters were only space and tab.
+
+### Bugs
+
+- Labels with the same number of references are minified in a non-deterministic
+  order.
 
 ## Disassembler
 
