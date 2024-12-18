@@ -1,7 +1,7 @@
 include ../base.mk
 
-PASS = $(filter-out $(WILD_FAIL), $(shell find wild -name '*.wsa'))
-FAIL = $(WILD_FAIL)
+PASS = $(filter-out $(WILD_FAIL), $(shell find pass wild -name '*.wsa'))
+FAIL = $(shell find fail -name '*.wsa') $(WILD_FAIL)
 WILD_FAIL = wild/problem08.wsa wild/problem08_o.wsa
 WS = $(PASS:.wsa=.ws)
 ERR = $(FAIL:.wsa=.err)
