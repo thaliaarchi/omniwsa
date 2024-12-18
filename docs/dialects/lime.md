@@ -101,6 +101,12 @@ TODO: Check that EOF and NUL are handled in all cases.
 - Unterminated block comments are allowed.
 - Macros without a closing `]` are not handled.
 - Open `[` in a macro list is not handled.
+- Labels with colliding hashes are treated as the same. Only the first 255 bytes
+  of a label are hashed.
+
+TODO: When pass/tokens/label_{first,rest}_part{1,2}.wsa are combined, it
+exhibits some bug in the hash map implementation. It doesn't seem to be from a
+hash collision.
 
 ## Disassembler
 
