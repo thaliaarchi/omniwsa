@@ -23,11 +23,11 @@ inst ::=
     | "MOD" | "mod"
     | "STORE" | "store"
     | "FETCH" | "fetch" | "RETRIEVE" | "retrieve"
-    | label ":"
-    | ("CALL" | "call") space label
-    | ("JMP" | "jmp") space label
-    | ("JZ" | "jz") space label
-    | ("JN" | "jn") space label
+    | label_def ":"
+    | ("CALL" | "call") space label_ref
+    | ("JMP" | "jmp") space label_ref
+    | ("JZ" | "jz") space label_ref
+    | ("JN" | "jn") space label_ref
     | "RET" | "ret"
     | "END" | "end"
     | "PRINTC" | "printc"
@@ -37,13 +37,14 @@ inst ::=
     | ("MACRO" | "macro")
         space word
         space? "["
-        (space? (word | label | number)
-                (space (word | label | number))*)?
+        (space? (word | label_ref | number)
+                (space (word | label_ref | number))*)?
         space? "]"
     | word
 
 word ::= [^ \t\n.:;\[\]*/\\'"#$-]+
-label ::= "." word
+label_def ::= "." word
+label_ref ::= "."? word
 number ::=
     | [0-9]{1,64}
     | "-" [0-9]{0,63}
@@ -61,7 +62,7 @@ The pattern `.` includes `\n` here.
 ## Parsing
 
 - Byte-oriented.
-- Numbers are limited to 64 digits when parsing and encoding.
+- Number tokens are limited to 64 bytes.
 - Labels and macro names cannot be mnemonics.
 - `'\n'` and `'\t'` escapes are handled, while any other characters are used
   unchanged.
@@ -80,10 +81,12 @@ The pattern `.` includes `\n` here.
 
 ## Bugs in the assembler
 
-- The first digit of a number and the first byte of a label may be any value.
 - Negative hex numbers and a `0X` prefix are not handled.
+- Integer values outside the range of `int64_t` are saturated.
 - Line comments can't end with EOF.
 - A label may be used in place of a number.
+- Label references do not need to start with `.`, while definitions require it,
+  so such labels always fail from referencing a non-existent definition.
 - Space is optional between tokens, when either is one of `.` `:` `;` `[` `]`
   `*` `/` `\` `'` `"` `#` `$` `-` or `` ` ``. This means that space isn't
   required before or after a label definition, after a macro definition, before
