@@ -1,0 +1,6 @@
+push 'x'
+push '\n'
+push '\t'
+push '\x'
+push '
+'
