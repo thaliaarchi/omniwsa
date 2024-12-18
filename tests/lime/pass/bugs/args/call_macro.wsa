@@ -1,0 +1,4 @@
+    push 1
+    call macro hello [push 2] .hello
+    hello
+.hello:
