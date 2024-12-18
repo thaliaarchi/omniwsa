@@ -1,0 +1,9 @@
+[WSP] Unexpected token type at loc: 2:21
+KEY: push           loc: 1:1
+NUM: 1        loc: 1:6
+KEY: push           loc: 2:14
+NUM: 2        loc: 2:19
+T List         loc: 2:21
+KEY: push           loc: 2:23
+NUM: 3        loc: 2:28
+T List         loc: 2:21
