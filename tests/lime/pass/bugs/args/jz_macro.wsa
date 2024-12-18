@@ -1,0 +1,4 @@
+    push 1
+    jz macro hello [push 2] .hello
+    hello
+.hello:
