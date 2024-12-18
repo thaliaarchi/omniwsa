@@ -67,6 +67,8 @@ The pattern `.` includes `\n` here.
 - `'\n'` and `'\t'` escapes are handled, while any other characters are used
   unchanged.
 
+TODO: Check that EOF and NUL are handled in all cases.
+
 ## Generation
 
 - Labels are encoded as signed integers incrementing from 0x4a00 in definition
@@ -81,9 +83,10 @@ The pattern `.` includes `\n` here.
 
 ## Bugs in the assembler
 
+- NUL truncates the file.
+- Minus without digits is allowed and is `0`.
 - Negative hex numbers and a `0X` prefix are not handled.
 - Integer values outside the range of `int64_t` are saturated.
-- Line comments can't end with EOF.
 - A label may be used in place of a number.
 - Label references do not need to start with `.`, while definitions require it,
   so such labels always fail from referencing a non-existent definition.
@@ -91,3 +94,16 @@ The pattern `.` includes `\n` here.
   `*` `/` `\` `'` `"` `#` `$` `-` or `` ` ``. This means that space isn't
   required before or after a label definition, after a macro definition, before
   a negative number, or before or after a char.
+- Unterminated block comments are allowed.
+
+## Disassembler
+
+The function `print_token` in `inc/common.h` disassembles a Whitespace
+instruction and was used to generate several of the programs.
+
+It uses the following mnemonics: `PUSH`, `DUPE`, `COPY`, `SWAP`, `DROP`,
+`SLIDE`, `ADD`, `SUB`, `MUL`, `DIV`, `MOD`, `STORE`, `FETCH`, `CALL`, `JMP`,
+`JZ`, `JN`, `RET`, `END`, `PRINTC`, `PRINTI`, `READC`, and `READI`. Instructions
+are indented with 4 spaces. Label definitions are printed with a `:` and are not
+indented. It uses LF line terminators. Labels are formatted as hex integers
+without leading zeros, prefixed with `.`.
