@@ -75,6 +75,7 @@ TODO: Check that EOF and NUL are handled in all cases.
   order and are limited to 64 bits.
 - `push 0` and `push -0` are encoded as `SS SSL`.
 - It prepends the shebang `#!lwsvm`.
+- Redeclared labels or macros are forbidden.
 
 ## Notes
 
@@ -87,19 +88,25 @@ TODO: Check that EOF and NUL are handled in all cases.
 - Minus without digits is allowed and is `0`.
 - Negative hex numbers and a `0X` prefix are not handled.
 - Integer values outside the range of `int64_t` are saturated.
-- A label may be used in place of a number.
+- A label may be used in place of a number and vice versa. They do not work in
+  these incorrect positions.
 - Label references do not need to start with `.`, while definitions require it,
   so such labels always fail from referencing a non-existent definition.
-- Space is optional between tokens, when either is one of `.` `:` `;` `[` `]`
-  `*` `/` `\` `'` `"` `#` `$` `-` or `` ` ``. This means that space isn't
-  required before or after a label definition, after a macro definition, before
-  a negative number, or before or after a char.
+- Space is optional between tokens, when either of the adjacent bytes is one of
+  `.` `:` `;` `[` `]` `*` `/` `\` `'` `"` `#` `$` or `-`. This means that space
+  isn't required before or after a label definition, after a macro definition,
+  before a negative number, or before or after a char.
+- Characters `*` `\` `"` `#` and `$` are treated as special, but unused.
+  However, this probably only impacts error messages.
 - Unterminated block comments are allowed.
+- Macros without a closing `]` are not handled.
+- Open `[` in a macro list is not handled.
 
 ## Disassembler
 
-The function `print_token` in `inc/common.h` disassembles a Whitespace
-instruction and was used to generate several of the programs.
+The functions `print_token` in `inc/common.h` and `print_op` in `wsa.c` both
+identically disassemble a Whitespace instruction and were supposedly used to
+generate several of the programs.
 
 It uses the following mnemonics: `PUSH`, `DUPE`, `COPY`, `SWAP`, `DROP`,
 `SLIDE`, `ADD`, `SUB`, `MUL`, `DIV`, `MOD`, `STORE`, `FETCH`, `CALL`, `JMP`,

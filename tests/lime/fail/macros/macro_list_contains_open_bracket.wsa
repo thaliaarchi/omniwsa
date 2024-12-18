@@ -1,0 +1,3 @@
+push 1
+macro hello [push 2 [ push 3]
+hello
