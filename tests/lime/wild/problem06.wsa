@@ -1,0 +1,64 @@
+    push 0
+    push 1
+    store
+    push 1
+    push 1
+    store
+    push 1
+.4a00:
+    push 1
+    add
+    dupe
+    push 0
+    fetch
+    add
+    push 0
+    swap
+    store
+    dupe
+    push 100
+    swap
+    sub
+    jz .4a01
+    jmp .4a00
+    
+.4a01:
+    drop
+    push 0
+    fetch
+    dupe
+    mul
+    push 0
+    swap
+    store
+    
+    push 1
+.4a02:
+    push 1
+    add
+    dupe
+    dupe 
+    mul
+    push 1
+    fetch
+    add
+    push 1
+    swap 
+    store
+    dupe
+    push 100
+    swap
+    sub
+    jz .4a03
+    jmp .4a02
+
+.4a03:
+    drop
+    push 0
+    fetch
+    push 1
+    fetch
+    sub
+    printi
+    end
+    

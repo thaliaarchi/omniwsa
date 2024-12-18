@@ -1,0 +1,41 @@
+    PUSH 1
+    PUSH 0
+    STORE
+    PUSH 2
+    PUSH 4000000
+    STORE
+    PUSH 1
+    DUPE
+.4a00:
+    SWAP
+    DUPE
+    PUSH 2
+    FETCH
+    SWAP
+    SUB
+    DUPE
+    JZ .4a10
+    JN .4a10
+    DUPE
+    PUSH 2
+    MOD
+    JZ .4a02
+.4a01:
+    COPY 1
+    ADD
+    JMP .4a00
+.4a02:
+    DUPE
+    PUSH 1
+    FETCH
+    ADD
+    PUSH 1
+    SWAP
+    STORE
+    JMP .4a01
+    
+.4a10:
+    PUSH 1
+    FETCH
+    PRINTI
+    END

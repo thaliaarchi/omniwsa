@@ -1,0 +1,44 @@
+    push 19
+    push 0
+    push 20
+    store
+.4a00:
+    dupe
+    jz .4a04
+    push 0
+    fetch
+    call .4a03
+    drop
+    push 1
+    sub
+    jmp .4a00
+.4a01:
+    dupe
+    jz .4a02
+    swap
+    copy 1
+    mod
+    jmp .4a01
+    
+.4a02:
+    drop
+    ret
+
+.4a03:
+    copy 1
+    copy 1
+    mul
+    copy 2
+    copy 2
+    call .4a01
+    div
+    push 0
+    swap
+    store
+    ret
+    
+.4a04:
+    push 0 
+    fetch
+    printi 
+    end

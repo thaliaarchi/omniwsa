@@ -1,0 +1,240 @@
+    /*
+        Program to solve the second Euler problem:
+        Larges product in a series @
+        https://projecteuler.net/problem=8
+        
+        This version is made to be runnable on the online interpreter
+    */
+
+    /*
+        73167 17653 13306 24919 22511 96744 26574 74235 53491 94934
+        96983 52031 27745 06326 23957 83180 16984 80186 94788 51843
+        
+        85861 56078 91129 49495 45950 17379 58331 95285 32088 05511
+        12540 69874 71585 23863 05071 56932 90963 29522 74430 43557
+        
+        66896 64895 04452 44523 16173 18564 03098 71112 17223 83113
+        62229 89342 33803 08135 33627 66142 82806 44448 66452 38749
+        
+        30358 90729 62904 91560 44077 23907 13810 51585 93079 60866
+        70172 42712 18839 98797 90879 22749 21901 69972 08880 93776
+        
+        65727 33300 10533 67881 22023 54218 09751 25454 05947 52243
+        52584 90771 16705 56013 60483 95864 46706 32441 57221 55397
+        
+        53697 81797 78461 74064 95514 92908 62569 32197 84686 22482
+        83972 24137 56570 56057 49026 14079 72968 65241 45351 00474
+        
+        82166 37048 44031 99890 00889 52434 50658 54122 75886 66881
+        16427 17147 99244 42928 23086 34656 74813 91912 31628 24586
+        
+        17866 45835 91245 66529 47654 56828 48912 88314 26076 90042
+        24219 02267 10556 26321 11110 93705 44217 50694 16589 60408
+        
+        07198 40385 09624 55444 36298 12309 87879 92724 42849 09188
+        84580 15616 60979 19133 87549 92005 24063 68991 25607 17606
+        
+        05886 11646 71094 05077 54100 22569 83155 20005 59357 29725
+        71636 26956 18826 70428 25248 36008 23257 53042 07529 63450
+    */
+
+    macro index_counter_loc [0]
+    macro largest_loc [1]
+    macro start_of_number [2]
+    macro step_number [13]
+    macro size_of_number [5]
+    macro total_size_of_number [1000]
+    macro base [10]
+
+
+    push index_counter_loc
+    push start_of_number
+    store
+
+    push largest_loc
+    push 1
+    store
+
+    push 73167 call .add_num push 17653 call .add_num push 13306 call .add_num 
+    push 24919 call .add_num push 22511 call .add_num push 96744 call .add_num 
+    push 26574 call .add_num push 74235 call .add_num push 53491 call .add_num 
+    push 94934 call .add_num
+    push 96983 call .add_num push 52031 call .add_num push 27745 call .add_num 
+    push 06326 call .add_num push 23957 call .add_num push 83180 call .add_num 
+    push 16984 call .add_num push 80186 call .add_num push 94788 call .add_num 
+    push 51843 call .add_num
+    
+    push 85861 call .add_num push 56078 call .add_num push 91129 call .add_num 
+    push 49495 call .add_num push 45950 call .add_num push 17379 call .add_num 
+    push 58331 call .add_num push 95285 call .add_num push 32088 call .add_num 
+    push 05511 call .add_num
+    push 12540 call .add_num push 69874 call .add_num push 71585 call .add_num 
+    push 23863 call .add_num push 05071 call .add_num push 56932 call .add_num 
+    push 90963 call .add_num push 29522 call .add_num push 74430 call .add_num 
+    push 43557 call .add_num
+    
+    push 66896 call .add_num push 64895 call .add_num push 04452 call .add_num 
+    push 44523 call .add_num push 16173 call .add_num push 18564 call .add_num 
+    push 03098 call .add_num push 71112 call .add_num push 17223 call .add_num 
+    push 83113 call .add_num
+    push 62229 call .add_num push 89342 call .add_num push 33803 call .add_num 
+    push 08135 call .add_num push 33627 call .add_num push 66142 call .add_num 
+    push 82806 call .add_num push 44448 call .add_num push 66452 call .add_num 
+    push 38749 call .add_num
+    
+    push 30358 call .add_num push 90729 call .add_num push 62904 call .add_num push 91560 call .add_num push 44077 call .add_num push 23907 call .add_num push 13810 call .add_num push 51585 call .add_num push 93079 call .add_num push 60866 call .add_num
+    push 70172 call .add_num push 42712 call .add_num push 18839 call .add_num push 98797 call .add_num push 90879 call .add_num push 22749 call .add_num push 21901 call .add_num push 69972 call .add_num push 08880 call .add_num push 93776 call .add_num
+    
+    push 65727 call .add_num push 33300 call .add_num push 10533 call .add_num push 67881 call .add_num push 22023 call .add_num push 54218 call .add_num push 09751 call .add_num push 25454 call .add_num push 05947 call .add_num push 52243 call .add_num
+    push 52584 call .add_num push 90771 call .add_num push 16705 call .add_num push 56013 call .add_num push 60483 call .add_num push 95864 call .add_num push 46706 call .add_num push 32441 call .add_num push 57221 call .add_num push 55397 call .add_num
+    
+    push 53697 call .add_num push 81797 call .add_num push 78461 call .add_num push 74064 call .add_num push 95514 call .add_num push 92908 call .add_num push 62569 call .add_num push 32197 call .add_num push 84686 call .add_num push 22482 call .add_num
+    push 83972 call .add_num push 24137 call .add_num push 56570 call .add_num push 56057 call .add_num push 49026 call .add_num push 14079 call .add_num push 72968 call .add_num push 65241 call .add_num push 45351 call .add_num push 00474 call .add_num
+    
+    push 82166 call .add_num push 37048 call .add_num push 44031 call .add_num push 99890 call .add_num push 00889 call .add_num push 52434 call .add_num push 50658 call .add_num push 54122 call .add_num push 75886 call .add_num push 66881 call .add_num
+    push 16427 call .add_num push 17147 call .add_num push 99244 call .add_num push 42928 call .add_num push 23086 call .add_num push 34656 call .add_num push 74813 call .add_num push 91912 call .add_num push 31628 call .add_num push 24586 call .add_num
+    
+    push 17866 call .add_num push 45835 call .add_num push 91245 call .add_num push 66529 call .add_num push 47654 call .add_num push 56828 call .add_num push 48912 call .add_num push 88314 call .add_num push 26076 call .add_num push 90042 call .add_num
+    push 24219 call .add_num push 02267 call .add_num push 10556 call .add_num push 26321 call .add_num push 11110 call .add_num push 93705 call .add_num push 44217 call .add_num push 50694 call .add_num push 16589 call .add_num push 60408 call .add_num
+    
+    push 07198 call .add_num push 40385 call .add_num push 09624 call .add_num push 55444 call .add_num push 36298 call .add_num push 12309 call .add_num push 87879 call .add_num push 92724 call .add_num push 42849 call .add_num push 09188 call .add_num
+    push 84580 call .add_num push 15616 call .add_num push 60979 call .add_num push 19133 call .add_num push 87549 call .add_num push 92005 call .add_num push 24063 call .add_num push 68991 call .add_num push 25607 call .add_num push 17606 call .add_num
+    
+    push 05886 call .add_num push 11646 call .add_num push 71094 call .add_num push 05077 call .add_num push 54100 call .add_num push 22569 call .add_num push 83155 call .add_num push 20005 call .add_num push 59357 call .add_num push 29725 call .add_num
+    push 71636 call .add_num push 26956 call .add_num push 18826 call .add_num push 70428 call .add_num push 25248 call .add_num push 36008 call .add_num push 23257 call .add_num push 53042 call .add_num push 07529 call .add_num push 63450 call .add_num
+
+    push 0
+    push step_number
+    push index_counter_loc
+    push 1
+    store
+
+
+    ; 0 4 0
+.loop:
+    dupe
+    copy 2
+    sub
+    jz .end_loop
+    copy 1
+    push size_of_number
+    div
+    push start_of_number
+    add 
+    fetch
+    copy 2
+    push size_of_number
+    mod
+    push 4
+    swap 
+    sub 
+    push base
+    swap
+    call .to_the_power_of
+    div 
+    push base
+    mod
+    push index_counter_loc
+    fetch 
+    mul 
+    push index_counter_loc
+    swap 
+    store
+    swap 
+    push 1
+    add 
+    swap
+    jmp .loop
+
+.end_loop:
+    push largest_loc
+    fetch
+    push index_counter_loc
+    fetch 
+    sub
+    jn .store_new_largest
+.cmp_while:
+    push 1
+    add 
+    swap 
+    drop 
+    dupe
+    push step_number
+    sub
+    swap
+    push index_counter_loc
+    push 1
+    store
+    dupe 
+    push total_size_of_number
+    sub
+    jn .loop
+    jmp .end
+
+
+.store_new_largest:
+    push largest_loc
+    push index_counter_loc
+    fetch
+    store 
+    jmp .cmp_while
+
+
+
+.add_num:
+    push index_counter_loc
+    fetch
+    dupe
+    copy 2
+    store 
+    push 1
+    add
+    push index_counter_loc
+    swap
+    store
+    drop
+    ret
+
+
+.to_the_power_of:
+    push 1
+    sub 
+    dupe
+    dupe
+    jn .ret_one
+    jz .ret_pow_one
+    copy 1 
+    dupe 
+.to_the_power_of_loop:
+    mul
+    swap 
+    push 1
+    sub
+    dupe 
+    jz .ret_power
+    swap 
+    copy 2
+    jmp .to_the_power_of_loop
+
+.ret_power:
+    drop 
+    swap
+    drop 
+    ret
+
+.ret_pow_one:
+    drop 
+    ret
+
+.ret_one:
+    drop
+    drop
+    drop
+    push 1
+    ret
+
+.end:
+    push largest_loc
+    fetch 
+    printi
+    end

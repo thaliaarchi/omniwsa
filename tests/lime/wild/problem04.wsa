@@ -1,0 +1,83 @@
+    
+    macro starting_val [100]
+    
+    push starting_val
+    push starting_val
+    push 0
+    push 0
+    store
+.4a00:
+    copy 1
+    copy 1
+    mul
+    call .4a01
+    push 999
+    copy 1
+    sub
+    jz .4a06
+.4a0a:
+    push 1
+    add
+    jmp .4a00
+.4a01:
+    dupe 
+    push 0
+.4a02:
+    push 10
+    mul
+    copy 1
+    push 10
+    mod
+    add
+    swap
+    push 10
+    div
+    dupe
+    dupe
+    jz .4a03    
+    jn .4a04
+    swap
+    jmp .4a02
+    
+.4a03:
+    drop
+.4a04:
+    drop
+    copy 1
+    sub
+    jz .4a05
+    drop
+    ret
+    
+.4a05:
+    push 0
+    fetch
+    copy 1
+    sub
+    jn .4a0b
+    drop
+    ret
+    
+.4a0b:
+    push 0
+    swap 
+    store
+    ret
+    
+.4a06:
+    drop
+    push 999
+    copy 1
+    sub
+    jz .4a07
+    push 1
+    add
+    push starting_val
+    jmp .4a00
+    
+.4a07:
+    push 0
+    fetch
+    printi
+    end
+    

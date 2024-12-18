@@ -1,0 +1,24 @@
+    /*
+        Testing of hexadecimal numbers of the whitespace assembler
+    */
+    
+    macro PRINTNL [push '\t' printc]
+    
+    
+    push 0xff
+    printi 
+    PRINTNL
+    
+    push 0x04
+    printi 
+    PRINTNL
+    
+    push 0x00 
+    printi 
+    PRINTNL
+    
+    push 0xaef
+    printi 
+    PRINTNL
+    end 
+    

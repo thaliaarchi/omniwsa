@@ -1,0 +1,51 @@
+    /*
+        Program to solve the second Euler problem:
+        Even Fibonacci numbers @
+        https://projecteuler.net/problem=2
+    */
+    
+    macro accumilator_loc [1]
+    macro max_number [4000000]
+    
+    
+    PUSH accumilator_loc
+    PUSH 0
+    STORE
+    PUSH 2
+    PUSH max_number
+    STORE
+    PUSH 1
+    DUPE
+.4a00:
+    SWAP
+    DUPE
+    PUSH 2
+    FETCH
+    SWAP
+    SUB
+    DUPE
+    JZ .4a10
+    JN .4a10
+    DUPE
+    PUSH 2
+    MOD
+    JZ .4a02
+.4a01:
+    COPY 1
+    ADD
+    JMP .4a00
+    .4a02:
+    DUPE
+    PUSH accumilator_loc
+    FETCH
+    ADD
+    PUSH accumilator_loc
+    SWAP
+    STORE
+    JMP .4a01
+
+.4a10:
+    PUSH 1
+    FETCH
+    PRINTI
+    END

@@ -1,0 +1,29 @@
+    PUSH 1
+    PUSH 1000
+    STORE
+    PUSH 1
+    DUPE
+    DUPE
+    DUPE
+    PRINTI
+    PUSH 10
+    PRINTC
+.4a00:
+    PRINTI
+    PUSH 10
+    PRINTC
+    COPY 1
+    ADD
+    SWAP
+    COPY 1
+    PUSH 1
+    FETCH
+    SWAP
+    SUB
+    DUPE
+    JN .4a01
+    JZ .4a01
+    COPY 1
+    JMP .4a00
+.4a01:
+    END
