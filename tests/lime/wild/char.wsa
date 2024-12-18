@@ -1,0 +1,29 @@
+    /*
+        Test immediate char in whitespace assembler
+        
+        FIXME: We for now allow '
+' <- this as a newline, disallow this later.
+    */
+    
+    macro PRINTC13 
+    [
+        ;FIXME: Maybe add some kind of for loop for generating tokens like this?
+        printc printc printc printc printc printc printc
+        printc printc printc printc printc printc
+    ]
+    
+    push '\n'
+    push '!'
+    push 'a'
+    push 's'
+    push 'w'
+    push 'l'
+    push ' '
+    push ','
+    push 'o'
+    push 'l'
+    push 'l'
+    push 'e'
+    push 'H'
+    PRINTC13
+    end

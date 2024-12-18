@@ -1,0 +1,49 @@
+    /*
+        Program to solve the first Euler problem
+        https://projecteuler.net/problem=1
+    */
+    macro accumilator_loc [100]
+    macro max_number [1000]
+    
+    
+    PUSH accumilator_loc
+    PUSH 0
+    STORE
+    PUSH max_number
+    PUSH 3
+    
+.check_multiples:
+    DUPE
+    PUSH 3
+    MOD
+    JZ .add_to_total
+    DUPE
+    PUSH 5
+    MOD
+    JZ .add_to_total
+    
+.inc_cmp:
+    PUSH 1
+    ADD
+    COPY 1
+    COPY 1
+    SUB
+    JZ .print_end
+    JMP .check_multiples
+
+.add_to_total:
+    DUPE
+    PUSH accumilator_loc
+    FETCH
+    ADD
+    PUSH accumilator_loc
+    SWAP
+    STORE
+    JMP .inc_cmp
+    
+    
+.print_end:
+    PUSH accumilator_loc
+    FETCH
+    PRINTI
+    END

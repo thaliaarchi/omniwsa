@@ -1,0 +1,124 @@
+    /*
+        Cellular atomata rule #110 
+        Proved to be turing complete
+        https://en.wikipedia.org/wiki/Rule_110
+    */
+    
+    
+    macro RULE [110]
+    macro BOARD_SZ [25]
+    
+    push BOARD_SZ
+    push 1
+    sub
+    push 1
+    store 
+    
+    push 0
+    
+.outer_loop:
+    dupe 
+    push BOARD_SZ
+    push 1
+    sub
+    swap 
+    sub
+    jz .end
+    
+    push 0
+    
+.print_loop:
+    dupe 
+    push BOARD_SZ
+    sub
+    jz .continue
+    dupe 
+    fetch 
+    call .print_char
+    push 1
+    add 
+    jmp .print_loop
+    
+
+.continue:
+    drop 
+    push '\n'
+    printc 
+    push 0
+    fetch 
+    push 2
+    mul 
+    push 1 
+    fetch 
+    add 
+    push 0
+    
+    ; Calculate next pattern
+.pattern_loop:
+    dupe 
+    push BOARD_SZ
+    push 1
+    sub
+    sub 
+    jz .end_pattern
+    swap 
+    push 2
+    mul 
+    push 8
+    mod 
+    copy 1
+    push 1
+    add 
+    fetch 
+    add 
+    push RULE 
+    copy 1
+    call .shr 
+    push 2 
+    mod 
+    copy 2
+    swap 
+    store 
+    swap
+    push 1
+    add 
+    jmp .pattern_loop
+    
+    
+.end_pattern:
+    drop 
+    drop 
+    push 1
+    add
+    jmp .outer_loop
+
+    ; shift right - [?, ?, a, b] -> [?, ?, (a >> b)]
+.shr:
+    dupe 
+    jz .end_shr
+    swap 
+    push 2
+    div 
+    swap 
+    push 1
+    sub
+    jmp .shr
+    
+.end_shr:
+    drop
+    ret    
+    
+.print_char:
+    jz .print_space
+    push 'o'
+    printc
+    ret 
+    
+.print_space:
+    push ' '
+    printc 
+    ret
+    
+.end:
+    end
+    

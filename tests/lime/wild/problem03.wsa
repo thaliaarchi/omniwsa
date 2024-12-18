@@ -1,0 +1,41 @@
+    PUSH 0
+    PUSH 0
+    STORE
+    PUSH 600851475143  
+    PUSH 2
+    
+.4a00:
+    COPY 1
+    COPY 1
+    MOD 
+    JZ .4a02
+.4a01:
+    PUSH 1
+    ADD
+    JMP .4a00
+    
+.4a02:
+    COPY 1
+    COPY 1
+    PUSH 0
+    SWAP 
+    STORE
+    SWAP
+    DIV
+    DUPE
+    PUSH 1
+    SUB
+    DUPE
+    JZ .4a03
+    JN .4a03
+    SWAP
+    DROP
+    PUSH 0
+    FETCH
+    JMP .4a01
+    
+.4a03:
+    PUSH 0
+    FETCH
+    PRINTI
+    END

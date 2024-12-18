@@ -1,0 +1,185 @@
+    PUSH 0
+    PUSH 69
+    STORE
+    PUSH 1
+    PUSH 110
+    STORE
+    PUSH 2
+    PUSH 116
+    STORE
+    PUSH 3
+    PUSH 101
+    STORE
+    PUSH 4
+    PUSH 114
+    STORE
+    PUSH 5
+    PUSH 32
+    STORE
+    PUSH 6
+    PUSH 97
+    STORE
+    PUSH 7
+    PUSH 32
+    STORE
+    PUSH 8
+    PUSH 110
+    STORE
+    PUSH 9
+    PUSH 117
+    STORE
+    PUSH 10
+    PUSH 109
+    STORE
+    PUSH 11
+    PUSH 98
+    STORE
+    PUSH 12
+    PUSH 101
+    STORE
+    PUSH 13
+    PUSH 114
+    STORE
+    PUSH 14
+    PUSH 58
+    STORE
+    PUSH 15
+    PUSH 32
+    STORE
+    PUSH 16
+    PUSH 0
+    STORE
+    PUSH 20
+    PUSH 32
+    STORE
+    PUSH 21
+    PUSH 45
+    STORE
+    PUSH 22
+    PUSH 62
+    STORE
+    PUSH 23
+    PUSH 32
+    STORE
+    PUSH 24
+    PUSH 0
+    STORE
+    PUSH 0
+    CALL .4a00
+    PUSH 100
+    READI
+    PUSH 100
+    FETCH
+    PUSH 1
+    PUSH 3
+    PUSH 2
+    CALL .4a01
+    END
+.4a01:
+    PUSH 103
+    SWAP
+    STORE
+    PUSH 102
+    SWAP
+    STORE
+    PUSH 101
+    SWAP
+    STORE
+    PUSH 100
+    SWAP
+    STORE
+    PUSH 100
+    FETCH
+    JZ .4a02
+    PUSH 100
+    FETCH
+    PUSH 101
+    FETCH
+    PUSH 102
+    FETCH
+    PUSH 103
+    FETCH
+    PUSH 100
+    FETCH
+    PUSH 1
+    SUB
+    PUSH 101
+    FETCH
+    PUSH 103
+    FETCH
+    PUSH 102
+    FETCH
+    CALL .4a01
+    PUSH 103
+    SWAP
+    STORE
+    PUSH 102
+    SWAP
+    STORE
+    PUSH 101
+    SWAP
+    STORE
+    PUSH 100
+    SWAP
+    STORE
+    PUSH 101
+    FETCH
+    PRINTI
+    PUSH 20
+    CALL .4a00
+    PUSH 102
+    FETCH
+    PRINTI
+    CALL .4a03
+    PUSH 100
+    FETCH
+    PUSH 101
+    FETCH
+    PUSH 102
+    FETCH
+    PUSH 103
+    FETCH
+    PUSH 100
+    FETCH
+    PUSH 1
+    SUB
+    PUSH 103
+    FETCH
+    PUSH 102
+    FETCH
+    PUSH 101
+    FETCH
+    CALL .4a01
+    PUSH 103
+    SWAP
+    STORE
+    PUSH 102
+    SWAP
+    STORE
+    PUSH 101
+    SWAP
+    STORE
+    PUSH 100
+    SWAP
+    STORE
+.4a02:
+    RET
+.4a00:
+    DUPE
+    FETCH
+    DUPE
+    JZ .4a04
+    PRINTC
+    PUSH 1
+    ADD
+    JMP .4a00
+.4a04:
+    DROP
+    DROP
+    RET
+.4a03:
+    PUSH 10
+    PUSH 13
+    PRINTC
+    PRINTC
+    RET

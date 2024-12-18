@@ -4,6 +4,7 @@
   },
   "cSpell.words": [
     "bltz",
+    "censoredusername",
     "debug_printheap",
     "debug_printstack",
     "debugprintheap",
@@ -13,6 +14,7 @@
     "elseoption",
     "endoption",
     "enumset",
+    "esotope",
     "getc",
     "getn",
     "gosub",
@@ -27,6 +29,7 @@
     "jumppn",
     "jumppz",
     "jumpz",
+    "lwsa",
     "omniwsa",
     "outc",
     "outchar",
@@ -49,6 +52,7 @@
     "valueinteger",
     "valuestring",
     "voliva",
+    "wconrad",
     "xchg"
   ]
 }
