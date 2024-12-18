@@ -1,0 +1,141 @@
+; This test is split into parts to sidestep bugs in the hash map.
+jmp .l .l: push 1
+jmp .l .l: push 2
+jmp .l .l: push 3
+jmp .l .l: push 4
+jmp .l .l: push 5
+jmp .l .l: push 6
+jmp .l .l: push 7
+jmp .l .l: push 8
+jmp .l .l: push 11
+jmp .l .l: push 12
+jmp .l .l: push 13
+jmp .l .l: push 14
+jmp .l .l: push 15
+jmp .l .l: push 16
+jmp .l .l: push 17
+jmp .l .l: push 18
+jmp .l .l: push 19
+jmp .l .l: push 20
+jmp .l .l: push 21
+jmp .l .l: push 22
+jmp .l .l: push 23
+jmp .l .l: push 24
+jmp .l .l: push 25
+jmp .l .l: push 26
+jmp .l .l: push 27
+jmp .l .l: push 28
+jmp .l .l: push 29
+jmp .l .l: push 30
+jmp .l .l: push 31
+jmp .l! .l!: push 33
+jmp .l% .l%: push 37
+jmp .l& .l&: push 38
+jmp .l( .l(: push 40
+jmp .l) .l): push 41
+jmp .l+ .l+: push 43
+jmp .l, .l,: push 44
+jmp .l0 .l0: push 48
+jmp .l1 .l1: push 49
+jmp .l2 .l2: push 50
+jmp .l3 .l3: push 51
+jmp .l4 .l4: push 52
+jmp .l5 .l5: push 53
+jmp .l6 .l6: push 54
+jmp .l7 .l7: push 55
+jmp .l8 .l8: push 56
+jmp .l9 .l9: push 57
+jmp .l< .l<: push 60
+jmp .l= .l=: push 61
+jmp .l> .l>: push 62
+jmp .l? .l?: push 63
+jmp .l@ .l@: push 64
+jmp .lA .lA: push 65
+jmp .lB .lB: push 66
+jmp .lC .lC: push 67
+jmp .lD .lD: push 68
+jmp .lE .lE: push 69
+jmp .lF .lF: push 70
+jmp .lG .lG: push 71
+jmp .lH .lH: push 72
+jmp .lI .lI: push 73
+jmp .lJ .lJ: push 74
+jmp .lK .lK: push 75
+jmp .lL .lL: push 76
+jmp .lM .lM: push 77
+jmp .lN .lN: push 78
+jmp .lO .lO: push 79
+jmp .lP .lP: push 80
+jmp .lQ .lQ: push 81
+jmp .lR .lR: push 82
+jmp .lS .lS: push 83
+jmp .lT .lT: push 84
+jmp .lU .lU: push 85
+jmp .lV .lV: push 86
+jmp .lW .lW: push 87
+jmp .lX .lX: push 88
+jmp .lY .lY: push 89
+jmp .lZ .lZ: push 90
+jmp .l^ .l^: push 94
+jmp .l_ .l_: push 95
+jmp .l` .l`: push 96
+jmp .la .la: push 97
+jmp .lb .lb: push 98
+jmp .lc .lc: push 99
+jmp .ld .ld: push 100
+jmp .le .le: push 101
+jmp .lf .lf: push 102
+jmp .lg .lg: push 103
+jmp .lh .lh: push 104
+jmp .li .li: push 105
+jmp .lj .lj: push 106
+jmp .lk .lk: push 107
+jmp .ll .ll: push 108
+jmp .lm .lm: push 109
+jmp .ln .ln: push 110
+jmp .lo .lo: push 111
+jmp .lp .lp: push 112
+jmp .lq .lq: push 113
+jmp .lr .lr: push 114
+jmp .ls .ls: push 115
+jmp .lt .lt: push 116
+jmp .lu .lu: push 117
+jmp .lv .lv: push 118
+jmp .lw .lw: push 119
+jmp .lx .lx: push 120
+jmp .ly .ly: push 121
+jmp .lz .lz: push 122
+jmp .l{ .l{: push 123
+jmp .l| .l|: push 124
+jmp .l} .l}: push 125
+jmp .l~ .l~: push 126
+jmp .l .l: push 127
+jmp .lÄ .lÄ: push 128
+jmp .lÅ .lÅ: push 129
+jmp .lÇ .lÇ: push 130
+jmp .lÉ .lÉ: push 131
+jmp .lÑ .lÑ: push 132
+jmp .lÖ .lÖ: push 133
+jmp .lÜ .lÜ: push 134
+jmp .lá .lá: push 135
+jmp .là .là: push 136
+jmp .lâ .lâ: push 137
+jmp .lä .lä: push 138
+jmp .lã .lã: push 139
+jmp .lå .lå: push 140
+jmp .lç .lç: push 141
+jmp .lé .lé: push 142
+jmp .lè .lè: push 143
+jmp .lê .lê: push 144
+jmp .lë .lë: push 145
+jmp .lí .lí: push 146
+jmp .lì .lì: push 147
+jmp .lî .lî: push 148
+jmp .lï .lï: push 149
+jmp .lñ .lñ: push 150
+jmp .ló .ló: push 151
+jmp .lò .lò: push 152
+jmp .lô .lô: push 153
+jmp .lö .lö: push 154
+jmp .lõ .lõ: push 155
+jmp .lú .lú: push 156
