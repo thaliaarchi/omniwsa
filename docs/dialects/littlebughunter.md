@@ -57,8 +57,9 @@ trim_space ::= (Char.IsWhiteSpace NOT line_term)+
 
 Opcodes are matched case-insensitively.
 
-[Char.IsWhiteSpace](https://learn.microsoft.com/en-us/dotnet/api/system.char.iswhitespace?view=net-8.0#system-char-iswhitespace(system-char))
-allows many more characters than just space and tab.
+`String.Trim` uses [`Char.IsWhiteSpace`](https://learn.microsoft.com/en-us/dotnet/api/system.char.iswhitespace?view=net-9.0#system-char-iswhitespace(system-char))
+to determine whether a UTF-16 code unit is whitespace. It allows many more
+characters than just space and tab.
 
 ## Optional arguments
 

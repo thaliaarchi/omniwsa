@@ -16,6 +16,8 @@ WSF_WSC ?= $(CENSOREDUSERNAME_WSC)
 # Languages
 CC ?= gcc
 GHC ?= ghc
+MCS ?= mcs
+MONO ?= mono
 NODE ?= node
 PYTHON2 ?= pyenv exec python2
 RUBY ?= ruby

@@ -1,4 +1,4 @@
-SUBDIRS := c haskell javascript python2
+SUBDIRS := c haskell javascript python2 ruby
 
 .PHONY: all clean
 all: $(SUBDIRS:%=%.all)
