@@ -15,6 +15,8 @@ They are now maintained on GitHub in repos for [wsa](https://github.com/wspace/b
   - wsinterws.wsa
 
 The libs/ and examples/ directories have been collapsed here, because wsa
-resolves imports relative to the current directory.
+resolves imports relative to the current directory. wsinterws/wsinterws.ws has
+been renamed to wsinterws.origin.ws. All other \*.ws and \*.pws files were
+generated with wsa by me.
 
 License: [GPL](https://web.archive.org/web/20090123074209/http://burghard.info:80/Code/index.html)
