@@ -1,5 +1,5 @@
 Ruby 3.3.6
-Whitespace characters for String#strip:
+ASCII whitespace characters for String#strip:
 0x00 ("\x00") is stripped on both sides
 0x09 ("\t") is stripped on both sides
 0x0a ("\n") is stripped on both sides

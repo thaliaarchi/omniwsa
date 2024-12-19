@@ -1,0 +1,9 @@
+Ruby 3.3.6
+UTF-8 whitespace characters for String#strip:
+U+0000 ("\u0000") is stripped on both sides
+U+0009 ("\t") is stripped on both sides
+U+000A ("\n") is stripped on both sides
+U+000B ("\v") is stripped on both sides
+U+000C ("\f") is stripped on both sides
+U+000D ("\r") is stripped on both sides
+U+0020 (" ") is stripped on both sides

@@ -98,11 +98,27 @@ impl SpaceSet {
             | SpaceCategory::ZeroWidthNoBreakSpace
     ));
 
-    /// Whitespace characters according to Ruby `Regexp` [`\s`](https://docs.ruby-lang.org/en/master/Regexp.html#class-Regexp-label-Shorthand+Character+Classes).
-    /// Unlike `String#strip`, it does not include NUL.
+    /// Whitespace characters according to Ruby `Regexp` `\s`. It is
+    /// [documented](https://docs.ruby-lang.org/en/master/Regexp.html#class-Regexp-label-Shorthand+Character+Classes)
+    /// as the set `[ \t\r\n\f\v]`. Unlike `String#strip`, it does not include
+    /// NUL.
+    ///
+    /// It seems that Ruby `Regexp` may match additional whitespace characters
+    /// for some encodings. The parser creates a `ONIGENC_CTYPE_SPACE` [[1](https://github.com/ruby/ruby/blob/ccded855b6bb2d9ab268c139f8241dcac410155f/regparse.c#L3169),
+    /// [2](https://github.com/ruby/ruby/blob/ccded855b6bb2d9ab268c139f8241dcac410155f/regparse.c#L3589)]
+    /// for `\s` nodes. Tables for single-byte encodings are generated with
+    /// properties of each byte—including [`IsSpace`](https://github.com/ruby/ruby/blob/ccded855b6bb2d9ab268c139f8241dcac410155f/enc/mktable.c#L735),
+    /// which accepts more bytes for some non-ASCII encodings. For Unicode
+    /// encodings, [`onigenc_unicode_is_code_ctype`](https://github.com/ruby/ruby/blob/ccded855b6bb2d9ab268c139f8241dcac410155f/enc/unicode.c#L182)
+    /// invokes [`CR_Space`](https://github.com/ruby/ruby/blob/ccded855b6bb2d9ab268c139f8241dcac410155f/enc/unicode/15.0.0/name2ctype.h#L3169),
+    /// which accepts U+0009–U+000D, U+0020, U+0085, U+00A0, U+1680,
+    /// U+2000–U+200A, U+2028–U+2029, U+202F, U+205F, and U+3000.
+    ///
+    /// However, my tests for ASCII and UTF-8 yield the same set.
     pub const RUBY_SLASH_S: Self = Self::C_ISSPACE;
 
-    /// Whitespace characters according to Ruby [`String#strip`](https://docs.ruby-lang.org/en/master/String.html#class-String-label-Whitespace+in+Strings).
+    /// Whitespace characters according to Ruby [`String#strip`](https://docs.ruby-lang.org/en/master/String.html#class-String-label-Whitespace+in+Strings)
+    /// [[code](https://github.com/ruby/ruby/blob/ccded855b6bb2d9ab268c139f8241dcac410155f/string.c#L10442)].
     /// Unlike `Regexp` `\s`, it includes NUL.
     ///
     /// Before [PR#4164](https://github.com/ruby/ruby/pull/4164)
