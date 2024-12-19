@@ -1,0 +1,7 @@
+The Glorious Glasgow Haskell Compilation System, version 9.8.1
+
+compile_fail/block_comments/unopened_block.hs:1:2: error: [GHC-58481]
+    parse error on input ‘}’
+  |
+1 | -}
+  |  ^

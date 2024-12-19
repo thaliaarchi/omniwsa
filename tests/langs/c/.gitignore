@@ -1,2 +1,6 @@
+# Exclude executables
+*
+!*.*
+!*/
+
 *.o
-ctype

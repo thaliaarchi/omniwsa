@@ -20,7 +20,9 @@ everything is demanded before it starts writing to a file.
 The file is first preprocessed by removing comments, that are outside of
 strings. Line comments are removed first, so an empty block comment, `{--}`, is
 not possible and `--` and `;` take precedence over `{-` and `-}` in a block
-comment.
+comment. This differs from Haskell, which [specifies](https://www.haskell.org/onlinereport/haskell2010/haskellch2.html#x7-170002.3)
+that `--`-comments are not interpreted in `{-`-comments and vice versa, and that
+`--`-comments are only interpreted when not a legal part of another lexeme.
 
 When block comments are removed, they are replaced with nothing and splice
 adjacent unquoted words, when no whitespace is between. For example, `add 1`,

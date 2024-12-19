@@ -1,0 +1,7 @@
+The Glorious Glasgow Haskell Compilation System, version 9.8.1
+
+compile_fail/block_comments/unclosed_block.hs:1:1: error: [GHC-21231]
+    unterminated `{-' at end of input
+  |
+1 | {-
+  | ^^...

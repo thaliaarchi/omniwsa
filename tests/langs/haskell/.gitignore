@@ -1,3 +1,7 @@
+# Exclude executables
+*
+!*.*
+!*/
+
 *.o
 *.hi
-toLower_to_ascii
