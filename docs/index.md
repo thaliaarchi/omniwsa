@@ -27,6 +27,7 @@ Design drafts describing features and goals before implementing them in omniwsa.
 They have not (yet) been updated to document the implementation, but provide a
 good intuition. Listed reverse-chronologically.
 
+- [Byte trie](drafts/byte_trie.md)
 - [Compact concrete syntax tree for Whitespace](drafts/compact_ws_cst.md)
 - [Generalized integer parsing](drafts/general_integer_parsing.md)
 - [Generalized string parsing](drafts/general_string_parsing.md)
