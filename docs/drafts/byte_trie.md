@@ -8,7 +8,7 @@ strings to Whitespace tokens.
 This is well suited for a trie. It would have branches, which have 2 to 256
 children, and leaves, which have the tail of the key and the corresponding data.
 Alternatively, the tail could store the full key and slice it starting at the
-depth to get the tail.
+depth to get the tail, if keys are one-to-one to values.
 
 Since the trie is sparse, we don't want to have `[NodeId; 256]` at every branch;
 for a 32-bit ID, that would be 8 KiB. Instead, it could be a 256-bit set, which

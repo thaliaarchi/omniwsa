@@ -109,7 +109,7 @@ pub(super) const MAX_MNEMONIC_LEN: usize = {
     let mut max_len = 0;
     let mut i = 0;
     while i < Palaiologos::MNEMONICS.len() {
-        let len = Palaiologos::MNEMONICS[i].0.s.len();
+        let len = Palaiologos::MNEMONICS[i].0.bytes.len();
         if len > max_len {
             max_len = len;
         }

@@ -1,5 +1,6 @@
 //! Generic token scanning.
 
+pub mod byte_trie;
 mod scan;
 mod token_stream;
 

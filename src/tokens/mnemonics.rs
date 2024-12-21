@@ -3,8 +3,8 @@
 use std::{
     borrow::Cow,
     collections::HashMap,
+    fmt::{self, Debug, Formatter},
     hash::{Hash, Hasher},
-    marker::PhantomData,
 };
 
 use bstr::ByteSlice;
@@ -40,12 +40,11 @@ pub struct MnemonicMap {
 /// A conventionally UTF-8 string which compares with configurable case folding.
 /// When two `FoldedStr` are compared, the most permissive case folding between
 /// the two is used.
-#[derive(Clone, Copy, DebugCustom)]
+#[derive(Clone, Copy)]
 pub struct FoldedStr<'a> {
     /// The bytes of the string, which are conventionally UTF-8, though not
     /// required to be.
-    #[debug("{:?}", s.as_bstr())]
-    pub s: &'a [u8],
+    pub bytes: &'a [u8],
     /// The case folding used when comparing this string.
     pub fold: CaseFold,
 }
@@ -122,48 +121,74 @@ impl From<&'static [(FoldedStr<'static>, &'static [Opcode])]> for MnemonicMap {
 
 impl<'a> FoldedStr<'a> {
     /// Wraps the byte string so it compares with the given case folding.
-    pub const fn new(s: &'a [u8], fold: CaseFold) -> Self {
-        FoldedStr { s, fold }
+    pub const fn new(bytes: &'a [u8], fold: CaseFold) -> Self {
+        FoldedStr { bytes, fold }
     }
 
     /// Detects the minimum case folding features needed for this byte string
     /// and wraps the byte string so it compares with that case folding.
-    pub const fn new_detect(s: &'a [u8], fold: CaseFold) -> Self {
-        FoldedStr::new(s, fold.detect(s))
+    pub const fn new_detect(bytes: &'a [u8], fold: CaseFold) -> Self {
+        FoldedStr::new(bytes, fold.detect(bytes))
     }
 
     /// Wraps the byte string so it compares verbatim, without case folding,
-    pub const fn exact(s: &'a [u8]) -> Self {
-        FoldedStr::new(s, CaseFold::Exact)
+    pub const fn exact(bytes: &'a [u8]) -> Self {
+        FoldedStr::new(bytes, CaseFold::Exact)
     }
 
     /// Wraps the byte string so it compares ASCII letters case-insensitively.
-    pub const fn ascii(s: &'a [u8]) -> Self {
-        FoldedStr::new(s, CaseFold::Ascii)
+    pub const fn ascii(bytes: &'a [u8]) -> Self {
+        FoldedStr::new(bytes, CaseFold::Ascii)
     }
 
     /// Wraps the byte string so it compares ASCII letters and 'K'
     /// case-insensitively.
-    pub const fn ascii_k(s: &'a [u8]) -> Self {
-        FoldedStr::new(s, CaseFold::AsciiK)
+    pub const fn ascii_k(bytes: &'a [u8]) -> Self {
+        FoldedStr::new(bytes, CaseFold::AsciiK)
     }
 
     /// Wraps the byte string so it compares ASCII letters, 'İ', and 'K'
     /// case-insensitively.
-    pub const fn ascii_ik(s: &'a [u8]) -> Self {
-        FoldedStr::new(s, CaseFold::AsciiIK)
+    pub const fn ascii_ik(bytes: &'a [u8]) -> Self {
+        FoldedStr::new(bytes, CaseFold::AsciiIK)
+    }
+
+    /// Returns whether this string starts with the given prefix, folding both.
+    pub fn starts_with(&self, prefix: &[u8]) -> bool {
+        self.fold.starts_with(self.bytes, prefix)
+    }
+
+    /// Iterates over case-folded bytes.
+    pub const fn iter(&self) -> CaseFoldIter<'a, CaseFold> {
+        CaseFoldIter {
+            bytes: self.bytes,
+            fold: self.fold,
+        }
+    }
+}
+
+impl Debug for FoldedStr<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("FoldedStr::")?;
+        f.write_str(match self.fold {
+            CaseFold::Exact => "exact",
+            CaseFold::Ascii => "ascii",
+            CaseFold::AsciiK => "ascii_k",
+            CaseFold::AsciiIK => "ascii_ik",
+        })?;
+        write!(f, "({:?})", self.bytes.as_bstr())
     }
 }
 
 impl PartialEq<[u8]> for FoldedStr<'_> {
     fn eq(&self, other: &[u8]) -> bool {
-        self.fold.compare(self.s, other)
+        self.fold.compare(self.bytes, other)
     }
 }
 
 impl PartialEq for FoldedStr<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.fold.max(other.fold).compare(self.s, other.s)
+        self.fold.max(other.fold).compare(self.bytes, other.bytes)
     }
 }
 
@@ -173,14 +198,32 @@ impl Hash for FoldedStr<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         // Hash with the most permissive case folding, so different folding
         // styles can be mixed.
-        CaseFoldIter::<CaseFoldAsciiIK>::new(self.s).for_each(|b| b.hash(state))
+        CaseFoldIter::<CaseFoldAsciiIK>::new(self.bytes).for_each(|b| b.hash(state))
+    }
+}
+
+impl<'a> IntoIterator for FoldedStr<'a> {
+    type Item = u8;
+    type IntoIter = CaseFoldIter<'a, CaseFold>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a> IntoIterator for &FoldedStr<'a> {
+    type Item = u8;
+    type IntoIter = CaseFoldIter<'a, CaseFold>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
 impl CaseFold {
     /// Compares two byte strings for equality using the specified style of case
     /// folding.
-    pub fn compare(&self, a: &[u8], b: &[u8]) -> bool {
+    pub fn compare(self, a: &[u8], b: &[u8]) -> bool {
         match self {
             CaseFold::Exact => a == b,
             CaseFold::Ascii => Iterator::eq(
@@ -198,8 +241,24 @@ impl CaseFold {
         }
     }
 
+    /// Returns whether this string starts with the given prefix, folding both.
+    pub fn starts_with(self, s: &[u8], prefix: &[u8]) -> bool {
+        if self == CaseFold::Exact {
+            return s.starts_with(prefix);
+        }
+        let mut s = FoldedStr::new(s, self).iter();
+        let mut prefix = FoldedStr::new(prefix, self).iter();
+        while let Some(b) = prefix.next() {
+            if s.next() != Some(b) {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Detects the minimum case folding features needed for this byte string.
-    const fn detect(&self, s: &[u8]) -> CaseFold {
+    const fn detect(self, bytes: &[u8]) -> CaseFold {
+        let s = bytes;
         match self {
             CaseFold::Exact => return CaseFold::Exact,
             CaseFold::Ascii => {
@@ -250,20 +309,67 @@ impl CaseFold {
 }
 
 /// An iterator over case-folded bytes.
-struct CaseFoldIter<'a, F> {
-    s: &'a [u8],
-    fold: PhantomData<F>,
+#[derive(Clone, DebugCustom)]
+pub struct CaseFoldIter<'a, F> {
+    #[debug("{:?}", bytes.as_bstr())]
+    bytes: &'a [u8],
+    fold: F,
 }
+
+#[derive(Clone, Copy, Debug, Default)]
 struct CaseFoldAscii;
+#[derive(Clone, Copy, Debug, Default)]
 struct CaseFoldAsciiK;
+#[derive(Clone, Copy, Debug, Default)]
 struct CaseFoldAsciiIK;
 
-impl<'a, F> CaseFoldIter<'a, F> {
-    fn new(s: &'a [u8]) -> Self {
+impl<'a, F: Default> CaseFoldIter<'a, F> {
+    fn new(bytes: &'a [u8]) -> Self {
         CaseFoldIter {
-            s,
-            fold: PhantomData,
+            bytes,
+            fold: Default::default(),
         }
+    }
+}
+
+impl<'a> CaseFoldIter<'a, CaseFold> {
+    /// Returns the remaining bytes which have not been iterated.
+    pub fn as_str(&self) -> FoldedStr<'a> {
+        FoldedStr::new(self.bytes, self.fold)
+    }
+}
+
+impl<'a, F> CaseFoldIter<'a, F> {
+    /// Returns the remaining bytes which have not been iterated.
+    pub fn as_bytes(&self) -> &'a [u8] {
+        self.bytes
+    }
+}
+
+impl Iterator for CaseFoldIter<'_, CaseFold> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let s = &mut self.bytes;
+        let Some(&b) = s.first() else {
+            return None;
+        };
+        let (mut lower, mut len) = (b, 1);
+        if self.fold >= CaseFold::Ascii {
+            if b <= b'\x7f' {
+                if (b'A'..=b'Z').contains(&b) {
+                    lower |= 0x20;
+                }
+            } else if self.fold >= CaseFold::AsciiK {
+                if s.starts_with("K".as_bytes()) {
+                    (lower, len) = (b'k', "K".len());
+                } else if self.fold == CaseFold::AsciiIK && s.starts_with("İ".as_bytes()) {
+                    (lower, len) = (b'i', "İ".len());
+                }
+            }
+        }
+        *s = &s[len..];
+        Some(lower)
     }
 }
 
@@ -271,7 +377,7 @@ impl Iterator for CaseFoldIter<'_, CaseFoldAscii> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let s = &mut self.s;
+        let s = &mut self.bytes;
         let Some(&b) = s.first() else {
             return None;
         };
@@ -288,7 +394,7 @@ impl Iterator for CaseFoldIter<'_, CaseFoldAsciiK> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let s = &mut self.s;
+        let s = &mut self.bytes;
         let Some(&b) = s.first() else {
             return None;
         };
@@ -313,7 +419,7 @@ impl Iterator for CaseFoldIter<'_, CaseFoldAsciiIK> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let s = &mut self.s;
+        let s = &mut self.bytes;
         let Some(&b) = s.first() else {
             return None;
         };
