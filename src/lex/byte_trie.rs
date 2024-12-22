@@ -9,9 +9,11 @@ use std::{
 use crate::tokens::mnemonics::FoldedStr;
 
 // TODO:
+// - Implement `ByteTrie::get_prefix(&self, s: &[u8]) -> Option<(&Entry<'s, T>, usize)>`
+//   which matches the longest prefix and returns its length.
+// - Structure as an indexed arena.
 // - Insert branches for each folded byte, instead of folding then inserting.
 //   Mixing case foldings can lead to missing some conflicts.
-// - A fallback case should be added to allow a valid prefix.
 // - Replace panic with error type.
 
 /// A prefix tree for lexing keywords.
@@ -36,6 +38,9 @@ enum Node<'s> {
     Branch {
         sparse: ByteSet,
         dense: Vec<Node<'s>>,
+        /// Whether `dense` has an extra node at the end, which is the fallback
+        /// case when nothing in `sparse` matches.
+        has_fallback: bool,
     },
     Leaf {
         tail: FoldedStr<'s>,
@@ -89,14 +94,22 @@ impl<'s> Node<'s> {
         Node::Branch {
             sparse: ByteSet::new(),
             dense: Vec::new(),
+            has_fallback: false,
         }
     }
 
     /// Gets the index of the entry at the key.
     fn get(&self, key: &[u8]) -> Option<usize> {
-        match self {
-            Node::Branch { sparse, dense } => {
+        match *self {
+            Node::Branch {
+                ref sparse,
+                ref dense,
+                has_fallback,
+            } => {
                 let Some((&b, key)) = key.split_first() else {
+                    if has_fallback {
+                        return dense[dense.len() - 1].get(key);
+                    }
                     return None;
                 };
                 if sparse.contains(b) {
@@ -105,8 +118,8 @@ impl<'s> Node<'s> {
                     None
                 }
             }
-            &Node::Leaf { tail, entry_index } => {
-                if tail.fold.starts_with(key, tail.bytes) {
+            Node::Leaf { tail, entry_index } => {
+                if &tail == key {
                     Some(entry_index)
                 } else {
                     None
@@ -118,21 +131,33 @@ impl<'s> Node<'s> {
     /// Inserts the index of the entry at the key.
     fn insert(&mut self, key: FoldedStr<'s>, entry_index: usize) {
         match self {
-            Node::Branch { sparse, dense } => {
+            Node::Branch {
+                sparse,
+                dense,
+                has_fallback,
+            } => {
                 let mut key = key.iter();
-                let Some(b) = key.next() else {
-                    panic!("conflicting keys");
-                };
-                let i = sparse.dense_index(b);
-                if sparse.contains(b) {
-                    dense[i].insert(key.as_str(), entry_index);
+                if let Some(b) = key.next() {
+                    let i = sparse.dense_index(b);
+                    if sparse.contains(b) {
+                        dense[i].insert(key.as_str(), entry_index);
+                    } else {
+                        sparse.insert(b);
+                        let leaf = Node::Leaf {
+                            tail: key.as_str(),
+                            entry_index,
+                        };
+                        dense.insert(i, leaf);
+                    }
                 } else {
-                    sparse.insert(b);
-                    let leaf = Node::Leaf {
-                        tail: key.as_str(),
+                    if *has_fallback {
+                        panic!("conflicting keys");
+                    }
+                    *has_fallback = true;
+                    dense.push(Node::Leaf {
+                        tail: FoldedStr::default(),
                         entry_index,
-                    };
-                    dense.insert(i, leaf);
+                    });
                 }
             }
             &mut Node::Leaf {
@@ -243,12 +268,25 @@ impl Debug for DebugByte {
 
 impl Debug for Node<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        struct Fallback;
+        impl Debug for Fallback {
+            fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+                f.write_str("fallback")
+            }
+        }
         match self {
-            Node::Branch { sparse, dense } => {
+            Node::Branch {
+                sparse,
+                dense,
+                has_fallback,
+            } => {
                 f.write_str("Branch ")?;
-                f.debug_map()
-                    .entries(sparse.iter().map(DebugByte).zip(dense))
-                    .finish()
+                let mut map = f.debug_map();
+                map.entries(sparse.iter().map(DebugByte).zip(dense));
+                if *has_fallback {
+                    map.entry(&Fallback, dense.last().unwrap());
+                }
+                map.finish()
             }
             Node::Leaf { tail, entry_index } => f
                 .debug_struct("Leaf")
@@ -272,12 +310,11 @@ mod tests {
 
     #[test]
     fn example() {
-        // TODO: "j" and "b" are prefixes of other mnemonics.
         let mnemonics = [
             "psh", "push", "dup", "copy", "take", "pull", "xchg", "swp", "swap", "drop", "dsc",
             "slide", "add", "sub", "mul", "div", "mod", "sto", "rcl", "call", "gosub", "jsr",
-            "jmp", /* "j", "b", */ "jz", "bz", "jltz", "bltz", "ret", "end", "putc", "putn",
-            "getc", "getn", "rep",
+            "jmp", "j", "b", "jz", "bz", "jltz", "bltz", "ret", "end", "putc", "putn", "getc",
+            "getn", "rep",
         ];
         let mut trie = ByteTrie::new();
         for mnemonic in &mnemonics {

@@ -180,6 +180,15 @@ impl Debug for FoldedStr<'_> {
     }
 }
 
+impl Default for FoldedStr<'_> {
+    fn default() -> Self {
+        FoldedStr {
+            bytes: b"",
+            fold: CaseFold::Exact,
+        }
+    }
+}
+
 impl PartialEq<[u8]> for FoldedStr<'_> {
     fn eq(&self, other: &[u8]) -> bool {
         self.fold.compare(self.bytes, other)
