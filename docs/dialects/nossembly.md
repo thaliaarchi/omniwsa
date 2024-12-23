@@ -1,8 +1,11 @@
-# Leah Hirst's Nossembly dialect
+# Nossembly Whitespace assembly
 
 - Source: <https://github.com/LeahHirst/nospace>
   (last updated [2024-11-26](https://github.com/LeahHirst/nospace/commit/60de08b7c18257161e4fb459a653fa6c4d237d28))
 - Corpus: [typescript/leahhirst-nospace](https://github.com/wspace/corpus/tree/main/typescript/leahhirst-nospace)
+
+Nossembly is Leah Hirst's Whitespace assembly dialect in her [Nospace](https://github.com/LeahHirst/nospace)
+project.
 
 ## Assembler
 
