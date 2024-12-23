@@ -9,8 +9,6 @@ use std::{
 use crate::tokens::mnemonics::FoldedStr;
 
 // TODO:
-// - Implement `ByteTrie::get_prefix(&self, s: &[u8]) -> Option<(&Entry<'s, T>, usize)>`
-//   which matches the longest prefix and returns its length.
 // - Structure as an indexed arena.
 // - Insert branches for each folded byte, instead of folding then inserting.
 //   Mixing case foldings can lead to missing some conflicts.
@@ -38,9 +36,9 @@ enum Node<'s> {
     Branch {
         sparse: ByteSet,
         dense: Vec<Node<'s>>,
-        /// Whether `dense` has an extra node at the end, which is the fallback
-        /// case when nothing in `sparse` matches.
-        has_fallback: bool,
+        /// The entry index of the fallback case when nothing in `sparse`
+        /// matches.
+        fallback: Option<usize>,
     },
     Leaf {
         tail: FoldedStr<'s>,
@@ -61,9 +59,17 @@ impl<'s, T> ByteTrie<'s, T> {
         }
     }
 
-    /// Gets the entry at the key.
-    pub fn get(&self, key: &[u8]) -> Option<&Entry<'s, T>> {
-        self.root.get(key).map(|i| &self.entries[i])
+    /// Matches the full key and returns the corresponding entry.
+    pub fn get_exact(&self, key: &[u8]) -> Option<&Entry<'s, T>> {
+        self.root.get_exact(key).map(|i| &self.entries[i])
+    }
+
+    /// Matches the longest prefix of the text and returns the corresponding
+    /// entry and the length of the prefix.
+    pub fn get_prefix(&self, key: &[u8]) -> Option<(&Entry<'s, T>, usize)> {
+        let mut last_match = None;
+        self.root.get_prefix(key, &mut last_match);
+        last_match.map(|(i, rest_len)| (&self.entries[i], key.len() - rest_len))
     }
 
     /// Inserts the value at the key.
@@ -94,28 +100,26 @@ impl<'s> Node<'s> {
         Node::Branch {
             sparse: ByteSet::new(),
             dense: Vec::new(),
-            has_fallback: false,
+            fallback: None,
         }
     }
 
-    /// Gets the index of the entry at the key.
-    fn get(&self, key: &[u8]) -> Option<usize> {
+    /// Matches the full key and returns the index of the corresponding entry.
+    fn get_exact(&self, key: &[u8]) -> Option<usize> {
         match *self {
             Node::Branch {
                 ref sparse,
                 ref dense,
-                has_fallback,
+                fallback,
             } => {
-                let Some((&b, key)) = key.split_first() else {
-                    if has_fallback {
-                        return dense[dense.len() - 1].get(key);
+                if let Some((&b, key)) = key.split_first() {
+                    if sparse.contains(b) {
+                        dense[sparse.dense_index(b)].get_exact(key)
+                    } else {
+                        None
                     }
-                    return None;
-                };
-                if sparse.contains(b) {
-                    dense[sparse.dense_index(b)].get(key)
                 } else {
-                    None
+                    fallback
                 }
             }
             Node::Leaf { tail, entry_index } => {
@@ -128,13 +132,39 @@ impl<'s> Node<'s> {
         }
     }
 
+    /// Matches the longest prefix of the text and returns the index of the
+    /// corresponding entry and the remaining length of the text.
+    fn get_prefix(&self, text: &[u8], last_match: &mut Option<(usize, usize)>) {
+        match *self {
+            Node::Branch {
+                ref sparse,
+                ref dense,
+                fallback,
+            } => {
+                if let Some(entry_index) = fallback {
+                    *last_match = Some((entry_index, text.len()));
+                }
+                if let Some((&b, text)) = text.split_first() {
+                    if sparse.contains(b) {
+                        dense[sparse.dense_index(b)].get_prefix(text, last_match);
+                    }
+                }
+            }
+            Node::Leaf { tail, entry_index } => {
+                if let Some(rest) = tail.fold.strip_prefix(text, tail.bytes) {
+                    *last_match = Some((entry_index, rest.len()));
+                }
+            }
+        }
+    }
+
     /// Inserts the index of the entry at the key.
     fn insert(&mut self, key: FoldedStr<'s>, entry_index: usize) {
         match self {
             Node::Branch {
                 sparse,
                 dense,
-                has_fallback,
+                fallback,
             } => {
                 let mut key = key.iter();
                 if let Some(b) = key.next() {
@@ -150,14 +180,10 @@ impl<'s> Node<'s> {
                         dense.insert(i, leaf);
                     }
                 } else {
-                    if *has_fallback {
+                    if fallback.is_some() {
                         panic!("conflicting keys");
                     }
-                    *has_fallback = true;
-                    dense.push(Node::Leaf {
-                        tail: FoldedStr::default(),
-                        entry_index,
-                    });
+                    *fallback = Some(entry_index);
                 }
             }
             &mut Node::Leaf {
@@ -278,13 +304,17 @@ impl Debug for Node<'_> {
             Node::Branch {
                 sparse,
                 dense,
-                has_fallback,
+                fallback,
             } => {
                 f.write_str("Branch ")?;
                 let mut map = f.debug_map();
                 map.entries(sparse.iter().map(DebugByte).zip(dense));
-                if *has_fallback {
-                    map.entry(&Fallback, dense.last().unwrap());
+                if let &Some(entry_index) = fallback {
+                    let node = Node::Leaf {
+                        tail: FoldedStr::default(),
+                        entry_index,
+                    };
+                    map.entry(&Fallback, &node);
                 }
                 map.finish()
             }
@@ -323,7 +353,7 @@ mod tests {
         assert_eq!(trie.len(), mnemonics.len());
         for mnemonic in &mnemonics {
             assert_eq!(
-                trie.get(mnemonic.as_bytes()),
+                trie.get_exact(mnemonic.as_bytes()),
                 Some(&Entry {
                     key: FoldedStr::ascii(mnemonic.as_bytes()),
                     value: mnemonic,

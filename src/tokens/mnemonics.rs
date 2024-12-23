@@ -5,6 +5,7 @@ use std::{
     collections::HashMap,
     fmt::{self, Debug, Formatter},
     hash::{Hash, Hasher},
+    iter::FusedIterator,
 };
 
 use bstr::ByteSlice;
@@ -265,6 +266,21 @@ impl CaseFold {
         true
     }
 
+    /// Returns the text with the prefix removed, folding both.
+    pub fn strip_prefix<'s>(self, s: &'s [u8], prefix: &[u8]) -> Option<&'s [u8]> {
+        if self == CaseFold::Exact {
+            return s.strip_prefix(prefix);
+        }
+        let mut s = FoldedStr::new(s, self).iter();
+        let mut prefix = FoldedStr::new(prefix, self).iter();
+        while let Some(b) = prefix.next() {
+            if s.next() != Some(b) {
+                return None;
+            }
+        }
+        Some(s.as_bytes())
+    }
+
     /// Detects the minimum case folding features needed for this byte string.
     const fn detect(self, bytes: &[u8]) -> CaseFold {
         let s = bytes;
@@ -450,6 +466,11 @@ impl Iterator for CaseFoldIter<'_, CaseFoldAsciiIK> {
         Some(lower)
     }
 }
+
+impl FusedIterator for CaseFoldIter<'_, CaseFold> {}
+impl FusedIterator for CaseFoldIter<'_, CaseFoldAscii> {}
+impl FusedIterator for CaseFoldIter<'_, CaseFoldAsciiK> {}
+impl FusedIterator for CaseFoldIter<'_, CaseFoldAsciiIK> {}
 
 #[cfg(test)]
 mod tests {
