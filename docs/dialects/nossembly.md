@@ -14,10 +14,10 @@ project.
 ```bnf
 program ::= (line "\n")* line?
 line ::=
-    | trim* inst junk? trim*
-    | pragma trim*
+    | whitespace* inst junk? whitespace*
+    | pragma whitespace*
     | comment
-    | trim*
+    | whitespace*
 inst ::=
     | "Push" space number
     | "Duplicate"
@@ -51,8 +51,7 @@ pragma ::=
     | "#if" space key space value space inst junk?
     | "#define" space key space value
 word ::= (NOT space)+
-# TODO: JavaScript Number.
-number ::= …
+number ::= to_number
 label ::= word
 key ::= word
 value ::= word
@@ -67,17 +66,36 @@ junk ::= (space word)+
 space ::= " "
 comment ::= "# " [^\n]*
 
-# Whitespace according to String.prototype.trim, excluding LF
+# JavaScript Number constructor (ref. https://tc39.es/ecma262/multipage/abstract-operations.html#sec-tonumber).
+to_number ::=
+    | whitespace*
+    | whitespace* numeric_literal whitespace*
+numeric_literal ::=
+    | decimal_literal
+    | non_decimal_integer_literal
+decimal_literal ::= ("+" | "-")? unsigned_decimal_literal
+unsigned_decimal_literal ::=
+    | "Infinity"
+    | decimal_digits "." decimal_digits? exponent_part?
+    | "." decimal_digits exponent_part?
+    | decimal_digits exponent_part?
+decimal_digits ::= [0-9]+
+exponent_part ::= ("e" | "E") ("+" | "-")? decimal_digits
+non_decimal_integer_literal ::=
+    | ("0b" | "0B") [01]+
+    | ("0o" | "0O") [0-7]+
+    | ("0x" | "0X") [0-9a-fA-F]+
+
+# JavaScript whitespace, specifically ECMAScript WhiteSpace and LineTerminator
+# productions, excluding LF. It is used by String.prototype.trim and Number
 # (ref. https://tc39.es/ecma262/multipage/text-processing.html#sec-string.prototype.trim).
-trim ::=
+whitespace ::=
     | U+0009 | U+000B | U+000C | U+000D | U+0020 | U+00A0 | U+1680 | U+2000
     | U+2001 | U+2002 | U+2003 | U+2004 | U+2005 | U+2006 | U+2007 | U+2008
     | U+2009 | U+200A | U+2028 | U+2029 | U+202F | U+205F | U+3000 | U+FEFF
 ```
 
 Mnemonics are case sensitive.
-
-TODO: Grammar for numbers.
 
 ### Semantics
 
@@ -119,6 +137,7 @@ Assembler:
 - Extra arguments are ignored for all instructions.
 - `UnknownInstruction` is a valid mnemonic.
 - `Strict` instruction seems unused.
+- It should use `BigInt`.
 
 Typechecker:
 
@@ -134,3 +153,11 @@ spaces.
 Built-in types are resolved to their name (`Never`, `Any`, `Unknown`, `Int`, or
 `Char`) and custom types are resolved as the form `Type{id}`, where `{id}` is an
 integer, increasing from 0 in order of first occurrence of types.
+
+## Interpreter
+
+### Bugs
+
+- `WriteChar` and `ReadChar` use UTF-16 code units instead of Unicode
+  codepoints.
+- `ReadInt` only parses the next UTF-16 code unit instead of the full line.
