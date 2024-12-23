@@ -1,0 +1,28 @@
+Push 1 junk
+Duplicate junk
+Copy 2 junk
+Swap junk
+Pop junk
+Slide 3 junk
+Add junk
+Subtract junk
+Multiply junk
+Divide junk
+Mod junk
+Store junk
+Retrieve junk
+Label l junk
+Call l junk
+Jump l junk
+JumpZero l junk
+JumpNegative l junk
+Return junk
+End junk
+WriteChar junk
+WriteInt junk
+ReadChar junk
+ReadInt junk
+Cast Int junk
+Assert Int junk
+Strict junk
+UnknownInstruction junk

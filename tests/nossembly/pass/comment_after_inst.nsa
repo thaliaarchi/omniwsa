@@ -1,0 +1,28 @@
+Push 1 # comment
+Duplicate # comment
+Copy 2 # comment
+Swap # comment
+Pop # comment
+Slide 3 # comment
+Add # comment
+Subtract # comment
+Multiply # comment
+Divide # comment
+Mod # comment
+Store # comment
+Retrieve # comment
+Label l # comment
+Call l # comment
+Jump l # comment
+JumpZero l # comment
+JumpNegative l # comment
+Return # comment
+End # comment
+WriteChar # comment
+WriteInt # comment
+ReadChar # comment
+ReadInt # comment
+Cast Int # comment
+Assert Int # comment
+Strict # comment
+UnknownInstruction # comment
