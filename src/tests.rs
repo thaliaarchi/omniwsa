@@ -108,6 +108,9 @@ fn codegen() {
     let mut ws_generated = String::new();
     let mut fail = false;
     for path in [
+        "pass/integer_bounds/rep_-2^31+1.asm",
+        "pass/integer_bounds/rep_-2^31.asm",
+        "pass/integer_bounds/rep_negative.asm",
         "pass/juxtapose.asm",
         "pass/regress/no_final_lf.asm",
         "wild/ws-build-run/rep_putn.asm",
@@ -124,11 +127,6 @@ fn codegen() {
         //// CharToken not handled in WsaInst::integer
         // "pass/char_escapes.asm",
         // "wild/ws-build-run/rep_putc.asm",
-
-        //// Negative Integer::to_usize in WsaInst::codegen case PalaiologosRep
-        // "pass/integer_bounds/rep_-2^31+1.asm",
-        // "pass/integer_bounds/rep_-2^31.asm",
-        // "pass/integer_bounds/rep_negative.asm",
 
         //// Text labels not handled
         // "pass/regress/label_sort_freq.asm",

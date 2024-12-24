@@ -21,6 +21,10 @@ use crate::{
 // - Handle options more robustly.
 // - Create an InstStream abstraction, which can be used to wrap tokenwrite,
 //   but is useful on its own.
+// - Configure PalaiologosRep count upper bound:
+//   - Use a loop when it would be shorter.
+//   - Use a loop when over some configurable limit, e.g., 10 or i32::MAX like
+//     Palaiologos.
 
 impl Cst<'_> {
     /// Generates a stream of Whitespace tokens for this CST.
@@ -345,7 +349,14 @@ impl<'s> WsaInst<'s> {
                     Opcode::VolivaBreakpoint => Inst::VolivaBreakpoint,
                     opcode => panic!("unsupported opcode for `rep`: {opcode:?}"),
                 };
-                for _ in 0..count.to_usize().unwrap() {
+                let count = if count.is_negative() {
+                    0
+                } else if let Some(count) = count.to_usize() {
+                    count
+                } else {
+                    panic!("too many repetitions");
+                };
+                for _ in 0..count {
                     w.write_inst(inst.clone())?;
                 }
                 Ok(())
