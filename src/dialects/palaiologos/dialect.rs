@@ -34,13 +34,13 @@ impl Dialect for Palaiologos {
         b"drop" => [Drop],
         b"dsc" => [Drop],
         b"slide" => [Slide],
-        b"add" => [Add, AddConstRhs],
-        b"sub" => [Sub, SubConstRhs],
-        b"mul" => [Mul, MulConstRhs],
-        b"div" => [Div, DivConstRhs],
-        b"mod" => [Mod, ModConstRhs],
-        b"sto" => [Store, StoreConstRhs, StoreConstConst],
-        b"rcl" => [Retrieve, RetrieveConst],
+        b"add" => [Add], // Overload::BinaryConstRhs
+        b"sub" => [Sub], // Overload::BinaryConstRhs
+        b"mul" => [Mul], // Overload::BinaryConstRhs
+        b"div" => [Div], // Overload::BinaryConstRhs
+        b"mod" => [Mod], // Overload::BinaryConstRhs
+        b"sto" => [Store], // Overload::BinaryConstRhs, Overload::BinaryConstConst
+        b"rcl" => [Retrieve], // Overload::UnaryConst
         b"call" => [Call],
         b"gosub" => [Call],
         b"jsr" => [Call],
@@ -53,10 +53,10 @@ impl Dialect for Palaiologos {
         b"bltz" => [Jn],
         b"ret" => [Ret],
         b"end" => [End],
-        b"putc" => [Printc, PrintcConst],
-        b"putn" => [Printi, PrintiConst],
-        b"getc" => [Readc, ReadcConst],
-        b"getn" => [Readi, ReadiConst],
+        b"putc" => [Printc], // Overload::UnaryConst
+        b"putn" => [Printi], // Overload::UnaryConst
+        b"getc" => [Readc], // Overload::UnaryConst
+        b"getn" => [Readi], // Overload::UnaryConst
         b"rep" => [PalaiologosRep],
     }
 

@@ -78,6 +78,7 @@ impl<'s> Iterator for Parser<'s, '_> {
             opcode: Opcode::Invalid,
             words,
             arg_layout: ArgLayout::Mnemonic,
+            overload: None,
             errors: EnumSet::empty(),
         };
         self.parse_inst(&mut inst);

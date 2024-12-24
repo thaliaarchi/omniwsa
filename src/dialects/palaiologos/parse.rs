@@ -117,6 +117,7 @@ impl<'s, 'd> Parser<'s, 'd> {
                 opcode: Opcode::Invalid,
                 arg_layout: ArgLayout::Mnemonic,
                 words,
+                overload: None,
                 errors: EnumSet::empty(),
             };
             analyze_inst(&mut inst);

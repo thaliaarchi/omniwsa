@@ -3,7 +3,7 @@
 use enumset::{EnumSet, EnumSetType};
 
 use crate::{
-    syntax::{HasError, Opcode},
+    syntax::{HasError, Opcode, Overload},
     tokens::{spaces::Spaces, words::Words, Token},
 };
 
@@ -22,6 +22,8 @@ pub struct Inst<'s> {
     pub words: Words<'s>,
     /// The layout that its arguments are syntactically arranged in.
     pub arg_layout: ArgLayout,
+    /// An overloaded interpretation of its arguments.
+    pub overload: Option<Overload>,
     /// Errors from parsing this instruction.
     pub errors: EnumSet<InstError>,
 }
@@ -52,6 +54,7 @@ impl<'s> Inst<'s> {
             opcode: Opcode::Nop,
             words: Words::new(spaces),
             arg_layout: ArgLayout::Bare,
+            overload: None,
             errors: EnumSet::empty(),
         }
     }

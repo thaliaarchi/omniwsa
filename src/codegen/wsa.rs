@@ -7,7 +7,7 @@ use rug::integer::MiniInteger;
 
 use crate::{
     codegen::{Inst, IntegerBits, LabelBits, TokenWrite},
-    syntax::{Cst, Inst as WsaInst, Opcode},
+    syntax::{Cst, Inst as WsaInst, Opcode, Overload},
     tokens::{
         integer::Integer,
         string::{Encoding, StringToken},
@@ -67,6 +67,82 @@ impl Cst<'_> {
 impl<'s> WsaInst<'s> {
     /// Generates a stream of Whitespace tokens for this instruction.
     pub fn codegen<T: TokenWrite>(&self, w: &mut T) -> Result<(), T::Error> {
+        if let Some(overload) = self.overload {
+            match overload {
+                Overload::UnaryConst | Overload::UnaryRef => assert!(matches!(
+                    self.opcode,
+                    Opcode::Dup
+                        | Opcode::Retrieve
+                        | Opcode::Printc
+                        | Opcode::Printi
+                        | Opcode::Readc
+                        | Opcode::Readi
+                )),
+                Overload::BinaryConstLhs
+                | Overload::BinaryConstRhs
+                | Overload::BinaryRefLhs
+                | Overload::BinaryRefRhs
+                | Overload::BinaryConstConst
+                | Overload::BinaryRefConst
+                | Overload::BinaryConstRef
+                | Overload::BinaryRefRef => {
+                    assert!(matches!(
+                        self.opcode,
+                        Opcode::Swap
+                            | Opcode::Add
+                            | Opcode::Sub
+                            | Opcode::Mul
+                            | Opcode::Div
+                            | Opcode::Mod
+                            | Opcode::Store
+                            | Opcode::VolivaOr
+                            | Opcode::VolivaNot
+                            | Opcode::VolivaAnd
+                    ))
+                }
+            }
+            match overload {
+                Overload::UnaryConst => w.write_inst(Inst::Push(self.integer(0)))?,
+                Overload::UnaryRef => {
+                    w.write_inst(Inst::Push(self.integer(0)))?;
+                    w.write_inst(Inst::Retrieve)?;
+                }
+                Overload::BinaryConstLhs => {
+                    w.write_inst(Inst::Push(self.integer(0)))?;
+                    w.write_inst(Inst::Swap)?;
+                }
+                Overload::BinaryConstRhs => w.write_inst(Inst::Push(self.integer(0)))?,
+                Overload::BinaryRefLhs => {
+                    w.write_inst(Inst::Push(self.integer(0)))?;
+                    w.write_inst(Inst::Retrieve)?;
+                    w.write_inst(Inst::Swap)?;
+                }
+                Overload::BinaryRefRhs => {
+                    w.write_inst(Inst::Push(self.integer(0)))?;
+                    w.write_inst(Inst::Retrieve)?;
+                }
+                Overload::BinaryConstConst => {
+                    w.write_inst(Inst::Push(self.integer(0)))?;
+                    w.write_inst(Inst::Push(self.integer(1)))?;
+                }
+                Overload::BinaryRefConst => {
+                    w.write_inst(Inst::Push(self.integer(0)))?;
+                    w.write_inst(Inst::Retrieve)?;
+                    w.write_inst(Inst::Push(self.integer(1)))?;
+                }
+                Overload::BinaryConstRef => {
+                    w.write_inst(Inst::Push(self.integer(0)))?;
+                    w.write_inst(Inst::Push(self.integer(1)))?;
+                    w.write_inst(Inst::Retrieve)?;
+                }
+                Overload::BinaryRefRef => {
+                    w.write_inst(Inst::Push(self.integer(0)))?;
+                    w.write_inst(Inst::Retrieve)?;
+                    w.write_inst(Inst::Push(self.integer(1)))?;
+                    w.write_inst(Inst::Retrieve)?;
+                }
+            }
+        }
         match self.opcode {
             Opcode::Push => w.write_inst(Inst::Push(self.integer(0))),
             Opcode::Dup => w.write_inst(Inst::Dup),
@@ -99,188 +175,6 @@ impl<'s> WsaInst<'s> {
             Opcode::VolivaAnd => w.write_inst(Inst::VolivaAnd),
             Opcode::VolivaBreakpoint => w.write_inst(Inst::VolivaBreakpoint),
             Opcode::Push0 => w.write_inst(Inst::Push((&Integer::ZERO).into())),
-            Opcode::AddConstRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Add)
-            }
-            Opcode::SubConstRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Sub)
-            }
-            Opcode::MulConstRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Mul)
-            }
-            Opcode::DivConstRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Div)
-            }
-            Opcode::ModConstRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Mod)
-            }
-            Opcode::VolivaOrConstRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::VolivaOr)
-            }
-            Opcode::VolivaAndConstRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::VolivaAnd)
-            }
-            Opcode::AddRefRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Add)
-            }
-            Opcode::SubRefRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Sub)
-            }
-            Opcode::MulRefRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Mul)
-            }
-            Opcode::DivRefRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Div)
-            }
-            Opcode::ModRefRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Mod)
-            }
-            Opcode::AddRefConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Add)
-            }
-            Opcode::SubRefConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Sub)
-            }
-            Opcode::MulRefConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Mul)
-            }
-            Opcode::DivRefConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Div)
-            }
-            Opcode::ModRefConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Mod)
-            }
-            Opcode::AddConstRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Add)
-            }
-            Opcode::SubConstRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Sub)
-            }
-            Opcode::MulConstRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Mul)
-            }
-            Opcode::DivConstRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Div)
-            }
-            Opcode::ModConstRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Mod)
-            }
-            Opcode::AddRefRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Add)
-            }
-            Opcode::SubRefRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Sub)
-            }
-            Opcode::MulRefRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Mul)
-            }
-            Opcode::DivRefRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Div)
-            }
-            Opcode::ModRefRef => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Retrieve)?;
-                w.write_inst(Inst::Mod)
-            }
-            Opcode::StoreConstLhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Swap)?;
-                w.write_inst(Inst::Store)
-            }
-            Opcode::StoreConstRhs => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Store)
-            }
-            Opcode::StoreConstConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Push(self.integer(1)))?;
-                w.write_inst(Inst::Store)
-            }
-            Opcode::RetrieveConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Retrieve)
-            }
-            Opcode::PrintcConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Printc)
-            }
-            Opcode::PrintiConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Printi)
-            }
-            Opcode::ReadcConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Readc)
-            }
-            Opcode::ReadiConst => {
-                w.write_inst(Inst::Push(self.integer(0)))?;
-                w.write_inst(Inst::Readi)
-            }
             Opcode::PushString => each_char(self.string(0), |c| w.write_inst(Inst::Push(c.into()))),
             Opcode::PushString0 => {
                 each_char(self.string(0), |c| w.write_inst(Inst::Push(c.into())))?;

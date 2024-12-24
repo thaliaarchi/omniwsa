@@ -27,13 +27,13 @@ impl Dialect for Burghard {
         b"doub" => [Dup],
         b"swap" => [Swap],
         b"pop" => [Drop],
-        b"add" => [Add, AddConstRhs],
-        b"sub" => [Sub, SubConstRhs],
-        b"mul" => [Mul, MulConstRhs],
-        b"div" => [Div, DivConstRhs],
-        b"mod" => [Mod, ModConstRhs],
-        b"store" => [Store, StoreConstLhs],
-        b"retrive" => [Retrieve, RetrieveConst],
+        b"add" => [Add], // Overload::BinaryConstRhs
+        b"sub" => [Sub], // Overload::BinaryConstRhs
+        b"mul" => [Mul], // Overload::BinaryConstRhs
+        b"div" => [Div], // Overload::BinaryConstRhs
+        b"mod" => [Mod], // Overload::BinaryConstRhs
+        b"store" => [Store], // Overload::BinaryConstLhs
+        b"retrive" => [Retrieve], // Overload::UnaryConst
         b"label" => [Label],
         b"call" => [Call],
         b"jump" => [Jmp],
@@ -179,6 +179,7 @@ mod tests {
                 ],
             },
             arg_layout: ArgLayout::Mnemonic,
+            overload: None,
             errors: EnumSet::empty(),
         })];
         assert_eq!(cst, expect);
@@ -204,6 +205,7 @@ mod tests {
                 )],
             },
             arg_layout: ArgLayout::Mnemonic,
+            overload: None,
             errors: EnumSet::empty(),
         })];
         assert_eq!(cst, expect);
@@ -250,6 +252,7 @@ mod tests {
                 ],
             },
             arg_layout: ArgLayout::Mnemonic,
+            overload: None,
             errors: InstError::InvalidTypes.into(),
         })];
         assert_eq!(cst, expect);
@@ -265,6 +268,7 @@ mod tests {
                     words: vec![(mnemonic!($letter, Opcode::Invalid), lf!())],
                 },
                 arg_layout: ArgLayout::Mnemonic,
+                overload: None,
                 errors: EnumSet::empty(),
             })
         });
@@ -285,6 +289,7 @@ mod tests {
                     ],
                 },
                 arg_layout: ArgLayout::Mnemonic,
+                overload: None,
                 errors: EnumSet::empty(),
             }
         });
@@ -305,6 +310,7 @@ mod tests {
                     ],
                 },
                 arg_layout: ArgLayout::Mnemonic,
+                overload: None,
                 errors: EnumSet::empty(),
             }
         });
@@ -316,6 +322,7 @@ mod tests {
                     words: vec![(mnemonic!(b"elseoption", Opcode::ElseOption), lf!())],
                 },
                 arg_layout: ArgLayout::Mnemonic,
+                overload: None,
                 errors: EnumSet::empty(),
             }
         });
@@ -327,6 +334,7 @@ mod tests {
                     words: vec![(mnemonic!(b"endoption", Opcode::EndOption), lf!())],
                 },
                 arg_layout: ArgLayout::Mnemonic,
+                overload: None,
                 errors: EnumSet::empty(),
             }
         });

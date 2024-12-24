@@ -95,111 +95,6 @@ opcodes! {
     /// `push` with zero value: `push` => `push 0`
     /// (Palaiologos).
     Push0,
-    /// `add` with constant RHS: `add n` => `push n / add`
-    /// (Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips).
-    AddConstRhs(Integer),
-    /// `sub` with constant RHS: `sub n` => `push n / sub`
-    /// (Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips).
-    SubConstRhs(Integer),
-    /// `mul` with constant RHS: `mul n` => `push n / mul`
-    /// (Burghard, littleBugHunter, Palaiologos, voliva, Whitelips).
-    MulConstRhs(Integer),
-    /// `div` with constant RHS: `div n` => `push n / div`
-    /// (Burghard, littleBugHunter, Palaiologos, voliva, Whitelips).
-    DivConstRhs(Integer),
-    /// `mod` with constant RHS: `mod n` => `push n / mod`
-    /// (Burghard, littleBugHunter, Palaiologos, voliva, Whitelips).
-    ModConstRhs(Integer),
-    /// voliva `or` with constant RHS: `or n` => `push n / or`
-    /// (voliva).
-    VolivaOrConstRhs,
-    /// voliva `and` with constant RHS: `and n` => `push n / and`
-    /// (voliva).
-    VolivaAndConstRhs,
-    /// `add` with a referenced RHS:
-    /// `add var` => `push addr / retrieve / add` (littleBugHunter).
-    AddRefRhs(Integer),
-    /// `sub` with a referenced RHS:
-    /// `sub var` => `push addr / retrieve / sub` (littleBugHunter).
-    SubRefRhs(Integer),
-    /// `mul` with a referenced RHS:
-    /// `mul var` => `push addr / retrieve / mul` (littleBugHunter).
-    MulRefRhs(Integer),
-    /// `div` with a referenced RHS:
-    /// `div var` => `push addr / retrieve / div` (littleBugHunter).
-    DivRefRhs(Integer),
-    /// `mod` with a referenced RHS:
-    /// `mod var` => `push addr / retrieve / mod` (littleBugHunter).
-    ModRefRhs(Integer),
-    /// `add` with a referenced LHS and constant RHS:
-    /// `add var n` => `push addr / retrieve / push n / add` (littleBugHunter).
-    AddRefConst(Integer, Integer),
-    /// `sub` with a referenced LHS and constant RHS:
-    /// `sub var n` => `push addr / retrieve / push n / sub` (littleBugHunter).
-    SubRefConst(Integer, Integer),
-    /// `mul` with a referenced LHS and constant RHS:
-    /// `mul var n` => `push addr / retrieve / push n / mul` (littleBugHunter).
-    MulRefConst(Integer, Integer),
-    /// `div` with a referenced LHS and constant RHS:
-    /// `div var n` => `push addr / retrieve / push n / div` (littleBugHunter).
-    DivRefConst(Integer, Integer),
-    /// `mod` with a referenced LHS and constant RHS:
-    /// `mod var n` => `push addr / retrieve / push n / mod` (littleBugHunter).
-    ModRefConst(Integer, Integer),
-    /// `add` with a constant LHS and referenced RHS:
-    /// `add n var` => `push n / push addr / retrieve / add` (littleBugHunter).
-    AddConstRef(Integer, Integer),
-    /// `sub` with a constant LHS and referenced RHS:
-    /// `sub n var` => `push n / push addr / retrieve / sub` (littleBugHunter).
-    SubConstRef(Integer, Integer),
-    /// `mul` with a constant LHS and referenced RHS:
-    /// `mul n var` => `push n / push addr / retrieve / mul` (littleBugHunter).
-    MulConstRef(Integer, Integer),
-    /// `div` with a constant LHS and referenced RHS:
-    /// `div n var` => `push n / push addr / retrieve / div` (littleBugHunter).
-    DivConstRef(Integer, Integer),
-    /// `mod` with a constant LHS and referenced RHS:
-    /// `mod n var` => `push n / push addr / retrieve / mod` (littleBugHunter).
-    ModConstRef(Integer, Integer),
-    /// `add` with a referenced LHS and referenced RHS:
-    /// `add var1 var2` => `push addr1 / retrieve / push addr2 / retrieve / add` (littleBugHunter).
-    AddRefRef(Integer),
-    /// `sub` with a referenced LHS and referenced RHS:
-    /// `sub var1 var2` => `push addr1 / retrieve / push addr2 / retrieve / sub` (littleBugHunter).
-    SubRefRef(Integer),
-    /// `mul` with a referenced LHS and referenced RHS:
-    /// `mul var1 var2` => `push addr1 / retrieve / push addr2 / retrieve / mul` (littleBugHunter).
-    MulRefRef(Integer),
-    /// `div` with a referenced LHS and referenced RHS:
-    /// `div var1 var2` => `push addr1 / retrieve / push addr2 / retrieve / div` (littleBugHunter).
-    DivRefRef(Integer),
-    /// `mod` with a referenced LHS and referenced RHS:
-    /// `mod var1 var2` => `push addr1 / retrieve / push addr2 / retrieve / mod` (littleBugHunter).
-    ModRefRef(Integer),
-    /// `store` with constant LHS: `store n` => `push n / swap / store`
-    /// (Burghard, littleBugHunter, voliva, rdebath-Burghard).
-    StoreConstLhs(Integer),
-    /// `store` with constant RHS: `store n` => `push n / store`
-    /// (Palaiologos).
-    StoreConstRhs(Integer),
-    /// `store` with constant LHS and RHS: `store x y` => `push y / push x / store`
-    /// (littleBugHunter, Palaiologos).
-    StoreConstConst(Integer, Integer),
-    /// `retrieve` with constant: `retrieve n` => `push n / retrieve`
-    /// (Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips).
-    RetrieveConst(Integer),
-    /// `printc` with constant: `printc n` => `push n / printc`
-    /// (Palaiologos).
-    PrintcConst(Integer),
-    /// `printi` with constant: `printi n` => `push n / printi`
-    /// (Palaiologos).
-    PrintiConst(Integer),
-    /// `readc` with constant: `readc n` => `push n / readc`
-    /// (Palaiologos, Whitelips).
-    ReadcConst(Integer),
-    /// `readi` with constant: `readi n` => `push n / readi`
-    /// (Palaiologos, Whitelips).
-    ReadiConst(Integer),
 
     // Predefined macros:
     /// Whitelips `push` with a string: `push s` => `push c` for each character
@@ -293,6 +188,79 @@ opcodes! {
 
     /// An invalid mnemonic.
     Invalid,
+}
+
+/// An overloaded interpretation of the arguments of a Whitespace assembly
+/// instruction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Overload {
+    /// Unary operation with constant value:
+    /// `op n` => `push n / op`.
+    /// - `retrieve n`: Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips
+    /// - `printc n`: Palaiologos
+    /// - `printi n`: Palaiologos
+    /// - `readc n`: Palaiologos, Whitelips
+    /// - `readi n`: Palaiologos, Whitelips
+    UnaryConst,
+    /// Unary operation with reference value:
+    /// `op var` => `push addr / retrieve / op`.
+    /// Not used by any dialect.
+    UnaryRef,
+    /// Binary operation with constant LHS:
+    /// `op n` => `push n / swap / op`.
+    /// - `store n`: Burghard, littleBugHunter, voliva, rdebath-Burghard
+    BinaryConstLhs,
+    /// Binary operation with constant RHS:
+    /// `op n` => `push n / op`.
+    /// - `add n`: Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips
+    /// - `sub n`: Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips
+    /// - `mul n`: Burghard, littleBugHunter, Palaiologos, voliva, Whitelips
+    /// - `div n`: Burghard, littleBugHunter, Palaiologos, voliva, Whitelips
+    /// - `mod n`: Burghard, littleBugHunter, Palaiologos, voliva, Whitelips
+    /// - `or n`: voliva
+    /// - `and n`: voliva
+    /// - `store n`: Palaiologos
+    BinaryConstRhs,
+    /// Binary operation with reference LHS:
+    /// `op var` => `push addr / retrieve / swap / op`.
+    /// Not used by any dialect.
+    BinaryRefLhs,
+    /// Binary operation with reference RHS:
+    /// `op var` => `push addr / retrieve / op`.
+    /// - `add var`: littleBugHunter
+    /// - `sub var`: littleBugHunter
+    /// - `mul var`: littleBugHunter
+    /// - `div var`: littleBugHunter
+    /// - `mod var`: littleBugHunter
+    BinaryRefRhs,
+    /// Binary operation with constant LHS and RHS:
+    /// `op x y` => `push y / push x / op`.
+    /// - `store x y`: littleBugHunter, Palaiologos
+    BinaryConstConst,
+    /// Binary operation with reference LHS and constant RHS:
+    /// `op var n` => `push addr / retrieve / push n / op`.
+    /// - `add var n`: littleBugHunter
+    /// - `sub var n`: littleBugHunter
+    /// - `mul var n`: littleBugHunter
+    /// - `div var n`: littleBugHunter
+    /// - `mod var n`: littleBugHunter
+    BinaryRefConst,
+    /// Binary operation with constant LHS and reference RHS:
+    /// `op n var` => `push n / push addr / retrieve / op`.
+    /// - `add n var`: littleBugHunter
+    /// - `sub n var`: littleBugHunter
+    /// - `mul n var`: littleBugHunter
+    /// - `div n var`: littleBugHunter
+    /// - `mod n var`: littleBugHunter
+    BinaryConstRef,
+    /// Binary operation with reference LHS and reference RHS:
+    /// `op var1 var2` => `push addr1 / retrieve / push addr2 / retrieve / op`.
+    /// - `add var1 var2`: littleBugHunter
+    /// - `sub var1 var2`: littleBugHunter
+    /// - `mul var1 var2`: littleBugHunter
+    /// - `div var1 var2`: littleBugHunter
+    /// - `mod var1 var2`: littleBugHunter
+    BinaryRefRef,
 }
 
 /// The type of an argument in an instruction. A variable reference is

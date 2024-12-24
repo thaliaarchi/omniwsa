@@ -126,6 +126,7 @@ mod tests {
                             ],
                         },
                         arg_layout: ArgLayout::Mnemonic,
+                        overload: None,
                         errors: EnumSet::empty(),
                     }),
                     Cst::Inst(Inst {
@@ -157,6 +158,7 @@ mod tests {
                             ],
                         },
                         arg_layout: ArgLayout::Mnemonic,
+                        overload: None,
                         errors: EnumSet::empty(),
                     }),
                     Cst::Inst(Inst::nop(Spaces::from(vec![
@@ -194,6 +196,7 @@ mod tests {
                             ],
                         },
                         arg_layout: ArgLayout::Mnemonic,
+                        overload: None,
                         errors: EnumSet::empty(),
                     }),
                 ],

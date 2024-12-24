@@ -119,6 +119,7 @@ mod tests {
                         ],
                     },
                     arg_layout: ArgLayout::Mnemonic,
+                    overload: None,
                     errors: EnumSet::empty(),
                 })],
             }),
