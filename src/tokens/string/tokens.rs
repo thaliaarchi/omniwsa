@@ -111,7 +111,7 @@ pub enum CharError {
     /// Has no chars.
     Empty,
     /// Has more than one char.
-    MoreThanOneChar,
+    MultipleChars,
     /// Invalid escape sequence.
     InvalidEscape,
     /// Contains invalid UTF-8.

@@ -59,6 +59,12 @@ impl<'s> Scanner<'s> {
         &self.src[self.start.offset..self.end.offset]
     }
 
+    /// Returns the text of the current token, starting at the given offset.
+    #[inline]
+    pub fn text_from_offset(&self, offset: usize) -> &'s [u8] {
+        &self.src[offset..self.end.offset]
+    }
+
     /// Returns the remaining source text to be scanned.
     #[inline]
     pub fn rest(&self) -> &'s [u8] {

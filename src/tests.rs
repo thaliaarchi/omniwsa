@@ -19,6 +19,7 @@ fn roundtrip_burghard() {
     let dialect = Burghard::new();
     let mut src = Vec::new();
     let mut pretty = Vec::new();
+    let mut fail = false;
     for path in glob("tests/burghard/**/*.wsa").unwrap() {
         let path = path.unwrap();
         src.clear();
@@ -26,12 +27,47 @@ fn roundtrip_burghard() {
         let cst = dialect.parse(&src);
         pretty.clear();
         cst.pretty(&mut pretty);
-        assert_eq!(
-            pretty.as_bstr(),
-            src.as_bstr(),
-            "parse({:?}).pretty()",
-            path,
-        );
+        if pretty != src {
+            println!(
+                "parse({path:?}).pretty()\n pretty = {:?}\n    src = {:?}",
+                pretty.as_bstr(),
+                src.as_bstr(),
+            );
+            fail = true;
+        }
+    }
+    if fail {
+        panic!("fail");
+    }
+}
+
+#[test]
+fn roundtrip_palaiologos() {
+    let dialect = Palaiologos::new();
+    let mut src = Vec::new();
+    let mut pretty = Vec::new();
+    let mut fail = false;
+    for path in glob("tests/palaiologos/**/*.asm")
+        .unwrap()
+        .chain(glob("tests/palaiologos/*.bak").unwrap())
+    {
+        let path = path.unwrap();
+        src.clear();
+        File::open(&path).unwrap().read_to_end(&mut src).unwrap();
+        let cst = dialect.parse(&src);
+        pretty.clear();
+        cst.pretty(&mut pretty);
+        if pretty != src {
+            println!(
+                "parse({path:?}).pretty()\n pretty = {:?}\n    src = {:?}",
+                pretty.as_bstr(),
+                src.as_bstr(),
+            );
+            fail = true;
+        }
+    }
+    if fail {
+        panic!("fail");
     }
 }
 
@@ -41,6 +77,7 @@ fn codegen() {
     let mut src = Vec::new();
     let mut ws_expect = Vec::new();
     let mut ws_generated = String::new();
+    let mut fail = false;
     for path in [
         "tests/palaiologos/pass/juxtapose.asm",
         "tests/palaiologos/wild/ws-build-run/rep_putn.asm",
@@ -58,12 +95,17 @@ fn codegen() {
         let cst = dialect.parse(&src);
         ws_generated.clear();
         cst.codegen(&mut ws_generated, &HashSet::new()).unwrap();
-        assert_eq!(
-            DebugStl(ws_generated.as_bytes()),
-            DebugStl(&ws_expect),
-            "parse({:?}).codegen()",
-            path,
-        );
+        if ws_generated.as_bytes() != ws_expect {
+            println!(
+                "parse({path:?}).codegen()\n generated = {:?}\n    expect = {:?}",
+                DebugStl(ws_generated.as_bytes()),
+                DebugStl(&ws_expect),
+            );
+            fail = true;
+        }
+    }
+    if fail {
+        panic!("fail");
     }
 }
 
