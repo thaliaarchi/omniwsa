@@ -130,7 +130,7 @@ impl<'s, 'd> Parser<'s, 'd> {
 }
 
 /// Analyzes the opcode and arguments of an instruction.
-fn analyze_inst<'s>(inst: &mut Inst<'s>) {
+fn analyze_inst(inst: &mut Inst<'_>) {
     if inst.words.is_empty() {
         inst.opcode = Opcode::Nop;
         inst.arg_layout = ArgLayout::Bare;

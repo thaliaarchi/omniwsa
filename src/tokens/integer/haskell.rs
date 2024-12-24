@@ -58,9 +58,9 @@ use enumset::{enum_set, EnumSet};
 
 use crate::tokens::integer::{BaseStyle, DigitSep, IntegerError, IntegerSyntax, Sign, SignStyle};
 
-/// TODO:
-/// - Strip parens by looping at the front, then the back, keeping an isize
-///   count. That will reduce locations of strip.
+// TODO:
+// - Strip parens by looping at the front, then the back, keeping an isize
+//   count. That will reduce locations of strip.
 
 impl IntegerSyntax {
     /// Integers with the syntax of [`read :: String -> Integer`](https://hackage.haskell.org/package/base/docs/GHC-Read.html)

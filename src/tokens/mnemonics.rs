@@ -112,6 +112,12 @@ impl MnemonicMap {
     }
 }
 
+impl Default for MnemonicMap {
+    fn default() -> Self {
+        MnemonicMap::new()
+    }
+}
+
 impl From<&'static [(FoldedStr<'static>, &'static [Opcode])]> for MnemonicMap {
     fn from(map: &'static [(FoldedStr<'static>, &'static [Opcode])]) -> Self {
         MnemonicMap {
@@ -257,8 +263,8 @@ impl CaseFold {
             return s.starts_with(prefix);
         }
         let mut s = FoldedStr::new(s, self).iter();
-        let mut prefix = FoldedStr::new(prefix, self).iter();
-        while let Some(b) = prefix.next() {
+        let prefix = FoldedStr::new(prefix, self).iter();
+        for b in prefix {
             if s.next() != Some(b) {
                 return false;
             }
@@ -272,8 +278,8 @@ impl CaseFold {
             return s.strip_prefix(prefix);
         }
         let mut s = FoldedStr::new(s, self).iter();
-        let mut prefix = FoldedStr::new(prefix, self).iter();
-        while let Some(b) = prefix.next() {
+        let prefix = FoldedStr::new(prefix, self).iter();
+        for b in prefix {
             if s.next() != Some(b) {
                 return None;
             }
@@ -376,9 +382,7 @@ impl Iterator for CaseFoldIter<'_, CaseFold> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let s = &mut self.bytes;
-        let Some(&b) = s.first() else {
-            return None;
-        };
+        let &b = s.first()?;
         let (mut lower, mut len) = (b, 1);
         if self.fold >= CaseFold::Ascii {
             if b <= b'\x7f' {
@@ -403,9 +407,7 @@ impl Iterator for CaseFoldIter<'_, CaseFoldAscii> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let s = &mut self.bytes;
-        let Some(&b) = s.first() else {
-            return None;
-        };
+        let &b = s.first()?;
         *s = &s[1..];
         Some(if (b'A'..=b'Z').contains(&b) {
             b | 0x20
@@ -420,9 +422,7 @@ impl Iterator for CaseFoldIter<'_, CaseFoldAsciiK> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let s = &mut self.bytes;
-        let Some(&b) = s.first() else {
-            return None;
-        };
+        let &b = s.first()?;
         let (lower, len) = if b <= b'\x7f' {
             if (b'A'..=b'Z').contains(&b) {
                 (b | 0x20, 1)
@@ -445,9 +445,7 @@ impl Iterator for CaseFoldIter<'_, CaseFoldAsciiIK> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let s = &mut self.bytes;
-        let Some(&b) = s.first() else {
-            return None;
-        };
+        let &b = s.first()?;
         let (lower, len) = if b <= b'\x7f' {
             if (b'A'..=b'Z').contains(&b) {
                 (b | 0x20, 1)

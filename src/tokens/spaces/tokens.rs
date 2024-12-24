@@ -191,6 +191,12 @@ impl<'s> Spaces<'s> {
     }
 }
 
+impl Default for Spaces<'_> {
+    fn default() -> Self {
+        Spaces::new()
+    }
+}
+
 impl HasError for Spaces<'_> {
     fn has_error(&self) -> bool {
         self.tokens.has_error()

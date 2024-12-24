@@ -82,6 +82,17 @@ impl<'s, T> ByteTrie<'s, T> {
     pub fn len(&self) -> usize {
         self.entries.len()
     }
+
+    /// Returns whether this trie has no entries.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl<T> Default for ByteTrie<'_, T> {
+    fn default() -> Self {
+        ByteTrie::new()
+    }
 }
 
 impl<'s, T> From<Vec<Entry<'s, T>>> for ByteTrie<'s, T> {

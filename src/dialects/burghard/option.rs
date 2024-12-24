@@ -25,7 +25,7 @@ impl<'s> OptionNester<'s> {
 
     /// Nests instructions into structured option blocks.
     pub fn nest(&mut self, parser: &mut Parser<'s, '_>) -> Cst<'s> {
-        while let Some(inst) = parser.next() {
+        for inst in parser {
             match inst.opcode {
                 Opcode::IfOption => {
                     self.option_stack.push(OptionBlock {

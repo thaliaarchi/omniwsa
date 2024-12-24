@@ -177,7 +177,7 @@ impl<'s> Index<usize> for Words<'s> {
 }
 
 /// Gets a mutable reference to the word at the given index.
-impl<'s> IndexMut<usize> for Words<'s> {
+impl IndexMut<usize> for Words<'_> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.words[index].0
     }

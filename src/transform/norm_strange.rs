@@ -8,7 +8,7 @@ use crate::{
     transform::Visitor,
 };
 
-impl<'s> Cst<'s> {
+impl Cst<'_> {
     /// Normalizes strange, non-portable constructs.
     ///
     /// - Removes non-semantic quotes (Burghard).

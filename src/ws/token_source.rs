@@ -118,7 +118,7 @@ impl TokenSource {
 
     /// Pushes a token and its lexeme to the end of the sequence.
     pub fn push(&mut self, tok: Token, lexeme: &[u8]) -> TokenId {
-        let id = TokenId(self.data.len().try_into().unwrap());
+        let id = TokenId(self.data.len());
         self.data.reserve(6); // Maximum encoded token size
 
         let lexeme_id = if let Some(&id) = self.lexeme_table.get(lexeme) {
@@ -241,6 +241,12 @@ impl Debug for TokenSource {
             .field("lexemes", &DebugLexemes(&self.lexemes))
             .field("extensions", &self.extensions)
             .finish()
+    }
+}
+
+impl Default for TokenSource {
+    fn default() -> Self {
+        TokenSource::new()
     }
 }
 

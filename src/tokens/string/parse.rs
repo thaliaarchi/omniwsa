@@ -124,7 +124,7 @@ impl<'s> StringScan<'s> {
             while let Some(i) = s.find_byte(b'\\') {
                 unescaped.extend_from_slice(&s[..i]);
                 let (ch, size) = bstr::decode_utf8(&s[i + 1..]);
-                if let Some(unescaped_ch) = ch.and_then(|ch| unescape(ch)) {
+                if let Some(unescaped_ch) = ch.and_then(&unescape) {
                     unescaped.push_char(unescaped_ch);
                 } else {
                     // Drop the `\` for an invalid escape sequence like C

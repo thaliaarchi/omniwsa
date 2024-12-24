@@ -112,7 +112,7 @@ impl<'s> Parser<'s, '_> {
             .mnemonics()
             .get_opcodes(&mnemonic_word.word)
             .unwrap_or(&[Opcode::Invalid]);
-        debug_assert!(opcodes.len() > 0);
+        debug_assert!(!opcodes.is_empty());
 
         // Iterate signatures by the largest arity first.
         for (i, &opcode) in opcodes.iter().enumerate().rev() {

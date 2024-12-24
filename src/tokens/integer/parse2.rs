@@ -351,7 +351,7 @@ impl<'s, 'a> IntegerParser<'s, 'a> {
         self.scan.bump_ascii_no_lf(1);
         if self.syntax.suffix_decimal_first
             && matches!(base_suffix, BaseStyle::HexSuffix_h | BaseStyle::HexSuffix_H)
-            && self.digit_buf.get(0).is_some_and(|&digit| digit > 9)
+            && self.digit_buf.first().is_some_and(|&digit| digit > 9)
         {
             self.errors |= IntegerError::StartsWithHex;
         }

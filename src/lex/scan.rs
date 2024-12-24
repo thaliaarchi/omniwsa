@@ -221,7 +221,7 @@ impl<'s> Scanner<'s> {
     /// predicate.
     pub fn bump_if_char<F: FnOnce(char) -> bool>(&mut self, predicate: F) -> bool {
         let (ch, size) = bstr::decode_utf8(self.rest());
-        if ch.is_some_and(|ch| predicate(ch)) {
+        if ch.is_some_and(predicate) {
             self.end.move_char(ch, size);
             true
         } else {
