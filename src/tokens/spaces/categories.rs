@@ -78,6 +78,17 @@ impl SpaceSet {
     /// `ìsspace` via [Gnulib](https://git.savannah.gnu.org/cgit/gnulib.git/tree/lib/regcomp.c?id=38b5fabdfcf0ddd516fdd9105ccb1b2ac38cb62c#n3515).
     pub const GNU_SED_SLASH_S: Self = Self::C_ISSPACE;
 
+    /// Whitespace characters according to Haskell [`Data.Char.isSpace`](https://gitlab.haskell.org/ghc/ghc/-/blob/ghc-9.12.1-release/libraries/ghc-internal/src/GHC/Internal/Unicode.hs#L233-L246).
+    pub const HASKELL_ISSPACE: Self = SpaceSet(enum_set!(
+        SpaceCategory::Tab
+            | SpaceCategory::LineFeed
+            | SpaceCategory::VerticalTab
+            | SpaceCategory::FormFeed
+            | SpaceCategory::CarriageReturn
+            | SpaceCategory::Space
+            | SpaceCategory::SpaceSeparatorMinusSpace
+    ));
+
     /// Whitespace characters according to JavaScript, which is used by
     /// `RegExp` [`\s`](https://tc39.es/ecma262/multipage/text-processing.html#sec-compiletocharset)
     /// and [`String.prototype.trim`](https://tc39.es/ecma262/multipage/text-processing.html#sec-string.prototype.trim),

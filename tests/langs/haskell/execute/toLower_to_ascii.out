@@ -1,4 +1,4 @@
 The Glorious Glasgow Haskell Compilation System, version 9.8.1
 Characters which Data.Char.toLower maps to ASCII:
-İ -> i
-K -> k
+'İ' U+0130 -> 'i' U+0069
+'K' U+212A -> 'k' U+006B
