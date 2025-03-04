@@ -59,7 +59,6 @@ impl Cst<'_> {
                 }
                 Ok(())
             }
-            Cst::Dialect { inner, .. } => inner.codegen(w, options),
         }
     }
 }

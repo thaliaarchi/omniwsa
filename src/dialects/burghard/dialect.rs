@@ -91,7 +91,7 @@ mod tests {
 
     use crate::{
         dialects::{Burghard, Dialect as _},
-        syntax::{ArgLayout, Cst, Dialect, Inst, InstError, Opcode, OptionBlock},
+        syntax::{ArgLayout, Cst, Inst, InstError, Opcode, OptionBlock},
         tokens::{
             GroupError, GroupStyle, GroupToken, SpliceToken, Token, WordToken,
             comment::{BlockCommentStyle, BlockCommentToken},
@@ -104,11 +104,8 @@ mod tests {
     };
 
     macro_rules! root[($($node:expr),* $(,)?) => {
-        Cst::Dialect {
-            dialect: Dialect::Burghard,
-            inner: Box::new(Cst::Block {
-                nodes: vec![$($node),*],
-            }),
+        Cst::Block {
+            nodes: vec![$($node),*],
         }
     }];
     macro_rules! mnemonic(($mnemonic:expr, $opcode:expr $(,)?) => {

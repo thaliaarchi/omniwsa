@@ -26,13 +26,6 @@ pub enum Cst<'s> {
     },
     /// Conditionally compiled block.
     OptionBlock(OptionBlock<'s>),
-    /// Marker for the dialect of the contained CST.
-    Dialect {
-        /// The dialect of the contained CST.
-        dialect: Dialect,
-        /// The contained CST.
-        inner: Box<Cst<'s>>,
-    },
 }
 
 /// A conditionally compiled block (Burghard `ifoption` and Respace `@ifdef`).
@@ -110,7 +103,6 @@ impl HasError for Cst<'_> {
             Cst::Inst(inst) => inst.has_error(),
             Cst::Block { nodes } => nodes.has_error(),
             Cst::OptionBlock(block) => block.has_error(),
-            Cst::Dialect { dialect: _, inner } => inner.has_error(),
         }
     }
 }
@@ -155,11 +147,6 @@ impl Debug for Cst<'_> {
                 f.debug_list().entries(nodes).finish()
             }
             Cst::OptionBlock(block) => Debug::fmt(block, f),
-            Cst::Dialect { dialect, inner } => f
-                .debug_struct("Dialect")
-                .field("dialect", dialect)
-                .field("inner", inner)
-                .finish(),
         }
     }
 }

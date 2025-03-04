@@ -7,7 +7,7 @@ use enumset::EnumSet;
 use crate::{
     dialects::{Palaiologos, dialect::DialectState, palaiologos::lex::Lexer},
     lex::TokenStream,
-    syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
+    syntax::{ArgLayout, Cst, Inst, Opcode},
     tokens::{
         Token,
         label::{LabelError, LabelStyle, LabelToken},
@@ -123,10 +123,7 @@ impl<'s, 'd> Parser<'s, 'd> {
             analyze_inst(&mut inst);
             nodes.push(Cst::from(inst));
         }
-        Cst::Dialect {
-            dialect: Dialect::Palaiologos,
-            inner: Box::new(Cst::Block { nodes }),
-        }
+        Cst::Block { nodes }
     }
 }
 

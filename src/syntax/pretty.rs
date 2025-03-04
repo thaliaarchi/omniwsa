@@ -46,7 +46,6 @@ impl Pretty for Cst<'_> {
             Cst::Inst(inst) => inst.pretty(buf),
             Cst::Block { nodes } => nodes.iter().for_each(|node| node.pretty(buf)),
             Cst::OptionBlock(block) => block.pretty(buf),
-            Cst::Dialect { dialect: _, inner } => inner.pretty(buf),
         }
     }
 }

@@ -60,7 +60,7 @@ mod tests {
 
     use crate::{
         dialects::{Burghard, Dialect as _},
-        syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
+        syntax::{ArgLayout, Cst, Inst, Opcode},
         tokens::{
             Token,
             comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
@@ -89,118 +89,111 @@ mod tests {
         let src = b"; start \n label start \n \t{-1-}  push 1\n ; 2\npush 2{-2-}\t";
         let mut cst = Burghard::new().parse(src);
         cst.normalize_whitespace(b"    ".into());
-        let expect = Cst::Dialect {
-            dialect: Dialect::Burghard,
-            inner: Box::new(Cst::Block {
-                nodes: vec![
-                    Cst::Inst(Inst::nop(Spaces::from(vec![
-                        Token::from(LineCommentToken {
-                            text: b" start",
-                            style: LineCommentStyle::Semi,
-                            errors: EnumSet::empty(),
-                        }),
-                        Token::from(LineTermToken::from(LineTermStyle::Lf)),
-                    ]))),
-                    Cst::Inst(Inst {
-                        opcode: Opcode::Label,
-                        words: Words {
-                            space_before: Spaces::new(),
-                            words: vec![
-                                (
-                                    Token::from(MnemonicToken {
-                                        mnemonic: b"label".into(),
-                                        opcode: Opcode::Label,
-                                    }),
-                                    Spaces::from(Token::from(SpaceToken::from(b" "))),
-                                ),
-                                (
-                                    Token::from(LabelToken {
-                                        label: b"start".into(),
-                                        style: LabelStyle::NoSigil,
-                                        errors: EnumSet::empty(),
-                                    }),
-                                    Spaces::from(Token::from(LineTermToken::from(
-                                        LineTermStyle::Lf,
-                                    ))),
-                                ),
-                            ],
-                        },
-                        arg_layout: ArgLayout::Mnemonic,
-                        overload: None,
+        let expect = Cst::Block {
+            nodes: vec![
+                Cst::Inst(Inst::nop(Spaces::from(vec![
+                    Token::from(LineCommentToken {
+                        text: b" start",
+                        style: LineCommentStyle::Semi,
                         errors: EnumSet::empty(),
                     }),
-                    Cst::Inst(Inst {
-                        opcode: Opcode::Push,
-                        words: Words {
-                            space_before: Spaces::from(vec![
-                                Token::from(SpaceToken::from(b"    ")),
-                                Token::from(BlockCommentToken {
-                                    text: b"1",
-                                    style: BlockCommentStyle::Burghard,
+                    Token::from(LineTermToken::from(LineTermStyle::Lf)),
+                ]))),
+                Cst::Inst(Inst {
+                    opcode: Opcode::Label,
+                    words: Words {
+                        space_before: Spaces::new(),
+                        words: vec![
+                            (
+                                Token::from(MnemonicToken {
+                                    mnemonic: b"label".into(),
+                                    opcode: Opcode::Label,
+                                }),
+                                Spaces::from(Token::from(SpaceToken::from(b" "))),
+                            ),
+                            (
+                                Token::from(LabelToken {
+                                    label: b"start".into(),
+                                    style: LabelStyle::NoSigil,
                                     errors: EnumSet::empty(),
                                 }),
-                                Token::from(SpaceToken::from(b"  ")),
-                            ]),
-                            words: vec![
-                                (
-                                    Token::from(MnemonicToken {
-                                        mnemonic: b"push".into(),
-                                        opcode: Opcode::Push,
-                                    }),
-                                    Spaces::from(Token::from(SpaceToken::from(b" "))),
-                                ),
-                                (
-                                    Token::from(integer!(1)),
-                                    Spaces::from(Token::from(LineTermToken::from(
-                                        LineTermStyle::Lf,
-                                    ))),
-                                ),
-                            ],
-                        },
-                        arg_layout: ArgLayout::Mnemonic,
-                        overload: None,
+                                Spaces::from(Token::from(LineTermToken::from(LineTermStyle::Lf))),
+                            ),
+                        ],
+                    },
+                    arg_layout: ArgLayout::Mnemonic,
+                    overload: None,
+                    errors: EnumSet::empty(),
+                }),
+                Cst::Inst(Inst {
+                    opcode: Opcode::Push,
+                    words: Words {
+                        space_before: Spaces::from(vec![
+                            Token::from(SpaceToken::from(b"    ")),
+                            Token::from(BlockCommentToken {
+                                text: b"1",
+                                style: BlockCommentStyle::Burghard,
+                                errors: EnumSet::empty(),
+                            }),
+                            Token::from(SpaceToken::from(b"  ")),
+                        ]),
+                        words: vec![
+                            (
+                                Token::from(MnemonicToken {
+                                    mnemonic: b"push".into(),
+                                    opcode: Opcode::Push,
+                                }),
+                                Spaces::from(Token::from(SpaceToken::from(b" "))),
+                            ),
+                            (
+                                Token::from(integer!(1)),
+                                Spaces::from(Token::from(LineTermToken::from(LineTermStyle::Lf))),
+                            ),
+                        ],
+                    },
+                    arg_layout: ArgLayout::Mnemonic,
+                    overload: None,
+                    errors: EnumSet::empty(),
+                }),
+                Cst::Inst(Inst::nop(Spaces::from(vec![
+                    Token::from(SpaceToken::from(b"    ")),
+                    Token::from(LineCommentToken {
+                        text: b" 2",
+                        style: LineCommentStyle::Semi,
                         errors: EnumSet::empty(),
                     }),
-                    Cst::Inst(Inst::nop(Spaces::from(vec![
-                        Token::from(SpaceToken::from(b"    ")),
-                        Token::from(LineCommentToken {
-                            text: b" 2",
-                            style: LineCommentStyle::Semi,
-                            errors: EnumSet::empty(),
-                        }),
-                        Token::from(LineTermToken::from(LineTermStyle::Lf)),
-                    ]))),
-                    Cst::Inst(Inst {
-                        opcode: Opcode::Push,
-                        words: Words {
-                            space_before: Spaces::from(Token::from(SpaceToken::from(b"    "))),
-                            words: vec![
-                                (
-                                    Token::from(MnemonicToken {
-                                        mnemonic: b"push".into(),
-                                        opcode: Opcode::Push,
+                    Token::from(LineTermToken::from(LineTermStyle::Lf)),
+                ]))),
+                Cst::Inst(Inst {
+                    opcode: Opcode::Push,
+                    words: Words {
+                        space_before: Spaces::from(Token::from(SpaceToken::from(b"    "))),
+                        words: vec![
+                            (
+                                Token::from(MnemonicToken {
+                                    mnemonic: b"push".into(),
+                                    opcode: Opcode::Push,
+                                }),
+                                Spaces::from(Token::from(SpaceToken::from(b" "))),
+                            ),
+                            (
+                                Token::from(integer!(2)),
+                                Spaces::from(vec![
+                                    Token::from(BlockCommentToken {
+                                        text: b"2",
+                                        style: BlockCommentStyle::Burghard,
+                                        errors: EnumSet::empty(),
                                     }),
-                                    Spaces::from(Token::from(SpaceToken::from(b" "))),
-                                ),
-                                (
-                                    Token::from(integer!(2)),
-                                    Spaces::from(vec![
-                                        Token::from(BlockCommentToken {
-                                            text: b"2",
-                                            style: BlockCommentStyle::Burghard,
-                                            errors: EnumSet::empty(),
-                                        }),
-                                        Token::from(EofToken),
-                                    ]),
-                                ),
-                            ],
-                        },
-                        arg_layout: ArgLayout::Mnemonic,
-                        overload: None,
-                        errors: EnumSet::empty(),
-                    }),
-                ],
-            }),
+                                    Token::from(EofToken),
+                                ]),
+                            ),
+                        ],
+                    },
+                    arg_layout: ArgLayout::Mnemonic,
+                    overload: None,
+                    errors: EnumSet::empty(),
+                }),
+            ],
         };
         assert_eq!(cst, expect);
     }

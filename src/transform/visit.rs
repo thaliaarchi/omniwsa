@@ -30,7 +30,6 @@ impl<'s> Cst<'s> {
                 });
                 block.end.as_mut().map(|end| visitor.visit_inst(end));
             }
-            Cst::Dialect { dialect: _, inner } => inner.visit(visitor),
         }
     }
 }

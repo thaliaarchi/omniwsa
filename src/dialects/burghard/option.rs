@@ -4,7 +4,7 @@ use std::mem;
 
 use crate::{
     dialects::burghard::parse::Parser,
-    syntax::{Cst, Dialect, Opcode, OptionBlock},
+    syntax::{Cst, Opcode, OptionBlock},
 };
 
 /// A builder, which structures options into blocks.
@@ -68,10 +68,7 @@ impl<'s> OptionNester<'s> {
             parent = &mut last.options.last_mut().unwrap().1;
         }
         let nodes = mem::take(&mut self.root);
-        Cst::Dialect {
-            dialect: Dialect::Burghard,
-            inner: Box::new(Cst::Block { nodes }),
-        }
+        Cst::Block { nodes }
     }
 
     /// Returns the current block for instructions to be inserted into.
