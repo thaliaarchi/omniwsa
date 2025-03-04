@@ -162,31 +162,25 @@ pub struct ErrorToken<'s> {
 
 impl<'s> Token<'s> {
     /// Unwraps non-semantic groups and splices.
-    pub fn ungroup(&self) -> &Token<'s> {
+    pub fn peel_groups(&self) -> &Token<'s> {
         let mut tok = self;
-        loop {
-            match tok {
-                Token::Group(GroupToken { inner, .. })
-                | Token::Splice(SpliceToken { spliced: inner, .. }) => {
-                    tok = inner;
-                }
-                _ => return tok,
-            }
+        while let Token::Group(GroupToken { inner, .. })
+        | Token::Splice(SpliceToken { spliced: inner, .. }) = tok
+        {
+            tok = inner;
         }
+        tok
     }
 
     /// Unwraps non-semantic groups and splices and returns a mutable reference.
-    pub fn ungroup_mut(&mut self) -> &mut Token<'s> {
+    pub fn peel_groups_mut(&mut self) -> &mut Token<'s> {
         let mut tok = self;
-        loop {
-            match tok {
-                Token::Group(GroupToken { inner, .. })
-                | Token::Splice(SpliceToken { spliced: inner, .. }) => {
-                    tok = inner;
-                }
-                _ => return tok,
-            }
+        while let Token::Group(GroupToken { inner, .. })
+        | Token::Splice(SpliceToken { spliced: inner, .. }) = tok
+        {
+            tok = inner;
         }
+        tok
     }
 }
 

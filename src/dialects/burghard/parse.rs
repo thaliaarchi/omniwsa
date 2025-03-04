@@ -104,7 +104,7 @@ impl<'s> Parser<'s, '_> {
             return;
         }
         let ((mnemonic, _), args) = inst.words.words.split_first_mut().unwrap();
-        let mnemonic = mnemonic.ungroup_mut();
+        let mnemonic = mnemonic.peel_groups_mut();
         let Token::Word(mnemonic_word) = mnemonic else {
             panic!("unhandled token");
         };
@@ -148,7 +148,7 @@ impl<'s> Parser<'s, '_> {
     /// valid.
     fn parse_arg(&mut self, tok: &mut Token<'_>, ty: ArgType) -> bool {
         let quoted = matches!(tok, Token::Group(_));
-        let inner = tok.ungroup_mut();
+        let inner = tok.peel_groups_mut();
         let Token::Word(inner_word) = inner else {
             return true;
         };

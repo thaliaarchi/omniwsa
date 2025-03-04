@@ -275,7 +275,7 @@ impl<'s> WsaInst<'s> {
 
     /// Gets the value of the indexed argument as an integer.
     fn integer(&self, index: usize) -> IntegerBits<'_> {
-        match self.arg(index).ungroup() {
+        match self.arg(index).peel_groups() {
             Token::Integer(int) => IntegerBits::from(&int.value),
             arg => panic!("not an integer: {arg:?}"),
         }
@@ -283,7 +283,7 @@ impl<'s> WsaInst<'s> {
 
     /// Gets the value of the indexed argument as a label.
     fn label(&self, index: usize) -> LabelBits<'_> {
-        match self.arg(index).ungroup() {
+        match self.arg(index).peel_groups() {
             Token::Integer(int) => LabelBits::from(&int.value),
             arg => panic!("not an integer label: {arg:?}"),
         }
@@ -291,7 +291,7 @@ impl<'s> WsaInst<'s> {
 
     /// Gets the value of the indexed argument as a string.
     fn string(&self, index: usize) -> &StringToken<'s> {
-        match self.arg(index).ungroup() {
+        match self.arg(index).peel_groups() {
             Token::String(s) => s,
             arg => panic!("not a string: {arg:?}"),
         }
@@ -299,7 +299,7 @@ impl<'s> WsaInst<'s> {
 
     /// Gets the value of the indexed argument as a word.
     fn word(&self, index: usize) -> &WordToken<'s> {
-        match self.arg(index).ungroup() {
+        match self.arg(index).peel_groups() {
             Token::Word(w) => w,
             arg => panic!("not a word: {arg:?}"),
         }

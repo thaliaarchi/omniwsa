@@ -125,7 +125,7 @@ fn main_loop(
                         let (mut prev_line, mut prev_col) = (0, 0);
                         for tok in &tokens {
                             eprintln!("{tok:?}");
-                            let ungrouped = tok.ungroup();
+                            let ungrouped = tok.peel_groups();
                             let ty = match ungrouped {
                                 Token::Mnemonic(_) => Some(TokenType::Keyword),
                                 Token::Integer(_) => Some(TokenType::Number),
