@@ -139,7 +139,7 @@ fn main_loop(
                                     Some(TokenType::Comment)
                                 }
                                 Token::Word(_) => Some(TokenType::Variable),
-                                Token::Group(_) | Token::Spliced(_) => panic!("not ungrouped"),
+                                Token::Group(_) | Token::Splice(_) => panic!("not ungrouped"),
                                 Token::Error(_) => None,
                                 Token::Placeholder => panic!("placeholder"),
                             };
@@ -263,7 +263,7 @@ fn token_len(tok: &Token<'_>) -> (usize, usize, usize) {
             }
             return (len + quotes, hlen + quotes, vlen);
         }
-        Token::Spliced(tok) => {
+        Token::Splice(tok) => {
             let (mut spliced_len, mut spliced_hlen, mut spliced_vlen) = (0, 0, 0);
             for tok in &tok.tokens {
                 let (len, hlen, vlen) = token_len(tok);

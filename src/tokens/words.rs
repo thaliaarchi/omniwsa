@@ -141,7 +141,7 @@ impl<'s> Words<'s> {
             | Token::LabelColon(_)
             | Token::Word(_)
             | Token::Group(_)
-            | Token::Spliced(_)
+            | Token::Splice(_)
             | Token::Error(_) => self.push_word(token),
             Token::Space(_)
             | Token::LineTerm(_)

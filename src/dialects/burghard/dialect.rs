@@ -93,7 +93,7 @@ mod tests {
         dialects::{Burghard, Dialect as _},
         syntax::{ArgLayout, Cst, Dialect, Inst, InstError, Opcode, OptionBlock},
         tokens::{
-            GroupError, GroupStyle, GroupToken, SplicedToken, Token, WordToken,
+            GroupError, GroupStyle, GroupToken, SpliceToken, Token, WordToken,
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{BaseStyle, Integer, IntegerToken, Sign},
             mnemonics::MnemonicToken,
@@ -147,7 +147,7 @@ mod tests {
                 ]),
                 words: vec![
                     (
-                        Token::from(SplicedToken {
+                        Token::from(SpliceToken {
                             tokens: vec![
                                 Token::from(WordToken {
                                     word: b"hello".into(),

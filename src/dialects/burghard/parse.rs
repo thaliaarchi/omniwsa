@@ -9,7 +9,7 @@ use crate::{
     lex::TokenStream,
     syntax::{ArgLayout, ArgType, HasError, Inst, InstError, Opcode},
     tokens::{
-        GroupError, GroupStyle, SplicedToken, Token, VariableStyle, VariableToken,
+        GroupError, GroupStyle, SpliceToken, Token, VariableStyle, VariableToken,
         label::{LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::Spaces,
@@ -194,7 +194,7 @@ impl<'s> Parser<'s, '_> {
 
         // Convert it to a string, including quotes if quoted.
         let tok = match tok {
-            Token::Spliced(s) => &mut s.spliced,
+            Token::Splice(s) => &mut s.spliced,
             _ => tok,
         };
         *tok = match mem::take(tok) {
@@ -234,7 +234,7 @@ fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Spaces<'s>, rhs: &Token<'s>
         .tokens
         .iter()
         .all(|tok| matches!(tok, Token::BlockComment(_)))
-        && matches!(lhs, Token::Word(_) | Token::Spliced(_))
+        && matches!(lhs, Token::Word(_) | Token::Splice(_))
         && matches!(rhs, Token::Word(_))
 }
 
@@ -242,13 +242,13 @@ fn should_splice_tokens<'s>(lhs: &Token<'s>, space: &Spaces<'s>, rhs: &Token<'s>
 fn splice_tokens<'s>(lhs: &mut Token<'s>, space: &mut Spaces<'s>, rhs: Token<'s>) {
     if matches!(lhs, Token::Word(_)) {
         let spliced = lhs.clone();
-        *lhs = Token::from(SplicedToken {
+        *lhs = Token::from(SpliceToken {
             tokens: vec![mem::take(lhs)],
             spliced: Box::new(spliced),
         });
     }
     match lhs {
-        Token::Spliced(s) => {
+        Token::Splice(s) => {
             let Token::Word(spliced) = &mut *s.spliced else {
                 panic!("unhandled token");
             };

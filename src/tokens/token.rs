@@ -67,7 +67,7 @@ pub enum Token<'s> {
     /// A token enclosed in parentheses or non-semantic quotes (Burghard).
     Group(GroupToken<'s>),
     /// Tokens spliced by block comments (Burghard).
-    Spliced(SplicedToken<'s>),
+    Splice(SpliceToken<'s>),
     /// An erroneous sequence.
     Error(ErrorToken<'s>),
     /// A placeholder variant for internal use.
@@ -144,7 +144,7 @@ pub enum GroupError {
 
 /// Tokens spliced by block comments (Burghard).
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SplicedToken<'s> {
+pub struct SpliceToken<'s> {
     /// A list of words interspersed with block comments. Only contains
     /// `Word` and `BlockComment`.
     pub tokens: Vec<Token<'s>>,
@@ -161,13 +161,13 @@ pub struct ErrorToken<'s> {
 }
 
 impl<'s> Token<'s> {
-    /// Unwraps non-semantic splices and quotes.
+    /// Unwraps non-semantic groups and splices.
     pub fn ungroup(&self) -> &Token<'s> {
         let mut tok = self;
         loop {
             match tok {
                 Token::Group(GroupToken { inner, .. })
-                | Token::Spliced(SplicedToken { spliced: inner, .. }) => {
+                | Token::Splice(SpliceToken { spliced: inner, .. }) => {
                     tok = inner;
                 }
                 _ => return tok,
@@ -175,13 +175,13 @@ impl<'s> Token<'s> {
         }
     }
 
-    /// Unwraps non-semantic splices and quotes and return a mutable reference.
+    /// Unwraps non-semantic groups and splices and returns a mutable reference.
     pub fn ungroup_mut(&mut self) -> &mut Token<'s> {
         let mut tok = self;
         loop {
             match tok {
                 Token::Group(GroupToken { inner, .. })
-                | Token::Spliced(SplicedToken { spliced: inner, .. }) => {
+                | Token::Splice(SpliceToken { spliced: inner, .. }) => {
                     tok = inner;
                 }
                 _ => return tok,
@@ -242,7 +242,7 @@ impl HasError for Token<'_> {
             Token::BlockComment(b) => b.has_error(),
             Token::Word(w) => w.has_error(),
             Token::Group(g) => g.has_error(),
-            Token::Spliced(s) => s.has_error(),
+            Token::Splice(s) => s.has_error(),
             Token::Error(e) => e.has_error(),
             Token::Placeholder => panic!("placeholder"),
         }
@@ -270,7 +270,7 @@ impl HasError for GroupToken<'_> {
     }
 }
 
-impl HasError for SplicedToken<'_> {
+impl HasError for SpliceToken<'_> {
     fn has_error(&self) -> bool {
         self.tokens.iter().any(Token::has_error)
     }
@@ -305,7 +305,7 @@ impl Pretty for GroupToken<'_> {
     }
 }
 
-impl Pretty for SplicedToken<'_> {
+impl Pretty for SpliceToken<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         self.tokens.iter().for_each(|tok| tok.pretty(buf));
     }
@@ -336,7 +336,7 @@ impl Debug for Token<'_> {
             Token::BlockComment(b) => Debug::fmt(b, f),
             Token::Word(w) => Debug::fmt(w, f),
             Token::Group(g) => Debug::fmt(g, f),
-            Token::Spliced(s) => Debug::fmt(s, f),
+            Token::Splice(s) => Debug::fmt(s, f),
             Token::Error(e) => Debug::fmt(e, f),
             Token::Placeholder => write!(f, "Placeholder"),
         }

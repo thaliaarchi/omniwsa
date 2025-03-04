@@ -32,10 +32,10 @@ impl<'s> Visitor<'s> for StrangeVisitor {
                     };
                     *word = *g.inner;
                 }
-                Token::Spliced(_) => {
+                Token::Splice(_) => {
                     // Move block comments out of a token splice to after it.
                     let (_, word, space_after) = inst.words.get_spaced_mut(i);
-                    let Token::Spliced(mut s) = mem::take(word) else {
+                    let Token::Splice(mut s) = mem::take(word) else {
                         unreachable!();
                     };
                     s.tokens.retain(|tok| matches!(tok, Token::BlockComment(_)));
