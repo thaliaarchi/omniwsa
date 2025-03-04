@@ -1,12 +1,12 @@
 //! Parsing for the CensoredUsername Whitespace assembly dialect.
 
 use crate::{
-    dialects::{censoredusername::lex::Lexer, define_mnemonics, dialect::DialectState, Dialect},
+    dialects::{Dialect, censoredusername::lex::Lexer, define_mnemonics, dialect::DialectState},
     lex::Lex,
     syntax::Cst,
     tokens::{
-        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
         Token,
+        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
     },
 };
 

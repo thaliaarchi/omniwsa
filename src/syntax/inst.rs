@@ -4,7 +4,7 @@ use enumset::{EnumSet, EnumSetType};
 
 use crate::{
     syntax::{HasError, Opcode, Overload},
-    tokens::{spaces::Spaces, words::Words, Token},
+    tokens::{Token, spaces::Spaces, words::Words},
 };
 
 // TODO:

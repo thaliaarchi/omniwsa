@@ -57,12 +57,12 @@ mod tests {
         dialects::{Burghard, Dialect as _},
         syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
         tokens::{
+            Token,
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{BaseStyle, Integer, IntegerToken, Sign},
             mnemonics::MnemonicToken,
             spaces::{EofToken, SpaceToken, Spaces},
             words::Words,
-            Token,
         },
     };
 

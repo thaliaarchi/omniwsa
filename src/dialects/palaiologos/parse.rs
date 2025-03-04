@@ -5,14 +5,14 @@ use std::collections::HashSet;
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{dialect::DialectState, palaiologos::lex::Lexer, Palaiologos},
+    dialects::{Palaiologos, dialect::DialectState, palaiologos::lex::Lexer},
     lex::TokenStream,
     syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
     tokens::{
+        Token,
         label::{LabelError, LabelStyle, LabelToken},
         spaces::{ArgSepError, InstSepError, Spaces},
         words::Words,
-        Token,
     },
 };
 

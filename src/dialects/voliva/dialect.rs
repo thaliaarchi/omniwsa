@@ -1,12 +1,12 @@
 //! Parsing for the voliva Whitespace assembly dialect.
 
 use crate::{
-    dialects::{define_mnemonics, dialect::DialectState, voliva::lex::Lexer, Dialect},
+    dialects::{Dialect, define_mnemonics, dialect::DialectState, voliva::lex::Lexer},
     lex::Lex,
     syntax::Cst,
     tokens::{
-        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
         Token,
+        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
     },
 };
 

@@ -172,7 +172,6 @@ impl<'s> CharScan<'s> {
         }
         let data = match ch {
             Some(mut ch) => {
-                // TODO: Use if-let chain once stabilized.
                 if escaped {
                     if let Some(unescaped) = unescape(ch) {
                         ch = unescaped;

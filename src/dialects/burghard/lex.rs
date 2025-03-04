@@ -5,12 +5,12 @@ use enumset::EnumSet;
 use crate::{
     lex::{Lex, Scanner},
     tokens::{
+        GroupError, GroupStyle, GroupToken, Token, WordError, WordToken,
         comment::{
             BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentError,
             LineCommentStyle, LineCommentToken,
         },
         spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
-        GroupError, GroupStyle, GroupToken, Token, WordError, WordToken,
     },
 };
 

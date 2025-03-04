@@ -3,14 +3,14 @@
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{dialect::DialectState, Voliva},
+    dialects::{Voliva, dialect::DialectState},
     lex::{Lex, Scanner},
     tokens::{
+        Token, WordError, WordToken,
         comment::{LineCommentError, LineCommentStyle, LineCommentToken},
         integer::{BaseStyle, Sign},
         spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken},
         string::Encoding,
-        Token, WordError, WordToken,
     },
 };
 

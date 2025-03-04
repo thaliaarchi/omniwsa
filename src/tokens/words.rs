@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     syntax::HasError,
-    tokens::{spaces::Spaces, Token},
+    tokens::{Token, spaces::Spaces},
 };
 
 /// A sequence of words, separated and surrounded by optional spaces.

@@ -9,9 +9,9 @@ use crate::{
     codegen::{Inst, IntegerBits, LabelBits, TokenWrite},
     syntax::{Cst, Inst as WsaInst, Opcode, Overload},
     tokens::{
+        Token, WordToken,
         integer::Integer,
         string::{Encoding, StringToken},
-        Token, WordToken,
     },
 };
 

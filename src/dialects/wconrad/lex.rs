@@ -2,7 +2,7 @@
 
 use crate::{
     lex::{Lex, Scanner},
-    tokens::{spaces::EofToken, Token},
+    tokens::{Token, spaces::EofToken},
 };
 
 /// A lexer for tokens in the wconrad Whitespace assembly dialect.

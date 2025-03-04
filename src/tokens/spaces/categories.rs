@@ -2,7 +2,7 @@
 
 use std::fmt::{self, Debug, Formatter};
 
-use enumset::{enum_set, EnumSet, EnumSetType};
+use enumset::{EnumSet, EnumSetType, enum_set};
 
 use crate::{lex::Scanner, tokens::spaces::SpaceToken};
 

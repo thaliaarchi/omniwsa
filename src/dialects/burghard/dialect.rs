@@ -2,14 +2,14 @@
 
 use crate::{
     dialects::{
+        Dialect,
         burghard::{lex::Lexer, option::OptionNester, parse::Parser},
         define_mnemonics,
         dialect::DialectState,
-        Dialect,
     },
     lex::Lex,
     syntax::Cst,
-    tokens::{integer::IntegerSyntax, Token},
+    tokens::{Token, integer::IntegerSyntax},
 };
 
 // TODO:
@@ -93,13 +93,13 @@ mod tests {
         dialects::{Burghard, Dialect as _},
         syntax::{ArgLayout, Cst, Dialect, Inst, InstError, Opcode, OptionBlock},
         tokens::{
+            GroupError, GroupStyle, GroupToken, SplicedToken, Token, WordToken,
             comment::{BlockCommentStyle, BlockCommentToken},
             integer::{BaseStyle, Integer, IntegerToken, Sign},
             mnemonics::MnemonicToken,
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
             string::{Encoding, QuoteStyle, StringToken},
             words::Words,
-            GroupError, GroupStyle, GroupToken, SplicedToken, Token, WordToken,
         },
     };
 

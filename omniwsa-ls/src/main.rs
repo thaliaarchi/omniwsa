@@ -8,17 +8,17 @@ use std::{
 use bstr::ByteSlice;
 use lsp_server::{Connection, Message, Request, Response};
 use lsp_types::{
-    request::{Request as _, SemanticTokensFullRequest},
     InitializeParams, SemanticToken, SemanticTokenModifier, SemanticTokenType, SemanticTokens,
     SemanticTokensFullOptions, SemanticTokensLegend, SemanticTokensOptions, SemanticTokensParams,
     SemanticTokensResult, SemanticTokensServerCapabilities, ServerCapabilities,
+    request::{Request as _, SemanticTokensFullRequest},
 };
 use omniwsa::{
     dialects::{Dialect, Palaiologos},
     tokens::{
+        GroupError, Token,
         comment::BlockCommentError,
         string::{CharError, StringError},
-        GroupError, Token,
     },
 };
 use serde_json::{from_value as from_json, to_value as to_json};
@@ -193,7 +193,7 @@ fn main_loop(
                         return Err(Box::new(io::Error::new(
                             ErrorKind::Unsupported,
                             format!("unknown method {method}"),
-                        )))
+                        )));
                     }
                 }
             }

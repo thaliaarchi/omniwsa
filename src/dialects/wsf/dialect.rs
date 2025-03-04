@@ -1,12 +1,12 @@
 //! Parsing for the wsf Whitespace assembly dialect.
 
 use crate::{
-    dialects::{define_mnemonics, dialect::DialectState, wsf::lex::Lexer, Dialect},
+    dialects::{Dialect, define_mnemonics, dialect::DialectState, wsf::lex::Lexer},
     lex::Lex,
     syntax::Cst,
     tokens::{
-        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
         Token,
+        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
     },
 };
 

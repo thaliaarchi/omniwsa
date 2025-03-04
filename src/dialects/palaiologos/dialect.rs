@@ -2,16 +2,15 @@
 
 use crate::{
     dialects::{
-        define_mnemonics,
+        Dialect, define_mnemonics,
         dialect::DialectState,
         palaiologos::{lex::Lexer, parse::Parser},
-        Dialect,
     },
     lex::Lex,
     syntax::Cst,
     tokens::{
-        integer::{BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
         Token,
+        integer::{BaseStyle, DigitSep, Integer, IntegerSyntax, SignStyle},
     },
 };
 

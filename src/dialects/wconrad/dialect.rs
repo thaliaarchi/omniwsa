@@ -1,12 +1,12 @@
 //! Parsing for the wconrad Whitespace assembly dialect.
 
 use crate::{
-    dialects::{define_mnemonics, wconrad::lex::Lexer, Dialect, DialectState},
+    dialects::{Dialect, DialectState, define_mnemonics, wconrad::lex::Lexer},
     lex::Lex,
     syntax::Cst,
     tokens::{
-        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
         Token,
+        integer::{BaseStyle, DigitSep, IntegerSyntax, SignStyle},
     },
 };
 

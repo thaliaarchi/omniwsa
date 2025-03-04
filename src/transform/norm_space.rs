@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use crate::{
     syntax::{Cst, Inst, Opcode},
-    tokens::{spaces::SpaceToken, Token},
+    tokens::{Token, spaces::SpaceToken},
     transform::Visitor,
 };
 
@@ -62,13 +62,13 @@ mod tests {
         dialects::{Burghard, Dialect as _},
         syntax::{ArgLayout, Cst, Dialect, Inst, Opcode},
         tokens::{
+            Token,
             comment::{BlockCommentStyle, BlockCommentToken, LineCommentStyle, LineCommentToken},
             integer::{BaseStyle, Integer, IntegerToken, Sign},
             label::{LabelStyle, LabelToken},
             mnemonics::MnemonicToken,
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
             words::Words,
-            Token,
         },
     };
 

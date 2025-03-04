@@ -54,7 +54,7 @@
 //!     ([docs](https://hackage.haskell.org/package/base-4.19.0.0/docs/GHC-Err.html#v:errorWithoutStackTrace))
 
 use bstr::ByteSlice;
-use enumset::{enum_set, EnumSet};
+use enumset::{EnumSet, enum_set};
 
 use crate::tokens::integer::{BaseStyle, DigitSep, IntegerError, IntegerSyntax, Sign, SignStyle};
 

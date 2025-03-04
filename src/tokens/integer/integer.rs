@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use bstr::ByteSlice;
 use derive_more::Debug as DebugCustom;
-use enumset::{enum_set, EnumSet, EnumSetType};
+use enumset::{EnumSet, EnumSetType, enum_set};
 
 use crate::{
     syntax::{HasError, Pretty},

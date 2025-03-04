@@ -3,10 +3,11 @@
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{dialect::DialectState, palaiologos::dialect::MAX_MNEMONIC_LEN, Palaiologos},
+    dialects::{Palaiologos, dialect::DialectState, palaiologos::dialect::MAX_MNEMONIC_LEN},
     lex::{Lex, Scanner},
     syntax::Opcode,
     tokens::{
+        ErrorToken, Token,
         comment::{LineCommentStyle, LineCommentToken},
         label::{LabelError, LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
@@ -15,7 +16,6 @@ use crate::{
             LineTermToken, SpaceToken,
         },
         string::Encoding,
-        ErrorToken, Token,
     },
 };
 

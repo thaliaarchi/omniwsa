@@ -2,7 +2,7 @@
 name = "omniwsa-ls"
 version = "0.1.0"
 authors = ["Thalia Archibald <thalia@archibald.dev>"]
-edition = "2021"
+edition = "2024"
 description = "A language server for all dialects of Whitespace assembly"
 repository = "https://github.com/thaliaarchi/omniwsa"
 license = "MPL-2.0"

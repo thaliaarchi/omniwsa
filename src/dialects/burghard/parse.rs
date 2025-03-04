@@ -5,16 +5,16 @@ use std::{borrow::Cow, mem};
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{burghard::lex::Lexer, dialect::DialectState, Burghard},
+    dialects::{Burghard, burghard::lex::Lexer, dialect::DialectState},
     lex::TokenStream,
     syntax::{ArgLayout, ArgType, HasError, Inst, InstError, Opcode},
     tokens::{
+        GroupError, GroupStyle, SplicedToken, Token, VariableStyle, VariableToken,
         label::{LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::Spaces,
         string::{Encoding, QuoteStyle, StringError, StringToken},
         words::Words,
-        GroupError, GroupStyle, SplicedToken, Token, VariableStyle, VariableToken,
     },
 };
 

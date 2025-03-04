@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use crate::{
     syntax::{Cst, Inst, OptionBlock},
-    tokens::{spaces::Spaces, words::Words, Token},
+    tokens::{Token, spaces::Spaces, words::Words},
 };
 
 /// Pretty-prints this node as Whitespace assembly syntax.

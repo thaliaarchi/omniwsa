@@ -167,7 +167,7 @@ fn most_significant_byte(int: &Integer) -> u8 {
     // Avoid dependency on `gmp_mpfr_sys::gmp::limb_t`.
     #[inline]
     unsafe fn as_bytes<T>(s: &[T]) -> &[u8] {
-        slice::from_raw_parts(s.as_ptr() as *const u8, mem::size_of_val(s))
+        unsafe { slice::from_raw_parts(s.as_ptr() as *const u8, mem::size_of_val(s)) }
     }
     // SAFETY: The pointer and length are valid and the alignment of u8 is less
     // than u64.
@@ -178,9 +178,5 @@ fn most_significant_byte(int: &Integer) -> u8 {
 /// Gets the most-significant hex digit from the integer.
 fn most_significant_hex_digit(int: &Integer) -> u8 {
     let msb = most_significant_byte(int);
-    if msb > 0x0f {
-        msb >> 4
-    } else {
-        msb
-    }
+    if msb > 0x0f { msb >> 4 } else { msb }
 }

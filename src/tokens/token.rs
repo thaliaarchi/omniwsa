@@ -180,11 +180,8 @@ impl<'s> Token<'s> {
         let mut tok = self;
         loop {
             match tok {
-                Token::Group(GroupToken { ref mut inner, .. })
-                | Token::Spliced(SplicedToken {
-                    spliced: ref mut inner,
-                    ..
-                }) => {
+                Token::Group(GroupToken { inner, .. })
+                | Token::Spliced(SplicedToken { spliced: inner, .. }) => {
                     tok = inner;
                 }
                 _ => return tok,

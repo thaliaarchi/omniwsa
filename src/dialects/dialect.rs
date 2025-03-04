@@ -5,9 +5,9 @@ use std::marker::PhantomData;
 use crate::{
     syntax::{Cst, Opcode},
     tokens::{
+        Token,
         integer::IntegerSyntax,
         mnemonics::{FoldedStr, MnemonicMap},
-        Token,
     },
 };
 
