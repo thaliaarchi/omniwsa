@@ -17,8 +17,8 @@ use omniwsa::{
     dialects::{Dialect, Palaiologos},
     tokens::{
         comment::BlockCommentError,
-        string::{CharError, QuotedError, StringError},
-        Token,
+        string::{CharError, StringError},
+        GroupError, Token,
     },
 };
 use serde_json::{from_value as from_json, to_value as to_json};
@@ -139,7 +139,7 @@ fn main_loop(
                                     Some(TokenType::Comment)
                                 }
                                 Token::Word(_) => Some(TokenType::Variable),
-                                Token::Quoted(_) | Token::Spliced(_) => panic!("not ungrouped"),
+                                Token::Group(_) | Token::Spliced(_) => panic!("not ungrouped"),
                                 Token::Error(_) => None,
                                 Token::Placeholder => panic!("placeholder"),
                             };
@@ -252,14 +252,14 @@ fn token_len(tok: &Token<'_>) -> (usize, usize, usize) {
             },
         ),
         Token::Word(tok) => (&tok.word, 0, 0),
-        Token::Quoted(tok) => {
+        Token::Group(tok) => {
             let (len, hlen, vlen) = token_len(&tok.inner);
             let mut quotes = 0;
             if vlen != 0 {
-                quotes += tok.quotes.quote().len();
+                quotes += tok.delim.open().len();
             }
-            if !tok.errors.contains(QuotedError::Unterminated) {
-                quotes += tok.quotes.quote().len();
+            if !tok.errors.contains(GroupError::Unterminated) {
+                quotes += tok.delim.close().len();
             }
             return (len + quotes, hlen + quotes, vlen);
         }

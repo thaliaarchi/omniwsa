@@ -140,7 +140,7 @@ impl<'s> Words<'s> {
             | Token::Label(_)
             | Token::LabelColon(_)
             | Token::Word(_)
-            | Token::Quoted(_)
+            | Token::Group(_)
             | Token::Spliced(_)
             | Token::Error(_) => self.push_word(token),
             Token::Space(_)

@@ -9,9 +9,8 @@ use crate::{
             BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentError,
             LineCommentStyle, LineCommentToken,
         },
-        spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken},
-        string::{QuoteStyle, QuotedError, QuotedToken},
-        Token, WordError, WordToken,
+        spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
+        GroupError, GroupStyle, GroupToken, Token, WordError, WordToken,
     },
 };
 
@@ -68,7 +67,7 @@ impl<'s> Lex<'s> for Lexer<'s> {
                 scan.bump_until_ascii(|ch| ch == b'"' || ch == b'\n');
                 let word = &scan.text()[1..];
                 let quoted_errors = if !scan.bump_if_ascii(|ch| ch == b'"') {
-                    QuotedError::Unterminated.into()
+                    GroupError::Unterminated.into()
                 } else {
                     EnumSet::empty()
                 };
@@ -77,12 +76,14 @@ impl<'s> Lex<'s> for Lexer<'s> {
                 } else {
                     EnumSet::empty()
                 };
-                Token::from(QuotedToken {
+                Token::from(GroupToken {
+                    delim: GroupStyle::DoubleQuotes,
+                    space_before: Spaces::new(),
                     inner: Box::new(Token::from(WordToken {
                         word: word.into(),
                         errors: word_errors,
                     })),
-                    quotes: QuoteStyle::Double,
+                    space_after: Spaces::new(),
                     errors: quoted_errors,
                 })
             }

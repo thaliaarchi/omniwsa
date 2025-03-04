@@ -14,7 +14,7 @@ use crate::{
         spaces::Spaces,
         string::{Encoding, QuoteStyle, StringError, StringToken},
         words::Words,
-        SplicedToken, Token, VariableStyle, VariableToken,
+        GroupError, GroupStyle, SplicedToken, Token, VariableStyle, VariableToken,
     },
 };
 
@@ -50,7 +50,7 @@ impl<'s> Iterator for Parser<'s, '_> {
         }
 
         let mut words = Words::new(self.space());
-        while matches!(self.toks.curr(), Token::Word(_) | Token::Quoted(_)) {
+        while matches!(self.toks.curr(), Token::Word(_) | Token::Group(_)) {
             let word = self.toks.advance();
             let space = self.space();
             match words.words.last_mut() {
@@ -147,7 +147,7 @@ impl<'s> Parser<'s, '_> {
     /// Parses an argument according to its type and returns whether it is
     /// valid.
     fn parse_arg(&mut self, tok: &mut Token<'_>, ty: ArgType) -> bool {
-        let quoted = matches!(tok, Token::Quoted(_));
+        let quoted = matches!(tok, Token::Group(_));
         let inner = tok.ungroup_mut();
         let Token::Word(inner_word) = inner else {
             return true;
@@ -205,19 +205,20 @@ impl<'s> Parser<'s, '_> {
                 quotes: QuoteStyle::Bare,
                 errors: EnumSet::empty(),
             }),
-            Token::Quoted(q) => {
-                let Token::Word(w) = *q.inner else {
+            Token::Group(g) => {
+                debug_assert_eq!(g.delim, GroupStyle::DoubleQuotes);
+                let Token::Word(w) = *g.inner else {
                     panic!("unhandled token");
                 };
                 let mut errors = EnumSet::empty();
-                for err in q.errors {
-                    errors |= StringError::from(err);
+                if g.errors.contains(GroupError::Unterminated) {
+                    errors |= StringError::Unterminated;
                 }
                 Token::from(StringToken {
                     literal: w.word.clone(),
                     unescaped: w.word,
                     encoding: Encoding::Utf8,
-                    quotes: q.quotes,
+                    quotes: QuoteStyle::Double,
                     errors,
                 })
             }

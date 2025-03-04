@@ -32,7 +32,7 @@ impl Pretty for Token<'_> {
             Token::LineComment(l) => l.pretty(buf),
             Token::BlockComment(b) => b.pretty(buf),
             Token::Word(w) => w.pretty(buf),
-            Token::Quoted(q) => q.pretty(buf),
+            Token::Group(g) => g.pretty(buf),
             Token::Spliced(s) => s.pretty(buf),
             Token::Error(e) => e.pretty(buf),
             Token::Placeholder => panic!("placeholder"),

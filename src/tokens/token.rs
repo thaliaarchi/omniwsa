@@ -16,8 +16,8 @@ use crate::{
         integer::IntegerToken,
         label::{LabelColonToken, LabelToken},
         mnemonics::MnemonicToken,
-        spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken},
-        string::{CharToken, QuotedToken, StringToken},
+        spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken, Spaces},
+        string::{CharToken, StringToken},
     },
 };
 
@@ -64,8 +64,8 @@ pub enum Token<'s> {
     BlockComment(BlockCommentToken<'s>),
     /// A word of uninterpreted meaning.
     Word(WordToken<'s>),
-    /// A token enclosed in non-semantic quotes (Burghard).
-    Quoted(QuotedToken<'s>),
+    /// A token enclosed in parentheses or non-semantic quotes (Burghard).
+    Group(GroupToken<'s>),
     /// Tokens spliced by block comments (Burghard).
     Spliced(SplicedToken<'s>),
     /// An erroneous sequence.
@@ -109,6 +109,39 @@ pub enum WordError {
     InvalidUtf8,
 }
 
+/// A token enclosed in parentheses or non-semantic quotes (Burghard).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GroupToken<'s> {
+    /// The style of the delimiter enclosing this token.
+    pub delim: GroupStyle,
+    /// Spaces between the opening delimiter and the inner token.
+    pub space_before: Spaces<'s>,
+    /// The effective token.
+    pub inner: Box<Token<'s>>,
+    /// Spaces between the inner token and the closing delimiter.
+    pub space_after: Spaces<'s>,
+    /// All errors from parsing this token.
+    pub errors: EnumSet<GroupError>,
+}
+
+/// The style of a non-semantic group.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GroupStyle {
+    /// Parentheses. Integers in the Burghard dialect may be wrapped in
+    /// parentheses.
+    Parens,
+    /// `"`-quotes. Any word in the Burghard dialect may be wrapped in
+    /// non-semantic quotes.
+    DoubleQuotes,
+}
+
+/// A parse error for a group token.
+#[derive(EnumSetType, Debug)]
+pub enum GroupError {
+    /// Has no closing delimiter.
+    Unterminated,
+}
+
 /// Tokens spliced by block comments (Burghard).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SplicedToken<'s> {
@@ -133,7 +166,7 @@ impl<'s> Token<'s> {
         let mut tok = self;
         loop {
             match tok {
-                Token::Quoted(QuotedToken { inner, .. })
+                Token::Group(GroupToken { inner, .. })
                 | Token::Spliced(SplicedToken { spliced: inner, .. }) => {
                     tok = inner;
                 }
@@ -147,7 +180,7 @@ impl<'s> Token<'s> {
         let mut tok = self;
         loop {
             match tok {
-                Token::Quoted(QuotedToken { ref mut inner, .. })
+                Token::Group(GroupToken { ref mut inner, .. })
                 | Token::Spliced(SplicedToken {
                     spliced: ref mut inner,
                     ..
@@ -165,6 +198,24 @@ impl VariableStyle {
     pub const fn sigil(&self) -> &'static str {
         match self {
             VariableStyle::UnderscoreSigil => "_",
+        }
+    }
+}
+
+impl GroupStyle {
+    /// The opening delimiter.
+    pub const fn open(&self) -> &'static str {
+        match self {
+            GroupStyle::Parens => "(",
+            GroupStyle::DoubleQuotes => "\"",
+        }
+    }
+
+    /// The closing delimiter.
+    pub const fn close(&self) -> &'static str {
+        match self {
+            GroupStyle::Parens => ")",
+            GroupStyle::DoubleQuotes => "\"",
         }
     }
 }
@@ -193,7 +244,7 @@ impl HasError for Token<'_> {
             Token::LineComment(l) => l.has_error(),
             Token::BlockComment(b) => b.has_error(),
             Token::Word(w) => w.has_error(),
-            Token::Quoted(q) => q.has_error(),
+            Token::Group(g) => g.has_error(),
             Token::Spliced(s) => s.has_error(),
             Token::Error(e) => e.has_error(),
             Token::Placeholder => panic!("placeholder"),
@@ -210,6 +261,15 @@ impl HasError for VariableToken<'_> {
 impl HasError for WordToken<'_> {
     fn has_error(&self) -> bool {
         false
+    }
+}
+
+impl HasError for GroupToken<'_> {
+    fn has_error(&self) -> bool {
+        self.space_before.has_error()
+            || self.inner.has_error()
+            || self.space_after.has_error()
+            || !self.errors.is_empty()
     }
 }
 
@@ -235,6 +295,16 @@ impl Pretty for VariableToken<'_> {
 impl Pretty for WordToken<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         self.word.pretty(buf);
+    }
+}
+
+impl Pretty for GroupToken<'_> {
+    fn pretty(&self, buf: &mut Vec<u8>) {
+        self.delim.open().pretty(buf);
+        self.inner.pretty(buf);
+        if !self.errors.contains(GroupError::Unterminated) {
+            self.delim.close().pretty(buf);
+        }
     }
 }
 
@@ -268,7 +338,7 @@ impl Debug for Token<'_> {
             Token::LineComment(l) => Debug::fmt(l, f),
             Token::BlockComment(b) => Debug::fmt(b, f),
             Token::Word(w) => Debug::fmt(w, f),
-            Token::Quoted(q) => Debug::fmt(q, f),
+            Token::Group(g) => Debug::fmt(g, f),
             Token::Spliced(s) => Debug::fmt(s, f),
             Token::Error(e) => Debug::fmt(e, f),
             Token::Placeholder => write!(f, "Placeholder"),

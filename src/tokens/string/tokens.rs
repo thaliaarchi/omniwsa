@@ -6,10 +6,7 @@ use bstr::ByteSlice;
 use derive_more::Debug as DebugCustom;
 use enumset::{EnumSet, EnumSetType};
 
-use crate::{
-    syntax::{HasError, Pretty},
-    tokens::Token,
-};
+use crate::syntax::{HasError, Pretty};
 
 // TODO:
 // - Create StringSyntax to describe escapes.
@@ -49,17 +46,6 @@ pub struct CharToken<'s> {
     /// All errors from parsing this char literal. When any errors are present,
     /// the unescaped data is best-effort.
     pub errors: EnumSet<CharError>,
-}
-
-/// A token enclosed in non-semantic quotes (Burghard).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct QuotedToken<'s> {
-    /// The effective token.
-    pub inner: Box<Token<'s>>,
-    /// The style of the quotes enclosing this token.
-    pub quotes: QuoteStyle,
-    /// All errors from parsing this quoted token.
-    pub errors: EnumSet<QuotedError>,
 }
 
 /// The encoding of an unescaped string literal.
@@ -120,13 +106,6 @@ pub enum CharError {
     UnexpectedUnicode,
 }
 
-/// A parse error for a quoted token.
-#[derive(EnumSetType, Debug)]
-pub enum QuotedError {
-    /// Has no closing quote.
-    Unterminated,
-}
-
 impl Encoding {
     /// Returns the character to use for representing invalid sequences: either
     /// U+FFFD replacement character for `Utf8` or U+001A substitute (SUB) for
@@ -150,14 +129,6 @@ impl QuoteStyle {
     }
 }
 
-impl From<QuotedError> for StringError {
-    fn from(err: QuotedError) -> Self {
-        match err {
-            QuotedError::Unterminated => StringError::Unterminated,
-        }
-    }
-}
-
 impl HasError for StringToken<'_> {
     fn has_error(&self) -> bool {
         !self.errors.is_empty()
@@ -167,12 +138,6 @@ impl HasError for StringToken<'_> {
 impl HasError for CharToken<'_> {
     fn has_error(&self) -> bool {
         !self.errors.is_empty()
-    }
-}
-
-impl HasError for QuotedToken<'_> {
-    fn has_error(&self) -> bool {
-        self.inner.has_error() || !self.errors.is_empty()
     }
 }
 
@@ -191,16 +156,6 @@ impl Pretty for CharToken<'_> {
         self.quotes.quote().pretty(buf);
         self.literal.pretty(buf);
         if !self.errors.contains(CharError::Unterminated) {
-            self.quotes.quote().pretty(buf);
-        }
-    }
-}
-
-impl Pretty for QuotedToken<'_> {
-    fn pretty(&self, buf: &mut Vec<u8>) {
-        self.quotes.quote().pretty(buf);
-        self.inner.pretty(buf);
-        if !self.errors.contains(QuotedError::Unterminated) {
             self.quotes.quote().pretty(buf);
         }
     }

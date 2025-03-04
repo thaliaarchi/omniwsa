@@ -25,12 +25,12 @@ impl<'s> Visitor<'s> for StrangeVisitor {
         for i in 0..inst.words.len() {
             let word = &mut inst.words.words[i].0;
             match word {
-                Token::Quoted(_) => {
-                    // Remove non-semantic quotes.
-                    let Token::Quoted(q) = mem::take(word) else {
+                Token::Group(_) => {
+                    // Remove non-semantic groups.
+                    let Token::Group(g) = mem::take(word) else {
                         unreachable!();
                     };
-                    *word = *q.inner;
+                    *word = *g.inner;
                 }
                 Token::Spliced(_) => {
                     // Move block comments out of a token splice to after it.

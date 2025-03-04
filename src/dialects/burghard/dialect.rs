@@ -97,9 +97,9 @@ mod tests {
             integer::{BaseStyle, Integer, IntegerToken, Sign},
             mnemonics::MnemonicToken,
             spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
-            string::{Encoding, QuoteStyle, QuotedError, QuotedToken, StringToken},
+            string::{Encoding, QuoteStyle, StringToken},
             words::Words,
-            SplicedToken, Token, WordToken,
+            GroupError, GroupStyle, GroupToken, SplicedToken, Token, WordToken,
         },
     };
 
@@ -193,13 +193,15 @@ mod tests {
             words: Words {
                 space_before: Spaces::new(),
                 words: vec![(
-                    Token::from(QuotedToken {
+                    Token::from(GroupToken {
+                        delim: GroupStyle::DoubleQuotes,
+                        space_before: Spaces::new(),
                         inner: Box::new(mnemonic!(
                             "Debug_PrİntStacK".as_bytes(),
                             Opcode::BurghardPrintStack,
                         )),
-                        quotes: QuoteStyle::Double,
-                        errors: QuotedError::Unterminated.into(),
+                        space_after: Spaces::new(),
+                        errors: GroupError::Unterminated.into(),
                     }),
                     eof!(),
                 )],
@@ -234,7 +236,9 @@ mod tests {
                         space!(b" "),
                     ),
                     (
-                        Token::from(QuotedToken {
+                        Token::from(GroupToken {
+                            delim: GroupStyle::DoubleQuotes,
+                            space_before: Spaces::new(),
                             inner: Box::new(Token::from(IntegerToken {
                                 literal: b"2".into(),
                                 value: Integer::from(2),
@@ -244,7 +248,7 @@ mod tests {
                                 has_digit_seps: false,
                                 errors: EnumSet::empty(),
                             })),
-                            quotes: QuoteStyle::Double,
+                            space_after: Spaces::new(),
                             errors: EnumSet::empty(),
                         }),
                         eof!(),
