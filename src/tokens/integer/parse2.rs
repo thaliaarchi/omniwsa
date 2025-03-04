@@ -6,6 +6,7 @@ use rug::Integer;
 use crate::{lex::Scanner, tokens::integer::BaseStyle};
 
 // TODO:
+// - Parse parens as `GroupToken`.
 // - Implement remainder of parsing, particularly digits.
 // - Handle digit separator position errors.
 // - Handle `0` octal prefix and `0b`/`0B` prefix as digits for `h`/`H` suffix.

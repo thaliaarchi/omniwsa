@@ -26,6 +26,11 @@ use serde_json::{from_value as from_json, to_value as to_json};
 // TODO:
 // - Implement text document API, instead of reading from disk.
 // - Record spans in tokens.
+// - About lazy analyses and ties between syntax and semantics:
+//   https://rust-analyzer.github.io/blog/2023/12/26/the-heart-of-a-language-server.html
+//   - To infer imports, it could eagerly parse every Whitespace file. For
+//     inactive files, only labels would need to be retained, instead of the
+//     full CST.
 
 fn main() {
     if let Err(err) = do_main() {

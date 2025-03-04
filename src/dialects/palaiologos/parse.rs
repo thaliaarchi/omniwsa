@@ -27,6 +27,7 @@ use crate::{
 //   - Allow using invalid mnemonics as label defs and refs.
 //   - Allow adjacent instructions without slashes. At every misplaced mnemonic,
 //     unless the previous was `rep` or it's used as a label, start a new token.
+//   - Recover `break:` as `label break`, instead of `jmp reak:`.
 
 /// A parser for the Palaiologos Whitespace assembly dialect.
 #[derive(Clone, Debug)]

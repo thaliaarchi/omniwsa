@@ -6,6 +6,10 @@ use enumset::{EnumSet, EnumSetType};
 
 use crate::syntax::{HasError, Pretty};
 
+// TODO:
+// - Block comments should be parsed into a list or even hierarchy of tokens.
+//   - Line comments within block comments could be highlighted differently.
+
 /// Line comment token (e.g., `#` or `//`).
 #[derive(Clone, DebugCustom, PartialEq, Eq)]
 pub struct LineCommentToken<'s> {

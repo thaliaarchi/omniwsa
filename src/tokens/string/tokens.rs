@@ -9,10 +9,13 @@ use enumset::{EnumSet, EnumSetType};
 use crate::syntax::{HasError, Pretty};
 
 // TODO:
+// - String tokens could be like `format_args!` and have a list of literal
+//   chunks and escapes, where each escape would have source and parsed
+//   interpretations and its own errors.
 // - Create StringSyntax to describe escapes.
 // - How to represent char literals with buggy delimiters, like those allowed
 //   with littleBugHunter's `'..` pattern? Maybe QuoteStyle::Custom with open
-//   and close.
+//   and close. Or just mark it as unterminated and error.
 // - Improve Debug for CharData::Byte.
 
 /// A string literal token.

@@ -22,9 +22,18 @@ use crate::{
 };
 
 // TODO:
-// - Whitelips, Lime, and Respace macro definitions.
-// - Respace `@define`.
 // - Store spans in tokens.
+//   - `Spanned<T>` or `Loc<T>`.
+//   - Use length-based spans, instead of offsets, like Rowan. Since the root
+//     node has the length of the full file, it needs to be `u64`, not shorter.
+// - Organization:
+//   - Merge `Token` into CST.
+//   - Remove Token suffix from type names. What about `StringToken`?
+//   - Possibly reference enum variants as `cst::Variant` like `ty::FnDef(_, _)`
+//     for `rustc_middle::ty::TyKind::FnDef(_, _)`.
+// - Features:
+//   - Whitelips, Lime, and Respace macro definitions.
+//   - Respace `@define`.
 // - Store byte string uniformly (named Text?), instead of a mix of &[u8] and
 //   Cow.
 //   - Create utilities for slicing and manipulating easier than Cow.
