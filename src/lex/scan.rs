@@ -137,6 +137,14 @@ impl<'s> Scanner<'s> {
         self.src.get(self.end.offset + n).copied()
     }
 
+    /// Returns the next char without consuming it or, if invalid or at EOF,
+    /// returns `None`.
+    #[inline]
+    pub fn peek_char(&self) -> Option<char> {
+        let (ch, _) = bstr::decode_utf8(self.rest());
+        ch
+    }
+
     /// Consumes and returns the next UTF-8 character from the source or, if
     /// invalid, returns the U+FFFD replacement character.
     pub fn next_char(&mut self) -> char {
