@@ -9,7 +9,8 @@ use crate::{
     lex::TokenStream,
     syntax::{ArgLayout, ArgType, HasError, Inst, InstError, Opcode},
     tokens::{
-        GroupError, GroupStyle, SpliceToken, Token, VariableStyle, VariableToken,
+        SpliceToken, Token, VariableStyle, VariableToken,
+        expr::{GroupError, GroupStyle},
         label::{LabelStyle, LabelToken},
         mnemonics::MnemonicToken,
         spaces::Spaces,
@@ -211,7 +212,7 @@ impl<'s> Parser<'s, '_> {
                     panic!("unhandled token");
                 };
                 let mut errors = EnumSet::empty();
-                if g.errors.contains(GroupError::Unterminated) {
+                if g.errors.contains(GroupError::Unclosed) {
                     errors |= StringError::Unterminated;
                 }
                 Token::from(StringToken {

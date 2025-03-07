@@ -1,6 +1,7 @@
 //! Lexical tokens for interoperable Whitespace assembly.
 
 pub mod comment;
+pub mod expr;
 pub mod integer;
 pub mod label;
 pub mod mnemonics;

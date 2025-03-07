@@ -16,8 +16,9 @@ use lsp_types::{
 use omniwsa::{
     dialects::{Dialect, Palaiologos},
     tokens::{
-        GroupError, Token,
+        Token,
         comment::BlockCommentError,
+        expr::GroupError,
         string::{CharError, StringError},
     },
 };

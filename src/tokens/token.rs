@@ -13,10 +13,11 @@ use crate::{
     syntax::{HasError, Pretty},
     tokens::{
         comment::{BlockCommentToken, LineCommentToken},
+        expr::GroupToken,
         integer::IntegerToken,
         label::{LabelColonToken, LabelToken},
         mnemonics::MnemonicToken,
-        spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken, Spaces},
+        spaces::{ArgSepToken, EofToken, InstSepToken, LineTermToken, SpaceToken},
         string::{CharToken, StringToken},
     },
 };
@@ -118,39 +119,6 @@ pub enum WordError {
     InvalidUtf8,
 }
 
-/// A token enclosed in parentheses or non-semantic quotes (Burghard).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GroupToken<'s> {
-    /// The style of the delimiter enclosing this token.
-    pub delim: GroupStyle,
-    /// Spaces between the opening delimiter and the inner token.
-    pub space_before: Spaces<'s>,
-    /// The effective token.
-    pub inner: Box<Token<'s>>,
-    /// Spaces between the inner token and the closing delimiter.
-    pub space_after: Spaces<'s>,
-    /// All errors from parsing this token.
-    pub errors: EnumSet<GroupError>,
-}
-
-/// The style of a non-semantic group.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum GroupStyle {
-    /// Parentheses. Integers in the Burghard dialect may be wrapped in
-    /// parentheses.
-    Parens,
-    /// `"`-quotes. Any word in the Burghard dialect may be wrapped in
-    /// non-semantic quotes.
-    DoubleQuotes,
-}
-
-/// A parse error for a group token.
-#[derive(EnumSetType, Debug)]
-pub enum GroupError {
-    /// Has no closing delimiter.
-    Unterminated,
-}
-
 /// Tokens spliced by block comments (Burghard).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpliceToken<'s> {
@@ -198,24 +166,6 @@ impl VariableStyle {
     pub const fn sigil(&self) -> &'static str {
         match self {
             VariableStyle::UnderscoreSigil => "_",
-        }
-    }
-}
-
-impl GroupStyle {
-    /// The opening delimiter.
-    pub const fn open(&self) -> &'static str {
-        match self {
-            GroupStyle::Parens => "(",
-            GroupStyle::DoubleQuotes => "\"",
-        }
-    }
-
-    /// The closing delimiter.
-    pub const fn close(&self) -> &'static str {
-        match self {
-            GroupStyle::Parens => ")",
-            GroupStyle::DoubleQuotes => "\"",
         }
     }
 }
@@ -295,16 +245,6 @@ impl Pretty for VariableToken<'_> {
 impl Pretty for WordToken<'_> {
     fn pretty(&self, buf: &mut Vec<u8>) {
         self.word.pretty(buf);
-    }
-}
-
-impl Pretty for GroupToken<'_> {
-    fn pretty(&self, buf: &mut Vec<u8>) {
-        self.delim.open().pretty(buf);
-        self.inner.pretty(buf);
-        if !self.errors.contains(GroupError::Unterminated) {
-            self.delim.close().pretty(buf);
-        }
     }
 }
 

@@ -5,11 +5,12 @@ use enumset::EnumSet;
 use crate::{
     lex::{Lex, Scanner},
     tokens::{
-        GroupError, GroupStyle, GroupToken, Token, WordError, WordToken,
+        Token, WordError, WordToken,
         comment::{
             BlockCommentError, BlockCommentStyle, BlockCommentToken, LineCommentError,
             LineCommentStyle, LineCommentToken,
         },
+        expr::{GroupError, GroupStyle, GroupToken},
         spaces::{EofToken, LineTermStyle, LineTermToken, SpaceToken, Spaces},
     },
 };
@@ -67,7 +68,7 @@ impl<'s> Lex<'s> for Lexer<'s> {
                 scan.bump_until_ascii(|ch| ch == b'"' || ch == b'\n');
                 let word = &scan.text()[1..];
                 let quoted_errors = if !scan.bump_if_ascii(|ch| ch == b'"') {
-                    GroupError::Unterminated.into()
+                    GroupError::Unclosed.into()
                 } else {
                     EnumSet::empty()
                 };
