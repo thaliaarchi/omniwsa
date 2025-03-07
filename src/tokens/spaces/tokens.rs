@@ -11,7 +11,10 @@ use enumset::{EnumSet, EnumSetType};
 
 use crate::{
     syntax::{HasError, Pretty},
-    tokens::Token,
+    tokens::{
+        Token,
+        comment::{BlockCommentToken, LineCommentToken},
+    },
 };
 
 // TODO:
@@ -218,6 +221,23 @@ impl<'s> From<Token<'s>> for Spaces<'s> {
         }
     }
 }
+
+macro_rules! from_space(($variant:ident, $T:ty) => {
+    impl<'s> From<$T> for Spaces<'s> {
+        fn from(token: $T) -> Self {
+            Spaces {
+                tokens: vec![Token::$variant(token)]
+            }
+        }
+    }
+});
+from_space!(Space, SpaceToken<'s>);
+from_space!(LineTerm, LineTermToken);
+from_space!(Eof, EofToken);
+from_space!(InstSep, InstSepToken);
+from_space!(ArgSep, ArgSepToken);
+from_space!(LineComment, LineCommentToken<'s>);
+from_space!(BlockComment, BlockCommentToken<'s>);
 
 impl Debug for Spaces<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

@@ -59,6 +59,22 @@ pub enum SpaceCategory {
 }
 
 impl SpaceSet {
+    /// All whitespace characters, across all definitions.
+    pub const ALL: Self = SpaceSet(enum_set!(
+        SpaceCategory::Nul
+            | SpaceCategory::Tab
+            | SpaceCategory::LineFeed
+            | SpaceCategory::VerticalTab
+            | SpaceCategory::FormFeed
+            | SpaceCategory::CarriageReturn
+            | SpaceCategory::Space
+            | SpaceCategory::NextLine
+            | SpaceCategory::SpaceSeparatorMinusSpace
+            | SpaceCategory::LineSeparator
+            | SpaceCategory::ParagraphSeparator
+            | SpaceCategory::ZeroWidthNoBreakSpace
+    ));
+
     /// Whitespace characters according to C [`isspace`](https://en.cppreference.com/w/c/string/byte/isspace)
     /// from `<ctype.h>`.
     pub const C_ISSPACE: Self = SpaceSet(enum_set!(

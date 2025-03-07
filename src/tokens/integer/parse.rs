@@ -20,7 +20,7 @@ impl IntegerSyntax {
     /// digits to reuse allocations.
     pub fn parse<'s>(&self, literal: Cow<'s, [u8]>, digits: &mut Vec<u8>) -> IntegerToken<'s> {
         let mut int = IntegerToken {
-            literal: b""[..].into(),
+            literal: b"".into(),
             value: Integer::new(),
             sign: Sign::None,
             base_style: BaseStyle::Decimal,

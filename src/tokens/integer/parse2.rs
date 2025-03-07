@@ -6,6 +6,8 @@ use rug::Integer;
 use crate::{lex::Scanner, tokens::integer::BaseStyle};
 
 // TODO:
+// - Validate spaces according to dialect requirements in a lint, not in the
+//   parser, if possible.
 // - Parse parens as `GroupToken`.
 // - Implement remainder of parsing, particularly digits.
 // - Handle digit separator position errors.
@@ -162,6 +164,19 @@ struct IntegerParser<'s, 'a> {
     cfg: ParseConfig,
     errors: EnumSet<IntegerError>,
     digit_buf: &'a mut Vec<u8>,
+}
+
+impl IntegerToken {
+    /// Parses an integer token, reading from the scanner with the given
+    /// configuration and scratch digit buffer.
+    pub fn parse<'s>(
+        scan: &mut Scanner<'_>,
+        syntax: &Syntax,
+        cfg: ParseConfig,
+        digit_buf: &mut Vec<u8>,
+    ) -> Self {
+        IntegerParser::new(scan, syntax, cfg, digit_buf).parse()
+    }
 }
 
 impl<'s, 'a> IntegerParser<'s, 'a> {
