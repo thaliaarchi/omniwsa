@@ -36,5 +36,7 @@ Add error tokens tokens [like Tolerant PHP Parser](https://github.com/microsoft/
 `Missing` is for a token expected to be present, but is not. `Skipped` is for an
 extra token that can't be dealt with.
 
+Swift also has a `Missing` node. They call their string-like type [`SyntaxText`](https://github.com/swiftlang/swift-syntax/blob/5f5371d77aab2389ab34aff78903f8424a09bb97/Contributor%20Documentation/Parser%20Design.md#string-is-rarely-appropriate-in-the-syntax-tree).
+
 For example, a missing argument multiple `,` separators could use `Missing` for
 the hole or `Skipped` for the comma.
