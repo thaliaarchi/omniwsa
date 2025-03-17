@@ -1,4 +1,4 @@
-Ruby 3.3.6
+Ruby 3.4.2
 UTF-8 whitespace characters for String#strip:
 U+0000 ("\u0000") is stripped on both sides
 U+0009 ("\t") is stripped on both sides
