@@ -3,18 +3,23 @@ include ../base.mk
 PASS = $(shell find pass -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')
 WS = $(PASS:.wsa=.ws)
+# TODO: Commented until sorting is stable.
+MIN_WS = # pass/bugs/label_sort_unstable.min.ws
 ERR = $(FAIL:.wsa=.err)
 
 .PHONY: all
-all: $(WS) $(ERR)
+all: $(WS) $(MIN_WS) $(ERR)
 
 %.ws: %.wsa
-	$(CENSOREDUSERNAME_WSC) -t -f asm -o $@ $<
+	$(CENSOREDUSERNAME_WSC) --translate --format asm -o $@ $<
+
+%.min.ws: %.wsa
+	$(CENSOREDUSERNAME_WSC) --translate --format asm --minify -o $@ $<
 
 %.err: %.wsa
-	! $(CENSOREDUSERNAME_WSC) -t -f asm -o $*.ws $< 2> $@
+	! $(CENSOREDUSERNAME_WSC) --translate --format asm -o $*.ws $< 2> $@
 
 .PHONY: all
 clean:
 	@echo rm -f '**.ws' '**.err'
-	@rm -f $(WS) $(ERR)
+	@rm -f $(WS) $(MIN_WS) $(ERR)
