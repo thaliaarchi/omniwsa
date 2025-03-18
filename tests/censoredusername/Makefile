@@ -3,8 +3,7 @@ include ../base.mk
 PASS = $(shell find pass -name '*.wsa')
 FAIL = $(shell find fail -name '*.wsa')
 WS = $(PASS:.wsa=.ws)
-# TODO: Commented until sorting is stable.
-MIN_WS = # pass/bugs/label_sort_unstable.min.ws
+MIN_WS = pass/regress/label_sort_unstable.min.ws
 ERR = $(FAIL:.wsa=.err)
 
 .PHONY: all

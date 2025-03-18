@@ -1,7 +1,7 @@
 # CensoredUsername Whitespace assembly
 
 - Source: <https://github.com/CensoredUsername/whitespace-rs>
-  (last updated [2024-12-12](https://github.com/CensoredUsername/whitespace-rs/commit/9028eba04b40af4a23f99dac058b3ac06c5967ff))
+  (last updated [2025-03-18](https://github.com/CensoredUsername/whitespace-rs/commit/7b856299b98601ff7d6e57a618cfe4c895e1248f))
 - Corpus: [rust/censoredusername-whitespace-rs](https://github.com/wspace/corpus/tree/main/rust/censoredusername-whitespace-rs)
 
 The Whitespace assembly dialect of CensoredUsername's whitespace-rs JIT and
@@ -94,15 +94,20 @@ Mnemonics and labels are case-sensitive.
 
 ### History
 
-- Until [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/35d4aa422867f9bd0e4eaf43437deeb0157fab33),
-  zero was encoded without a sign.
-- Until [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/3ad9036a4cf17bd578f38ac0aca3fff30b316689),
-  the recognized whitespace characters were only space and tab.
-
-### Bugs
-
-- Labels with the same number of references are minified in a non-deterministic
-  order.
+- [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/35d4aa422867f9bd0e4eaf43437deeb0157fab33):
+  Encode zero with a positive sign. Before it was encoded without a sign.
+- [2024-12-10](https://github.com/CensoredUsername/whitespace-rs/commit/3ad9036a4cf17bd578f38ac0aca3fff30b316689):
+  Recognize whitespace characters with `char::is_ascii_whitespace`. Before only
+  space and tab were whitespace.
+- [2024-12-12](https://github.com/CensoredUsername/whitespace-rs/commit/f7d1fe1d995358924952ec7e56346f42add4a6e0):
+  Encode labels which match the pattern `_[01]*` as their binary representation
+  (big-endian). Before, they were encoded as their ASCII representation.
+- [2025-03-18](https://github.com/CensoredUsername/whitespace-rs/commit/7b856299b98601ff7d6e57a618cfe4c895e1248f):
+  Assign minified labels deterministically, ordered by number of references and
+  breaking ties by earlier definition. Before, labels with the same number of
+  references were ordered non-deterministically.
+- [2025-03-18](https://github.com/CensoredUsername/whitespace-rs/commit/7b856299b98601ff7d6e57a618cfe4c895e1248f):
+  Minify labels with big-endian bit order. Before, they were little-endian.
 
 ## Disassembler
 
@@ -113,6 +118,8 @@ as ASCII if the representation consists of 8-bit bytes in `[a-zA-Z_]`; otherwise
 as `_` followed by binary digits. Labels use colon syntax and are not indented.
 Every line is terminated with LF.
 
-### Bugs
+### History
 
-- Labels are not disassembled as ASCII if they contain `[0-9]`.
+- [2025-03-18](https://github.com/CensoredUsername/whitespace-rs/commit/c2096bfd332d6cd28cc33e0e9b94c61b75e77d7f):
+  Disassemble labels as ASCII which match the pattern `[a-zA-Z_][a-zA-Z0-9_]*`.
+  Before, the pattern was `[a-zA-Z_]+`.
