@@ -38,8 +38,6 @@
 - ruby/bossiernesto
 - ruby/collidedscope-spitewaste
 - ruby/shimo-yukicoder
-- rust/faultier-albino
-- rust/faultier-whitebase
 - scala/dashlambda-eso
 - whitespace/drebelsky-programs
 - whitespace/lukepebody-advent-of-code

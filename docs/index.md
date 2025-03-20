@@ -5,6 +5,7 @@
 Specifications for Whitespace assembly dialects following their implementations,
 including grammar, semantics, code generation, and bugs.
 
+- [Albino](dialects/albino.md) (rust/faultier-albino, rust/faultier-whitebase)
 - [Burghard](dialects/burghard.md) (haskell/burghard-wsa)
 - [CensoredUsername](dialects/censoredusername.md) (rust/censoredusername-whitespace-rs)
 - [Esotope](dialects/esotope.md) (python/lifthrasiir-esotope-ws, ocaml/lifthrasiir-esotope)

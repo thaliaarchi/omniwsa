@@ -34,7 +34,7 @@ inst ::=
     | "read_char"
     | "read_number"
 arith_op ::=
-    | ε
+    | ""
     | space number
     | space variable
     | space variable space number
