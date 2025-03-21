@@ -25,6 +25,7 @@ MCS ?= mcs
 MONO ?= mono
 NODE ?= node
 PYTHON2 ?= pyenv exec python2
+PYTHON3 ?= python3
 RUBY ?= ruby
 
 # Shell tools

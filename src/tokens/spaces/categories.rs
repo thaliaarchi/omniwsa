@@ -13,48 +13,54 @@ pub struct SpaceSet(pub EnumSet<SpaceCategory>);
 /// A grouping of Unicode codepoints variously treated as whitespace characters.
 #[derive(EnumSetType, Debug)]
 pub enum SpaceCategory {
-    /// Null (U+0000)
+    /// U+0000 Null
     Nul,
-    /// Character Tabulation (U+0009)
+    /// U+0009 Character Tabulation
     Tab,
-    /// Line Feed (U+000A)
+    /// U+000A Line Feed
     LineFeed,
-    /// Line Tabulation (U+000B)
+    /// U+000B Line Tabulation
     VerticalTab,
-    /// Form Feed (U+000C)
+    /// U+000C Form Feed
     FormFeed,
-    /// Carriage Return (U+000D)
+    /// U+000D Carriage Return
     CarriageReturn,
-    /// Space (U+0020)
+    /// ASCII information separators:
+    /// - U+001C File Separator (FS)
+    /// - U+001D Group Separator (GS)
+    /// - U+001E Record Separator (RS)
+    /// - U+001F Unit Separator (US)
+    InformationSeparator,
+    /// U+0020 Space
     Space,
-    /// Next Line (U+0085)
+    /// U+0085 Next Line
     NextLine,
-    /// Unicode Space Separator (Zs) category, minus Space (U+0020).
-    /// - No-Break Space (U+00A0)
-    /// - Ogham Space Mark (U+1680)
-    /// - En Quad (U+2000)
-    /// - Em Quad (U+2001)
-    /// - En Space (U+2002)
-    /// - Em Space (U+2003)
-    /// - Three-Per-Em Space (U+2004)
-    /// - Four-Per-Em Space (U+2005)
-    /// - Six-Per-Em Space (U+2006)
-    /// - Figure Space (U+2007)
-    /// - Punctuation Space (U+2008)
-    /// - Thin Space (U+2009)
-    /// - Hair Space (U+200A)
-    /// - Narrow No-Break Space (U+202F)
-    /// - Medium Mathematical Space (U+205F)
-    /// - Ideographic Space (U+3000)
+    /// Unicode Space Separator (Zs) category, minus U+0020 Space:
+    /// - U+00A0 No-Break Space
+    /// - U+1680 Ogham Space Mark
+    /// - U+2000 En Quad
+    /// - U+2001 Em Quad
+    /// - U+2002 En Space
+    /// - U+2003 Em Space
+    /// - U+2004 Three-Per-Em Space
+    /// - U+2005 Four-Per-Em Space
+    /// - U+2006 Six-Per-Em Space
+    /// - U+2007 Figure Space
+    /// - U+2008 Punctuation Space
+    /// - U+2009 Thin Space
+    /// - U+200A Hair Space
+    /// - U+202F Narrow No-Break Space
+    /// - U+205F Medium Mathematical Space
+    /// - U+3000 Ideographic Space
     SpaceSeparatorMinusSpace,
-    /// Unicode Line Separator (Zl) category.
-    /// - Line Separator (U+2028)
+    /// Unicode Line Separator (Zl) category:
+    /// - U+2028 Line Separator
     LineSeparator,
-    /// Unicode Paragraph Separator (Zp) category.
-    /// - Paragraph Separator (U+2029)
+    /// Unicode Paragraph Separator (Zp) category:
+    /// - U+2029 Paragraph Separator
     ParagraphSeparator,
-    /// Zero Width No-Break Space (U+FEFF), i.e., the codepoint for the byte
-    /// order mark.
+    /// U+FEFF Zero Width No-Break Space (i.e., the codepoint for the byte order
+    /// mark)
     ZeroWidthNoBreakSpace,
 }
 
@@ -67,6 +73,7 @@ impl SpaceSet {
             | SpaceCategory::VerticalTab
             | SpaceCategory::FormFeed
             | SpaceCategory::CarriageReturn
+            | SpaceCategory::InformationSeparator
             | SpaceCategory::Space
             | SpaceCategory::NextLine
             | SpaceCategory::SpaceSeparatorMinusSpace
@@ -123,6 +130,26 @@ impl SpaceSet {
             | SpaceCategory::LineSeparator
             | SpaceCategory::ParagraphSeparator
             | SpaceCategory::ZeroWidthNoBreakSpace
+    ));
+
+    /// Whitespace characters according to Python 2 `str.split()` and
+    /// `str.strip()`.
+    pub const PYTHON2: Self = Self::C_ISSPACE;
+
+    /// Whitespace characters according to Python 3 `str.split()` and
+    /// `str.strip()`.
+    pub const PYTHON3: Self = SpaceSet(enum_set!(
+        SpaceCategory::Tab
+            | SpaceCategory::LineFeed
+            | SpaceCategory::VerticalTab
+            | SpaceCategory::FormFeed
+            | SpaceCategory::CarriageReturn
+            | SpaceCategory::InformationSeparator
+            | SpaceCategory::Space
+            | SpaceCategory::NextLine
+            | SpaceCategory::SpaceSeparatorMinusSpace
+            | SpaceCategory::LineSeparator
+            | SpaceCategory::ParagraphSeparator
     ));
 
     /// Whitespace characters according to Ruby `Regexp` `\s`. It is
@@ -220,9 +247,10 @@ impl SpaceSet {
             b'\0' => enum_set!(SpaceCategory::Nul),
             b'\t' => enum_set!(SpaceCategory::Tab),
             b'\n' => enum_set!(SpaceCategory::LineFeed),
-            b'\x0b' => enum_set!(SpaceCategory::VerticalTab),
-            b'\x0c' => enum_set!(SpaceCategory::FormFeed),
+            b'\x0B' => enum_set!(SpaceCategory::VerticalTab),
+            b'\x0C' => enum_set!(SpaceCategory::FormFeed),
             b'\r' => enum_set!(SpaceCategory::CarriageReturn),
+            b'\x1C' | b'\x1D' | b'\x1E' | b'\x1F' => enum_set!(SpaceCategory::InformationSeparator),
             b' ' => enum_set!(SpaceCategory::Space),
             _ => EnumSet::empty(),
         })
