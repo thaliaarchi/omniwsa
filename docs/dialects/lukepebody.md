@@ -48,6 +48,8 @@ arg_space ::= " " space* (not_space+ space+)* int
 # BUG: Should require a space after the mnemonic.
 arg_no_space ::= (not_space* space+)+ int
 
+# TODO: Python int(str)
+# ref. https://github.com/python/cpython/blob/v3.13.2/Objects/longobject.c#L5858
 int ::= TODO
 
 space ::=
