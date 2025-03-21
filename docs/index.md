@@ -11,6 +11,7 @@ including grammar, semantics, code generation, and bugs.
 - [Esotope](dialects/esotope.md) (python/lifthrasiir-esotope-ws, ocaml/lifthrasiir-esotope)
 - [Lime](dialects/lime.md) (c/manarice)
 - [littleBugHunter](dialects/littlebughunter.md) (csharp/littlebughunter-assembler)
+- [LukePebody](dialects/lukepebody.md) (whitespace/lukepebody-advent-of-code)
 - [Nossembly](dialects/liahhirst.md) (typescript/leahhirst-nospace)
 - [omniwsa](dialects/omniwsa.md) (rust/thaliaarchi-omniwsa)
 - [Palaiologos](dialects/palaiologos.md) (c/kspalaiologos-asm2ws)

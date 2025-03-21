@@ -40,5 +40,4 @@
 - ruby/shimo-yukicoder
 - scala/dashlambda-eso
 - whitespace/drebelsky-programs
-- whitespace/lukepebody-advent-of-code
 - whitespace/t3nsor-spoj
