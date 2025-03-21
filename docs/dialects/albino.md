@@ -74,6 +74,11 @@ the same behavior between the two versions.
 Integer arguments are parsed and stored as `i64`. Overflow while parsing returns
 an error.
 
+### Generation
+
+Integers and labels both have a sign. Zero is serialized as SS SSL. Negative
+labels are valid.
+
 ## Disassembler
 
 ```bnf
@@ -104,4 +109,69 @@ inst ::=
     | "GETC"
     | "GETN"
 i64 ::= "-"? ("0" | [1-9][0-9]*)
+```
+
+### Generation
+
+When parsing Whitespace or DT syntax, labels are replaced with a number,
+incrementing starting at 1, in order of first definition or use. This is not
+done when parsing Whitespace assembly.
+
+## Bytecode format
+
+Bytecode instructions are serialized as a byte for the opcode, followed by the
+`i64` integer argument encoded as big-endian bytes, if the opcode takes a
+parameter. Opcodes have the following byte values, where the high nibble is for
+the IMP.
+
+```bnf
+PUSH     ::= 0b0011_0011
+DUP      ::= 0b0011_0100
+COPY     ::= 0b0011_1000
+SWAP     ::= 0b0011_0110
+DISCARD  ::= 0b0011_0101
+SLIDE    ::= 0b0011_1001
+ADD      ::= 0b1000_0000
+SUB      ::= 0b1000_0010
+MUL      ::= 0b1000_0001
+DIV      ::= 0b1000_1000
+MOD      ::= 0b1000_1010
+STORE    ::= 0b1010_0011
+RETRIEVE ::= 0b1010_1011
+MARK     ::= 0b0111_0000
+CALL     ::= 0b0111_0010
+JUMP     ::= 0b0111_0001
+JUMPZ    ::= 0b0111_1000
+JUMPN    ::= 0b0111_1010
+RETURN   ::= 0b0111_1001
+EXIT     ::= 0b0111_0101
+PUTC     ::= 0b1001_0000
+PUTN     ::= 0b1001_0010
+GETC     ::= 0b1001_1000
+GETN     ::= 0b1001_1010
+```
+
+## DT mapping
+
+DT is a simple token mapping for Whitespace. Characters which are not used in
+the tokens are comments. A token which is broken up with comment chars or is
+incomplete is a comment. The entire source must be valid UTF-8. The author
+introduced it in a [blog post](https://faultier.blog.jp/archives/1139763.html)
+in Japanese.
+
+```bnf
+token ::= space | tab | lf | comment
+space ::= "ど"
+tab   ::= "童貞ちゃうわっ！"
+lf    ::= "…"
+
+comment ::=
+  | [^ど童…]
+  | "童" (?! "貞")
+  | "童貞" (?! "ち")
+  | "童貞ち" (?! "ゃ")
+  | "童貞ちゃ" (?! "う")
+  | "童貞ちゃう" (?! "わ")
+  | "童貞ちゃうわ" (?! "っ")
+  | "童貞ちゃうわっ" (?! "！")
 ```
