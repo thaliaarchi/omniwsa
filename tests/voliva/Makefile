@@ -17,7 +17,7 @@ all: $(WS) $(ERR)
 
 %.err: %.wsa
 	! $(NODE) $(VOLIVA_CLI) compile $(OPTIONS) $< $*.ws 2> $@ >&2
-	@sed -i.bak "s|$$(realpath $(VOLIVA_WSA_DIR))|"'$$WSA|' $@
+	@sed -i.bak "s|$$(realpath $(VOLIVA_DIR))|"'$$WSA|' $@
 	@rm $@.bak
 
 .PHONY: clean

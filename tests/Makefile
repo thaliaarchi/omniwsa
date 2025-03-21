@@ -1,5 +1,5 @@
-SUBDIRS := burghard censoredusername esotope langs lime palaiologos voliva \
-	wconrad wsf
+SUBDIRS := albino burghard censoredusername esotope langs lime palaiologos \
+	voliva wconrad wsf
 
 .PHONY: all clean
 all: $(SUBDIRS:%=%.all)
