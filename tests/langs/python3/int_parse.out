@@ -1,5 +1,13 @@
 Python 3.13.2
-Digit values in int(str):
+U+0009 	 space
+U+000A 
+ space
+U+000B  space
+U+000C  space
+U+000D  space
+U+0020   space
+U+002B + (None, 0, None, None, None)
+U+002D - (None, 'negative', None, None, None)
 U+0030 0 0
 U+0031 1 1
 U+0032 2 2
@@ -10,7 +18,9 @@ U+0036 6 6
 U+0037 7 7
 U+0038 8 8
 U+0039 9 9
-U+005F _ underscore
+U+005F _ (None, None, 'underscore', None, None)
+U+0085  space
+U+00A0   space
 U+0660 ٠ 0
 U+0661 ١ 1
 U+0662 ٢ 2
@@ -191,6 +201,7 @@ U+1096 ႖ 6
 U+1097 ႗ 7
 U+1098 ႘ 8
 U+1099 ႙ 9
+U+1680   space
 U+17E0 ០ 0
 U+17E1 ១ 1
 U+17E2 ២ 2
@@ -291,6 +302,22 @@ U+1C56 ᱖ 6
 U+1C57 ᱗ 7
 U+1C58 ᱘ 8
 U+1C59 ᱙ 9
+U+2000   space
+U+2001   space
+U+2002   space
+U+2003   space
+U+2004   space
+U+2005   space
+U+2006   space
+U+2007   space
+U+2008   space
+U+2009   space
+U+200A   space
+U+2028   space
+U+2029   space
+U+202F   space
+U+205F   space
+U+3000 　 space
 U+A620 ꘠ 0
 U+A621 ꘡ 1
 U+A622 ꘢ 2

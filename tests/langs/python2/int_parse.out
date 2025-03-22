@@ -1,5 +1,13 @@
 Python 2.7.18
-Digit values in int(str):
+U+0009 	 space
+U+000A 
+ space
+U+000B  space
+U+000C  space
+U+000D  space
+U+0020   space
+U+002B + ('space', 0, None, None, None)
+U+002D - ('negative', 'negative', None, None, None)
 U+0030 0 0
 U+0031 1 1
 U+0032 2 2
