@@ -11,28 +11,28 @@
 program ::= (trim_space? (inst | comment)? trim_space? line_term)*
             trim_space? (inst | comment)? trim_space? line_term?
 inst ::=
-    | "push" space (number | variable)
-    | "dup"
-    | "swap"
-    | "pop"
-    | "add" arith_op
-    | "sub" arith_op
-    | "mul" arith_op
-    | "div" arith_op
-    | "mod" arith_op
-    | "store" (space number (space number)?)?
-    | "retrieve" (space number)?
-    | "lbl" space label
-    | "call" space label
-    | "jmp" space label
-    | "jpz" space label
-    | "jpn" space label
-    | "ret"
-    | "exit"
-    | "print_char"
-    | "print_number"
-    | "read_char"
-    | "read_number"
+    | (?i)"push" space (number | variable)
+    | (?i)"dup"
+    | (?i)"swap"
+    | (?i)"pop"
+    | (?i)"add" arith_op
+    | (?i)"sub" arith_op
+    | (?i)"mul" arith_op
+    | (?i)"div" arith_op
+    | (?i)"mod" arith_op
+    | (?i)"store" (space number (space number)?)?
+    | (?i)"retrieve" (space number)?
+    | (?i)"lbl" space label
+    | (?i)"call" space label
+    | (?i)"jmp" space label
+    | (?i)"jpz" space label
+    | (?i)"jpn" space label
+    | (?i)"ret"
+    | (?i)"exit"
+    | (?i)"print_char"
+    | (?i)"print_number"
+    | (?i)"read_char"
+    | (?i)"read_number"
 arith_op ::=
     | ""
     | space number
@@ -55,7 +55,11 @@ space ::= [ \t]+
 trim_space ::= (Char.IsWhiteSpace NOT line_term)+
 ```
 
+TODO: Can variables contain spaces?
+
 Opcodes are matched case-insensitively.
+
+TODO: What case folding?
 
 `String.Trim` uses [`Char.IsWhiteSpace`](https://learn.microsoft.com/en-us/dotnet/api/system.char.iswhitespace?view=net-9.0#system-char-iswhitespace(system-char))
 to determine whether a UTF-16 code unit is whitespace. It allows many more

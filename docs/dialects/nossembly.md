@@ -114,6 +114,8 @@ Numbers and labels are serialized the same and always with a sign. Labels are
 assigned integers increasing from 0 in order of first occurrence and have a
 leading space.
 
+TODO: How do non-integer floating point numbers generate?
+
 Types are assigned integer values as follows:
 - `Never`: `TTL`
 - `Any`: `TSL`
