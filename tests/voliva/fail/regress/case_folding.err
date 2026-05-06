@@ -5,6 +5,6 @@ file://$WSA/dist/assets/io-C1Dry2Fz.js:771
 Error: invalid opcode valuei̇nteger
     at parseArgs (file://$WSA/dist/assets/io-C1Dry2Fz.js:771:11)
     at file://$WSA/dist/assets/io-C1Dry2Fz.js:914:45
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
 
-Node.js v23.10.0
+Node.js v25.9.0
