@@ -1,11 +1,11 @@
-//! Parser for the Palaiologos Whitespace assembly dialect.
+//! Parser for the Iczelia Whitespace assembly dialect.
 
 use std::collections::HashSet;
 
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{Palaiologos, dialect::DialectState, palaiologos::lex::Lexer},
+    dialects::{Iczelia, dialect::DialectState, iczelia::lex::Lexer},
     lex::TokenStream,
     syntax::{ArgLayout, Cst, Inst, Opcode},
     tokens::{
@@ -29,15 +29,15 @@ use crate::{
 //     unless the previous was `rep` or it's used as a label, start a new token.
 //   - Recover `break:` as `label break`, instead of `jmp reak:`.
 
-/// A parser for the Palaiologos Whitespace assembly dialect.
+/// A parser for the Iczelia Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Parser<'s, 'd> {
     toks: TokenStream<'s, Lexer<'s, 'd>>,
 }
 
 impl<'s, 'd> Parser<'s, 'd> {
-    /// Constructs a new parser for Palaiologos-dialect source text.
-    pub fn new(src: &'s [u8], dialect: &'d DialectState<Palaiologos>) -> Self {
+    /// Constructs a new parser for Iczelia-dialect source text.
+    pub fn new(src: &'s [u8], dialect: &'d DialectState<Iczelia>) -> Self {
         Parser {
             toks: TokenStream::new(Lexer::new(src, dialect)),
         }
@@ -152,7 +152,7 @@ fn analyze_inst(inst: &mut Inst<'_>) {
         _ => panic!("unhandled token"),
     };
 
-    let args_start = if inst.opcode == Opcode::PalaiologosRep {
+    let args_start = if inst.opcode == Opcode::IczeliaRep {
         2
     } else {
         1

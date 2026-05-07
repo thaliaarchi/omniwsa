@@ -15,7 +15,7 @@
 - LukePebody: line term (LF), whitespace (all), line comment ("#"), integer,
   word
 - Nossembly: line term (LF), whitespace (all), hash ("#"), number, word
-- Palaiologos: maybe custom
+- Iczelia: maybe custom
 - rdebath: line term (LF), whitespace (all), line comment (";", "#"), colon
   (":"), integer, word
 - voliva: line term (LF), whitespace (all), decoration (";#;"), line comment
@@ -34,8 +34,8 @@ Strings should be lexed even in dialects which do not support them, unless
 quotes are valid in words.
 
 Burghard has complicated comment precedence which does not compose well, so
-probably should be manually lexed. Palaiologos doesn't require spaces between
-words, so might be more difficult to do more generally. wsf integer prefixes and
+probably should be manually lexed. Iczelia doesn't require spaces between words,
+so might be more difficult to do more generally. wsf integer prefixes and
 suffixes suggest that those should probably be handled after scanning into
 words.
 

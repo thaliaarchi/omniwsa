@@ -1,9 +1,9 @@
-//! Lexer for the Palaiologos Whitespace assembly dialect.
+//! Lexer for the Iczelia Whitespace assembly dialect.
 
 use enumset::EnumSet;
 
 use crate::{
-    dialects::{Palaiologos, dialect::DialectState, palaiologos::dialect::MAX_MNEMONIC_LEN},
+    dialects::{Iczelia, dialect::DialectState, iczelia::dialect::MAX_MNEMONIC_LEN},
     lex::{Lex, Scanner},
     syntax::Opcode,
     tokens::{
@@ -22,17 +22,17 @@ use crate::{
 // TODO:
 // - Write CST tests for error recovery.
 
-/// A lexer for tokens in the Palaiologos Whitespace assembly dialect.
+/// A lexer for tokens in the Iczelia Whitespace assembly dialect.
 #[derive(Clone, Debug)]
 pub struct Lexer<'s, 'd> {
-    dialect: &'d DialectState<Palaiologos>,
+    dialect: &'d DialectState<Iczelia>,
     scan: Scanner<'s>,
     digit_buf: Vec<u8>,
 }
 
 impl<'s, 'd> Lexer<'s, 'd> {
-    /// Constructs a new lexer for Palaiologos-dialect source text.
-    pub fn new(src: &'s [u8], dialect: &'d DialectState<Palaiologos>) -> Self {
+    /// Constructs a new lexer for Iczelia-dialect source text.
+    pub fn new(src: &'s [u8], dialect: &'d DialectState<Iczelia>) -> Self {
         Lexer {
             dialect,
             scan: Scanner::new(src),
@@ -182,7 +182,7 @@ impl<'s> Lex<'s> for Lexer<'s, '_> {
 /// Tries to scan a mnemonic at the start of the bytes.
 fn scan_mnemonic<'s>(
     s: &'s [u8],
-    dialect: &DialectState<Palaiologos>,
+    dialect: &DialectState<Iczelia>,
 ) -> Option<(&'s [u8], &'static [Opcode])> {
     let chunk = &s[..MAX_MNEMONIC_LEN.min(s.len())];
     for len in (1..=chunk.len()).rev() {

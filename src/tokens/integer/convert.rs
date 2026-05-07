@@ -14,7 +14,7 @@ use crate::tokens::integer::{BaseStyle, DigitSep, IntegerSyntax, IntegerToken, S
 // - When removing Haskell parentheses, keep the spaces, either in the token if
 //   allowed by the dialect or moved out as space tokens.
 // - Generalize suffix handling in convert_syntax to support both Haskell parens
-//   and Palaiologos bases.
+//   and Iczelia bases.
 
 impl IntegerToken<'_> {
     /// Returns whether this integer literal is already compatible with the
@@ -41,7 +41,7 @@ impl IntegerToken<'_> {
     /// If `self.literal` is not consistent with what was parsed to the other
     /// fields, the result may be inconsistent.
     pub fn convert_syntax(&self, from: &IntegerSyntax, to: &IntegerSyntax) -> Self {
-        // Both Haskell parentheses and Palaiologos bases use suffixes and would
+        // Both Haskell parentheses and Iczelia bases use suffixes and would
         // need a refactor to combine.
         debug_assert!(
             !(from.sign_style == SignStyle::Haskell
@@ -136,7 +136,7 @@ impl IntegerToken<'_> {
             new_has_digit_seps = false;
         }
 
-        // Append the Haskell close parentheses or Palaiologos base suffix.
+        // Append the Haskell close parentheses or Iczelia base suffix.
         new_literal.extend_from_slice(suffix);
 
         IntegerToken {

@@ -64,9 +64,9 @@ pub enum Token<'s> {
     LineTerm(LineTermToken),
     /// End of file.
     Eof(EofToken),
-    /// Instruction separator (e.g., Respace `;` or Palaiologos `/`).
+    /// Instruction separator (e.g., Respace `;` or Iczelia `/`).
     InstSep(InstSepToken),
-    /// Argument separator (e.g., Palaiologos `,`).
+    /// Argument separator (e.g., Iczelia `,`).
     ArgSep(ArgSepToken),
     /// Line comment (e.g., `#` or `//`).
     LineComment(LineCommentToken<'s>),

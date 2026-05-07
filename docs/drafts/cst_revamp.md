@@ -1,7 +1,7 @@
-# Revamp of CST for Palaiologos
+# Revamp of CST for Iczelia
 
-The Palaiologos dialect has some features, that run counter to the assumptions
-of a line-oriented dialect like Burghard:
+The Iczelia dialect has some features, that run counter to the assumptions of a
+line-oriented dialect like Burghard:
 - A bare integer is a `push` without a mnemonic.
 - Opcodes with multiple arguments use `,` to separate them (`store`).
 

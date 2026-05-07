@@ -1,7 +1,7 @@
-# Palaiologos Whitespace assembly
+# Iczelia Whitespace assembly
 
-- Source: <https://github.com/kspalaiologos/asm2ws>
-  (last updated [2024-12-04](https://github.com/kspalaiologos/asm2ws/commit/536d9eb1b2d6dc6c0da1d300cfd9aba579e5b067))
+- Source: <https://github.com/iczelia/asm2ws>
+  (last updated [2025-08-05](https://github.com/iczelia/asm2ws/commit/f94d590d500164fcbcbb29ff263bf389b2ee90f2))
 - Corpus: [c/kspalaiologos-asm2ws](https://github.com/wspace/corpus/tree/main/c/kspalaiologos-asm2ws)
 
 ## Grammar

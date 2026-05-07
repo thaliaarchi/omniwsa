@@ -47,7 +47,7 @@ pub enum IntegerError {
     NoDigits,
     /// An invalid digit.
     InvalidDigit,
-    /// Starts with a hex letter (Palaiologos).
+    /// Starts with a hex letter (Iczelia).
     StartsWithHex,
     /// Unsupported digit separators.
     DigitSep,

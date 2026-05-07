@@ -11,19 +11,19 @@ TIMEOUT_OUT = $(patsubst %.asm, %.timeout, $(patsubst %.bak, %.timeout, $(TIMEOU
 all: $(WS) $(ERR) $(TIMEOUT_OUT)
 
 %.ws: %.asm
-	$(PALAIOLOGOS_WSI) --masm $< > $@
+	$(ICZELIA_WSI) --masm $< > $@
 %.ws: %.bak
-	$(PALAIOLOGOS_WSI) --masm $< > $@
+	$(ICZELIA_WSI) --masm $< > $@
 
 %.err: %.asm
-	! $(PALAIOLOGOS_WSI) --masm $< 2> $@
+	! $(ICZELIA_WSI) --masm $< 2> $@
 %.err: %.bak
-	! $(PALAIOLOGOS_WSI) --masm $< 2> $@
+	! $(ICZELIA_WSI) --masm $< 2> $@
 
 %.timeout: %.asm
-	! $(TIMEOUT) $(PALAIOLOGOS_WSI) --masm $< >/dev/null && touch $@
+	! $(TIMEOUT) $(ICZELIA_WSI) --masm $< >/dev/null && touch $@
 %.timeout: %.bak
-	! $(TIMEOUT) $(PALAIOLOGOS_WSI) --masm $< >/dev/null && touch $@
+	! $(TIMEOUT) $(ICZELIA_WSI) --masm $< >/dev/null && touch $@
 
 .PHONY: clean
 clean:

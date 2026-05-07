@@ -10,8 +10,8 @@ use crate::tokens::integer::{
 
 // TODO:
 // - Move integer scanning here.
-// - Extend Palaiologos syntax with `x`/`X` suffix. It conflicts with `xchg`, so
-//   it should peek before bumping.
+// - Extend Iczelia syntax with `x`/`X` suffix. It conflicts with `xchg`, so it
+//   should peek before bumping.
 // - When an integer that ends with `b`/`B` is valid as binary, interpret it as
 //   a suffix. Otherwise, unless it is supported, always treat it as decimal.
 
@@ -198,9 +198,9 @@ impl BaseStyle {
         }
     }
 
-    /// Strips a base suffix from an integer literal with Palaiologos-like
-    /// syntax, specifically a suffix of `h`/`H` for hexadecimal, `b`/`B` for
-    /// binary, `o`/`O` for octal, and otherwise for decimal.
+    /// Strips a base suffix from an integer literal with Iczelia-like syntax,
+    /// specifically a suffix of `h`/`H` for hexadecimal, `b`/`B` for binary,
+    /// `o`/`O` for octal, and otherwise for decimal.
     #[inline]
     pub(super) fn strip_suffix(s: &[u8]) -> (Self, &[u8]) {
         match s.split_last() {

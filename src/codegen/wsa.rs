@@ -21,10 +21,10 @@ use crate::{
 // - Handle options more robustly.
 // - Create an InstStream abstraction, which can be used to wrap tokenwrite,
 //   but is useful on its own.
-// - Configure PalaiologosRep count upper bound:
+// - Configure IczeliaRep count upper bound:
 //   - Use a loop when it would be shorter.
 //   - Use a loop when over some configurable limit, e.g., 10 or i32::MAX like
-//     Palaiologos.
+//     Iczelia.
 
 impl Cst<'_> {
     /// Generates a stream of Whitespace tokens for this CST.
@@ -208,7 +208,7 @@ impl<'s> WsaInst<'s> {
                 w.write_inst(Inst::Push(self.integer(0)))?;
                 w.write_inst(Inst::Sub)
             }
-            Opcode::PalaiologosRep => {
+            Opcode::IczeliaRep => {
                 let opcode = match self.arg(0) {
                     Token::Mnemonic(m) => m.opcode,
                     arg => panic!("not a mnemonic: {arg:?}"),

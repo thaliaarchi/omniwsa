@@ -1,10 +1,10 @@
-//! Parsing for the Palaiologos Whitespace assembly dialect.
+//! Parsing for the Iczelia Whitespace assembly dialect.
 
 use crate::{
     dialects::{
         Dialect, define_mnemonics,
         dialect::DialectState,
-        palaiologos::{lex::Lexer, parse::Parser},
+        iczelia::{lex::Lexer, parse::Parser},
     },
     lex::Lex,
     syntax::Cst,
@@ -14,11 +14,11 @@ use crate::{
     },
 };
 
-/// Palaiologos Whitespace assembly dialect.
+/// Iczelia Whitespace assembly dialect.
 #[derive(Clone, Copy, Debug)]
-pub struct Palaiologos;
+pub struct Iczelia;
 
-impl Dialect for Palaiologos {
+impl Dialect for Iczelia {
     define_mnemonics! {
         fold = Ascii,
         b"psh" => [Push, Push0],
@@ -56,7 +56,7 @@ impl Dialect for Palaiologos {
         b"putn" => [Printi], // Overload::UnaryConst
         b"getc" => [Readc], // Overload::UnaryConst
         b"getn" => [Readi], // Overload::UnaryConst
-        b"rep" => [PalaiologosRep],
+        b"rep" => [IczeliaRep],
     }
 
     fn parse<'s>(src: &'s [u8], dialect: &DialectState<Self>) -> Cst<'s> {
@@ -107,8 +107,8 @@ impl Dialect for Palaiologos {
 pub(super) const MAX_MNEMONIC_LEN: usize = {
     let mut max_len = 0;
     let mut i = 0;
-    while i < Palaiologos::MNEMONICS.len() {
-        let len = Palaiologos::MNEMONICS[i].0.bytes.len();
+    while i < Iczelia::MNEMONICS.len() {
+        let len = Iczelia::MNEMONICS[i].0.bytes.len();
         if len > max_len {
             max_len = len;
         }

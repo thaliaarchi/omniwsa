@@ -33,8 +33,8 @@ pub struct Inst<'s> {
 pub enum ArgLayout {
     /// A mnemonic followed by arguments.
     Mnemonic,
-    /// Arguments alone, without a mnemonic (e.g., label definitions and
-    /// Palaiologos mnemonic-less `push`).
+    /// Arguments alone, without a mnemonic (e.g., label definitions and Iczelia
+    /// mnemonic-less `push`).
     Bare,
 }
 

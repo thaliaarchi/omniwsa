@@ -25,9 +25,9 @@ pub struct LabelToken<'s> {
 pub enum LabelStyle {
     /// No sigil (Burghard).
     NoSigil,
-    /// `@` prefix sigil (Palaiologos).
+    /// `@` prefix sigil (Iczelia).
     AtSigil,
-    /// `%` prefix sigil (Palaiologos).
+    /// `%` prefix sigil (Iczelia).
     PercentSigil,
 }
 
@@ -36,9 +36,9 @@ pub enum LabelStyle {
 pub enum LabelError {
     /// The label has already been defined.
     Redefined,
-    /// The label has no characters (Palaiologos).
+    /// The label has no characters (Iczelia).
     Empty,
-    /// The first character is a digit, which is not allowed (Palaiologos).
+    /// The first character is a digit, which is not allowed (Iczelia).
     StartsWithDigit,
 }
 

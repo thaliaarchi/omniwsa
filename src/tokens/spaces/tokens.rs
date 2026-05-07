@@ -59,7 +59,7 @@ pub enum LineTermStyle {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EofToken;
 
-/// Instruction separator token (e.g., Respace `;` or Palaiologos `/`).
+/// Instruction separator token (e.g., Respace `;` or Iczelia `/`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstSepToken {
     /// The style of this instruction separator.
@@ -73,7 +73,7 @@ pub struct InstSepToken {
 pub enum InstSepStyle {
     /// `;` argument separator (Respace).
     Semi,
-    /// `/` argument separator (Palaiologos).
+    /// `/` argument separator (Iczelia).
     Slash,
 }
 
@@ -88,7 +88,7 @@ pub enum InstSepError {
     EndOfLine,
 }
 
-/// Argument separator token (e.g., Palaiologos `,`).
+/// Argument separator token (e.g., Iczelia `,`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ArgSepToken {
     /// The style of this argument separator.
@@ -100,7 +100,7 @@ pub struct ArgSepToken {
 /// The style of an argument separator.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ArgSepStyle {
-    /// `,` argument separator (Palaiologos).
+    /// `,` argument separator (Iczelia).
     Comma,
 }
 

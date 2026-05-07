@@ -10,7 +10,7 @@ use std::{
 use clap::{Parser, ValueEnum};
 use omniwsa::{
     codegen::{Token, TokenWrite},
-    dialects::{Burghard, Dialect as _, Palaiologos},
+    dialects::{Burghard, Dialect as _, Iczelia},
 };
 
 // TODO:
@@ -40,8 +40,8 @@ struct Cli {
 enum Dialect {
     /// Burghard Whitespace assembly.
     Burghard,
-    /// Palaiologos Whitespace assembly.
-    Palaiologos,
+    /// Iczelia Whitespace assembly.
+    Iczelia,
 }
 
 fn main() {
@@ -55,7 +55,7 @@ fn main() {
     };
     let cst = match cli.dialect {
         Dialect::Burghard => Burghard::new().parse(&src),
-        Dialect::Palaiologos => Palaiologos::new().parse(&src),
+        Dialect::Iczelia => Iczelia::new().parse(&src),
     };
     let output: Box<BufWriter<dyn Write>> = if cli.stdout {
         Box::new(BufWriter::new(io::stdout()))

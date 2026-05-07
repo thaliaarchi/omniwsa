@@ -45,12 +45,12 @@ pub struct OptionBlock<'s> {
 pub enum Dialect {
     /// Burghard Whitespace assembly.
     Burghard,
+    /// Iczelia Whitespace assembly.
+    Iczelia,
     /// Lime Whitespace assembly.
     Lime,
     /// littleBugHunter Whitespace assembly.
     LittleBugHunter,
-    /// Palaiologos Whitespace assembly.
-    Palaiologos,
     /// rdebath Whitespace assembly.
     Rdebath,
     /// Respace Whitespace assembly.
@@ -72,9 +72,9 @@ impl Dialect {
     pub fn name(&self) -> &'static str {
         match self {
             Dialect::Burghard => "Burghard",
+            Dialect::Iczelia => "Iczelia",
             Dialect::Lime => "Lime",
             Dialect::LittleBugHunter => "littleBugHunter",
-            Dialect::Palaiologos => "Palaiologos",
             Dialect::Rdebath => "rdebath",
             Dialect::Respace => "Respace",
             Dialect::Voliva => "voliva",
@@ -86,9 +86,9 @@ impl Dialect {
     pub fn short_name(&self) -> &'static str {
         match self {
             Dialect::Burghard => "burg",
+            Dialect::Iczelia => "icz",
             Dialect::Lime => "lime",
             Dialect::LittleBugHunter => "lbug",
-            Dialect::Palaiologos => "palo",
             Dialect::Rdebath => "rdb",
             Dialect::Respace => "resp",
             Dialect::Voliva => "voli",

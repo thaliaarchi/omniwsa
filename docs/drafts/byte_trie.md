@@ -1,9 +1,9 @@
 # Byte trie
 
-Problem: Keywords in the Palaiologos dialect are not necessarily delimited by
-spaces and need to be lexed by matching iteratively longer chunks until a
-keyword is identified. This is the same problem as with lexing a fixed number of
-strings to Whitespace tokens.
+Problem: Keywords in the Iczelia dialect are not necessarily delimited by spaces
+and need to be lexed by matching iteratively longer chunks until a keyword is
+identified. This is the same problem as with lexing a fixed number of strings to
+Whitespace tokens.
 
 This is well suited for a trie. It would have branches, which have 2 to 256
 children, and leaves, which have the tail of the key and the corresponding data.

@@ -74,7 +74,7 @@ pub enum IntegerError {
     InvalidBase,
     /// Uses digit separators, which are not supported.
     InvalidDigitSep,
-    /// Starts with a hex letter (Palaiologos).
+    /// Starts with a hex letter (Iczelia).
     StartsWithHex,
     /// An unpaired parenthesis (Haskell).
     UnpairedParen,

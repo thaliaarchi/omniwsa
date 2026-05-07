@@ -11,7 +11,7 @@ use bstr::ByteSlice;
 use glob::glob;
 
 use crate::{
-    dialects::{Burghard, Dialect as _, DialectState, Palaiologos},
+    dialects::{Burghard, Dialect as _, DialectState, Iczelia},
     syntax::Pretty,
 };
 
@@ -43,14 +43,14 @@ fn roundtrip_burghard() {
 }
 
 #[test]
-fn roundtrip_palaiologos() {
-    let dialect = Palaiologos::new();
+fn roundtrip_iczelia() {
+    let dialect = Iczelia::new();
     let mut src = Vec::new();
     let mut pretty = Vec::new();
     let mut fail = false;
-    for path in glob("tests/palaiologos/**/*.asm")
+    for path in glob("tests/iczelia/**/*.asm")
         .unwrap()
-        .chain(glob("tests/palaiologos/*.bak").unwrap())
+        .chain(glob("tests/iczelia/*.bak").unwrap())
     {
         let path = path.unwrap();
         src.clear();
@@ -76,13 +76,13 @@ fn roundtrip_palaiologos() {
 fn codegen() {
     #[track_caller]
     fn test(
-        dialect: &DialectState<Palaiologos>,
+        dialect: &DialectState<Iczelia>,
         path: &str,
         src: &mut Vec<u8>,
         ws_expect: &mut Vec<u8>,
         ws_generated: &mut String,
     ) -> Result<bool, Box<dyn Error>> {
-        let path = Path::new("tests/palaiologos").join(path);
+        let path = Path::new("tests/iczelia").join(path);
         src.clear();
         File::open(&path)?.read_to_end(src)?;
         ws_expect.clear();
@@ -102,7 +102,7 @@ fn codegen() {
         }
     }
 
-    let dialect = Palaiologos::new();
+    let dialect = Iczelia::new();
     let mut src = Vec::new();
     let mut ws_expect = Vec::new();
     let mut ws_generated = String::new();

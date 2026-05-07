@@ -93,7 +93,7 @@ opcodes! {
 
     // Standard instructions with overloaded arguments:
     /// `push` with zero value: `push` => `push 0`
-    /// (Palaiologos).
+    /// (Iczelia).
     Push0,
 
     // Predefined macros:
@@ -151,8 +151,8 @@ opcodes! {
     /// Burghard `test`:
     /// `test n` => `dup / push n / sub` (Burghard and rdebath-Burghard).
     BurghardTest(Integer),
-    /// Palaiologos `rep`.
-    PalaiologosRep(Mnemonic, Integer),
+    /// Iczelia `rep`.
+    IczeliaRep(Mnemonic, Integer),
 
     /// Burghard `include`.
     BurghardInclude(Include),
@@ -196,11 +196,11 @@ opcodes! {
 pub enum Overload {
     /// Unary operation with constant value:
     /// `op n` => `push n / op`.
-    /// - `retrieve n`: Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips
-    /// - `printc n`: Palaiologos
-    /// - `printi n`: Palaiologos
-    /// - `readc n`: Palaiologos, Whitelips
-    /// - `readi n`: Palaiologos, Whitelips
+    /// - `retrieve n`: Burghard, littleBugHunter, Iczelia, rdebath-Burghard, voliva, Whitelips
+    /// - `printc n`: Iczelia
+    /// - `printi n`: Iczelia
+    /// - `readc n`: Iczelia, Whitelips
+    /// - `readi n`: Iczelia, Whitelips
     UnaryConst,
     /// Unary operation with reference value:
     /// `op var` => `push addr / retrieve / op`.
@@ -212,14 +212,14 @@ pub enum Overload {
     BinaryConstLhs,
     /// Binary operation with constant RHS:
     /// `op n` => `push n / op`.
-    /// - `add n`: Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips
-    /// - `sub n`: Burghard, littleBugHunter, Palaiologos, rdebath-Burghard, voliva, Whitelips
-    /// - `mul n`: Burghard, littleBugHunter, Palaiologos, voliva, Whitelips
-    /// - `div n`: Burghard, littleBugHunter, Palaiologos, voliva, Whitelips
-    /// - `mod n`: Burghard, littleBugHunter, Palaiologos, voliva, Whitelips
+    /// - `add n`: Burghard, littleBugHunter, Iczelia, rdebath-Burghard, voliva, Whitelips
+    /// - `sub n`: Burghard, littleBugHunter, Iczelia, rdebath-Burghard, voliva, Whitelips
+    /// - `mul n`: Burghard, littleBugHunter, Iczelia, voliva, Whitelips
+    /// - `div n`: Burghard, littleBugHunter, Iczelia, voliva, Whitelips
+    /// - `mod n`: Burghard, littleBugHunter, Iczelia, voliva, Whitelips
     /// - `or n`: voliva
     /// - `and n`: voliva
-    /// - `store n`: Palaiologos
+    /// - `store n`: Iczelia
     BinaryConstRhs,
     /// Binary operation with reference LHS:
     /// `op var` => `push addr / retrieve / swap / op`.
@@ -235,7 +235,7 @@ pub enum Overload {
     BinaryRefRhs,
     /// Binary operation with constant LHS and RHS:
     /// `op x y` => `push y / push x / op`.
-    /// - `store x y`: littleBugHunter, Palaiologos
+    /// - `store x y`: littleBugHunter, Iczelia
     BinaryConstConst,
     /// Binary operation with reference LHS and constant RHS:
     /// `op var n` => `push addr / retrieve / push n / op`.

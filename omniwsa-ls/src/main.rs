@@ -14,7 +14,7 @@ use lsp_types::{
     request::{Request as _, SemanticTokensFullRequest},
 };
 use omniwsa::{
-    dialects::{Dialect, Palaiologos},
+    dialects::{Dialect, Iczelia},
     tokens::{
         Token,
         comment::BlockCommentError,
@@ -124,7 +124,7 @@ fn main_loop(
                         let path = params.text_document.uri.as_str();
                         let path = path.strip_prefix("file://").unwrap_or(path);
                         let src = fs::read(path)?;
-                        let tokens = Palaiologos::new().lex(&src);
+                        let tokens = Iczelia::new().lex(&src);
 
                         let mut tokens_out = Vec::with_capacity(tokens.len());
                         let (mut curr_line, mut curr_col) = (0, 0);

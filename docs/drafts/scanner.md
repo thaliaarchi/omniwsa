@@ -16,10 +16,10 @@ terminators in C. A safe API should not be cumbersome.
 
 For bytes clients, this will give better line/col positions.
 
-For the Palaiologos dialect, this only impacts char literals, which still need
-to be effectively bytes. When a char is encoded as more than byte, emit
-CharData::Char with a CharError::NotByte. When a single non-ASCII byte is in
-quotes, accept it. String literals remain StringData::Bytes. When a client
+For the Iczelia dialect, this only impacts char literals, which still need to be
+effectively bytes. When a char is encoded as more than byte, emit
+`CharData::Char` with a `CharError::NotByte`. When a single non-ASCII byte is in
+quotes, accept it. String literals remain `StringData::Bytes`.
 
 A bytes client likely wants to deal in terms of bytes, but the scanner should
 not yield positions at an offset between bytes in a valid multi-byte encoding of
